@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCare Pro | My Reports</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/mechanic.css">
+</head>
+<body class="m-body">
+
+<aside class="m-sidebar" id="mSidebar">
+  <div class="m-brand">
+    <div class="m-brand-logo"><img src="../media/logo.jpg" alt="logo"></div>
+    <div class="m-brand-text"><strong>AutoPro Care</strong><small>Mechanic portal</small></div>
+  </div>
+  <div class="m-nav-group">
+    <span class="m-nav-label">MAIN</span>
+    <ul class="m-nav">
+      <li><a href="index.html"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a></li>
+      <li><a href="repair.html"><i class="bi bi-wrench-adjustable"></i> My Repairs</a></li>
+      <li><a href="reports.html#parts" class="active"><i class="bi bi-tools"></i> Parts Used</a></li>
+    </ul>
+  </div>
+  <div class="m-nav-group">
+    <span class="m-nav-label">REPORTS</span>
+    <ul class="m-nav">
+      <li><a href="reports.html" class="active"><i class="bi bi-file-earmark-bar-graph"></i> My Reports</a></li>
+      <li><a href="reports.html#performance"><i class="bi bi-speedometer2"></i> Performance</a></li>
+    </ul>
+  </div>
+  <div class="m-nav-group">
+    <span class="m-nav-label">ACCOUNT</span>
+    <ul class="m-nav">
+      <li><a href="profile.html"><i class="bi bi-person-fill"></i> My Profile</a></li>
+      <li><a href="login.html"><i class="bi bi-box-arrow-right"></i> Logout</a></li>
+    </ul>
+  </div>
+
+  <div class="m-user-foot">
+    <div class="m-user-info">
+      <div class="m-avatar">UD</div>
+      <div class="m-user-text"><strong>Ugyen Dorji</strong><small>Senior Mechanic</small></div>
+    </div>
+    <a href="login.html" class="m-logout"><i class="bi bi-box-arrow-right"></i> Logout</a>
+  </div>
+</aside>
+
+<main class="m-main">
+  <button class="m-sidebar-toggle"><i class="bi bi-list"></i></button>
+
+  <header class="m-topbar">
+    <div>
+      <h1>My Reports</h1>
+      <p>Summary of your repair activities</p>
+    </div>
+    <div class="m-topbar-actions">
+      <a href="../index.html" class="m-btn m-btn-outline m-btn-sm"><i class="bi bi-house-door"></i> Main Site</a>
+      <button class="m-btn m-btn-outline"><i class="bi bi-download"></i> Export</button>
+      <div class="m-user-chip"><span>Ugyen Dorji</span><div class="m-avatar">UD</div></div>
+    </div>
+  </header>
+
+  <section class="m-stats">
+    <div class="m-stat">
+      <div class="m-stat-icon m-icon-purple"><i class="bi bi-check-circle-fill"></i></div>
+      <div><h6>Total completed</h6><div class="m-stat-value">24</div><p class="m-stat-foot">This month</p></div>
+    </div>
+    <div class="m-stat">
+      <div class="m-stat-icon m-icon-blue"><i class="bi bi-box-seam"></i></div>
+      <div><h6>Parts logged</h6><div class="m-stat-value">67</div><p class="m-stat-foot blue">This month</p></div>
+    </div>
+    <div class="m-stat">
+      <div class="m-stat-icon m-icon-green"><i class="bi bi-tools"></i></div>
+      <div><h6>Services recorded</h6><div class="m-stat-value">38</div><p class="m-stat-foot green">This month</p></div>
+    </div>
+    <div class="m-stat">
+      <div class="m-stat-icon m-icon-orange"><i class="bi bi-clock-history"></i></div>
+      <div><h6>Avg. repair time</h6><div class="m-stat-value">4h 12m</div><p class="m-stat-foot orange">Per job</p></div>
+    </div>
+  </section>
+
+  <div class="m-tabs">
+    <button class="active">This month</button>
+    <button>This week</button>
+    <button>All time</button>
+  </div>
+
+  <div class="m-panel">
+    <div class="m-panel-head"><h3>Repair Summary</h3></div>
+    <div style="overflow-x:auto;">
+      <table class="m-table">
+        <thead>
+          <tr><th>Vehicle</th><th>Customer</th><th>Service</th><th>Parts Cost</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Hyundai i20 — BP-9012</td><td>Tshering Wangmo</td><td>Oil Change</td><td>Nu. 470</td><td><span class="m-badge m-badge-complete">Complete</span></td></tr>
+          <tr><td>Toyota Corolla — BP-1234</td><td>Karma Dorji</td><td>Brake Replacement</td><td>Nu. 1,040</td><td><span class="m-badge m-badge-progress">In Progress</span></td></tr>
+          <tr><td>Honda Civic — BP-5678</td><td>Sonam Choden</td><td>Engine Diagnostics</td><td>Nu. 1,040</td><td><span class="m-badge m-badge-progress">In Progress</span></td></tr>
+          <tr><td>BMW X5 — BP-8821</td><td>Ugyen Dorji</td><td>Diagnostics</td><td>Nu. 1,500</td><td><span class="m-badge m-badge-pending">Pending</span></td></tr>
+          <tr><td>Ford Mustang — BP-7721</td><td>Pema Lhamo</td><td>Brake Service</td><td>Nu. 2,500</td><td><span class="m-badge m-badge-complete">Complete</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="js/mechanic.js"></script>
+</body>
+</html>

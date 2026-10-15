@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCare Pro | Admin Dashboard</title>
+<link rel="icon" href="../repairCar/media/logo.jpg">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+</head>
+<body class="a-body" data-page="dashboard">
+
+<!-- Sidebar is filled in by js/admin.js so every page shares the same menu -->
+<aside class="a-sidebar" id="aSidebar"></aside>
+
+<main class="a-main">
+  <button class="a-sidebar-toggle" aria-label="Open menu"><i class="bi bi-list"></i></button>
+
+  <header class="a-topbar">
+    <div>
+      <h1>Dashboard</h1>
+      <p><span id="greet" class="a-greet">Workshop overview</span></p>
+    </div>
+    <div class="a-topbar-actions">
+      <div class="a-search-wrap">
+        <i class="bi bi-search"></i>
+        <input class="a-search" placeholder="Search repairs, plates, customers...">
+      </div>
+      <div class="a-user-chip"></div>
+    </div>
+  </header>
+
+  <section class="a-stats" id="stats"></section>
+
+  <div class="a-grid">
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Revenue — last 6 months</h3><span class="small text-muted" id="revTotal"></span></div>
+      <div class="a-chart" id="revChart"></div>
+    </div>
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Repairs by status</h3><a href="repairs.html">All repairs →</a></div>
+      <div class="a-donut-wrap" id="statusDonut"></div>
+    </div>
+  </div>
+
+  <div class="a-grid">
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Recent repair jobs</h3><a href="repairs.html">View all →</a></div>
+      <div class="a-panel-list" id="recentList"></div>
+    </div>
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Needs your attention</h3></div>
+      <div class="a-panel-list" id="attentionList"></div>
+    </div>
+  </div>
+
+  <div class="a-grid">
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Mechanic workload</h3><a href="mechanics.html">Team →</a></div>
+      <div class="a-workload" id="workload"></div>
+    </div>
+    <div class="a-panel">
+      <div class="a-panel-head"><h3>Quick actions</h3></div>
+      <div class="a-quick-grid">
+        <a href="repairs.html?new=1" class="a-quick-btn a-quick-primary"><i class="bi bi-plus-circle"></i> New repair job</a>
+        <a href="customers.html?new=1" class="a-quick-btn"><i class="bi bi-person-plus"></i> Add customer</a>
+        <a href="inventory.html?new=1" class="a-quick-btn"><i class="bi bi-box-seam"></i> Add part</a>
+        <a href="order.html" class="a-quick-btn"><i class="bi bi-bag-check"></i> Review orders</a>
+        <a href="mechanics.html?new=1" class="a-quick-btn"><i class="bi bi-person-badge"></i> Add mechanic</a>
+        <a href="suppliers.html?new=1" class="a-quick-btn"><i class="bi bi-truck"></i> Add supplier</a>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="js/data.js"></script>
+<script src="js/admin.js"></script>
+<script src="js/dashboard.js"></script>
+</body>
+</html>

@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoCare Pro | Admin Login</title>
+<link rel="icon" href="../repairCar/media/logo.jpg">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/admin.css">
+<style>
+  * { box-sizing: border-box; }
+  body { font-family: var(--font-body); margin: 0; background: #fff; color: var(--a-text); }
+  .lg { min-height: 100vh; display: grid; grid-template-columns: 1.1fr 1fr; }
+
+  /* Left: brand panel */
+  .lg-brand {
+    position: relative; overflow: hidden; color: #fff;
+    padding: 48px 56px; display: flex; flex-direction: column; justify-content: space-between;
+    background:
+      linear-gradient(160deg, rgba(20,16,60,.92) 0%, rgba(43,33,140,.88) 55%, rgba(75,63,214,.85) 100%),
+      url('../repairCar/media/banner1.jpg') center/cover no-repeat;
+  }
+  .lg-brand::after {
+    content: ''; position: absolute; right: -120px; bottom: -120px; width: 420px; height: 420px;
+    border-radius: 50%; border: 60px solid rgba(212,217,40,.10);
+  }
+  .lg-logo { display: flex; align-items: center; gap: 14px; position: relative; z-index: 1; }
+  .lg-logo img { width: 54px; height: 54px; border-radius: 50%; object-fit: cover; background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.15); }
+  .lg-logo strong { font-family: var(--font-heading); font-size: 1.2rem; display: block; line-height: 1.1; }
+  .lg-logo small { color: rgba(255,255,255,.65); font-size: .8rem; }
+  .lg-copy { position: relative; z-index: 1; max-width: 440px; }
+  .lg-copy .tag {
+    display: inline-flex; align-items: center; gap: 8px; font-size: .75rem; font-weight: 600;
+    background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+    padding: 6px 12px; border-radius: 30px; margin-bottom: 18px;
+  }
+  .lg-copy .tag i { color: #e6ea5a; }
+  .lg-copy h1 { color: #fff; font-family: var(--font-heading); font-weight: 800; font-size: 2.4rem; line-height: 1.15; margin: 0 0 14px; }
+  .lg-copy h1 span { color: #e6ea5a; }
+  .lg-copy p { color: rgba(255,255,255,.75); font-size: .98rem; line-height: 1.6; margin: 0; }
+  .lg-feats { list-style: none; padding: 0; margin: 26px 0 0; display: grid; gap: 12px; }
+  .lg-feats li { display: flex; align-items: center; gap: 12px; font-size: .92rem; color: rgba(255,255,255,.9); }
+  .lg-feats i {
+    width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0;
+    display: inline-flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,.1); color: #e6ea5a;
+  }
+  .lg-foot { position: relative; z-index: 1; font-size: .8rem; color: rgba(255,255,255,.55); }
+
+  /* Right: form */
+  .lg-form-side { display: flex; align-items: center; justify-content: center; padding: 40px 24px; background: #fafbfd; }
+  .lg-card { width: 100%; max-width: 400px; }
+  .lg-mobile-logo { display: none; }
+  .lg-card h2 { font-family: var(--font-heading); font-weight: 800; font-size: 1.75rem; margin: 0 0 6px; color: var(--a-text); }
+  .lg-card .lead-txt { color: var(--a-text-muted); font-size: .92rem; margin: 0 0 28px; }
+  .lg-field { margin-bottom: 18px; }
+  .lg-field label { display: block; font-size: .82rem; font-weight: 600; margin-bottom: 7px; color: var(--a-text); }
+  .lg-input { position: relative; }
+  .lg-input > i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #9ca3af; font-size: 1rem; pointer-events: none; }
+  .lg-input input {
+    width: 100%; height: 48px; padding: 0 44px 0 42px; border-radius: 12px;
+    border: 1.5px solid var(--a-border); background: #fff; font-size: .95rem; font-family: inherit; color: var(--a-text);
+    outline: none; transition: border-color .15s, box-shadow .15s;
+  }
+  .lg-input input:focus { border-color: var(--a-purple); box-shadow: 0 0 0 4px rgba(75,63,214,.12); }
+  .lg-input input:focus + i, .lg-input:focus-within > i { color: var(--a-purple); }
+  .lg-eye {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 36px; height: 36px; border: none; background: none; border-radius: 8px; color: #9ca3af; cursor: pointer;
+  }
+  .lg-eye:hover { background: #f3f4f6; color: var(--a-text); }
+  .lg-row { display: flex; justify-content: space-between; align-items: center; margin: 4px 0 22px; font-size: .85rem; }
+  .lg-check { display: inline-flex; align-items: center; gap: 8px; color: var(--a-text-muted); cursor: pointer; margin: 0; }
+  .lg-check input { width: 16px; height: 16px; accent-color: var(--a-purple); margin: 0; }
+  .lg-link { color: var(--a-purple); font-weight: 600; text-decoration: none; }
+  .lg-link:hover { text-decoration: underline; }
+  .lg-btn {
+    width: 100%; height: 50px; border: none; border-radius: 12px; cursor: pointer;
+    background: var(--a-purple); color: #fff; font-weight: 700; font-size: .98rem; font-family: inherit;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    box-shadow: 0 8px 20px rgba(75,63,214,.28); transition: background .15s, transform .1s;
+  }
+  .lg-btn:hover { background: #392fb0; }
+  .lg-btn:active { transform: translateY(1px); }
+  .lg-btn:disabled { opacity: .75; cursor: wait; }
+  .lg-demo {
+    margin-top: 22px; padding: 12px 14px; border-radius: 12px; font-size: .82rem;
+    background: #fff; border: 1px dashed #c7c2f5; color: var(--a-text-muted);
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .lg-demo i { color: var(--a-purple); font-size: 1rem; margin-top: 1px; }
+  .lg-demo code { background: #f1f0ff; color: #3b31b8; padding: 1px 6px; border-radius: 5px; font-size: .8rem; cursor: pointer; }
+  .lg-back { display: inline-flex; align-items: center; gap: 6px; margin-top: 26px; font-size: .85rem; color: var(--a-text-muted); text-decoration: none; }
+  .lg-back:hover { color: var(--a-purple); }
+
+  @media (max-width: 900px) {
+    .lg { grid-template-columns: 1fr; }
+    .lg-brand { display: none; }
+    .lg-form-side { min-height: 100vh; background: linear-gradient(180deg, #f3f1ff 0%, #fafbfd 40%); }
+    .lg-mobile-logo { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .lg-mobile-logo img { width: 46px; height: 46px; border-radius: 50%; object-fit: cover; }
+    .lg-mobile-logo strong { font-family: var(--font-heading); font-size: 1.05rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="lg">
+  <!-- Left: brand panel -->
+  <section class="lg-brand">
+    <div class="lg-logo">
+      <img src="../repairCar/media/logo.jpg" alt="AutoCare Pro logo">
+      <div><strong>AutoCare Pro</strong><small>Workshop management</small></div>
+    </div>
+
+    <div class="lg-copy">
+      <span class="tag"><i class="bi bi-shield-lock-fill"></i> Staff only</span>
+      <h1>Run the whole workshop from <span>one place.</span></h1>
+      <p>Track repair jobs, assign mechanics, keep parts in stock and approve orders, all from the admin panel.</p>
+      <ul class="lg-feats">
+        <li><i class="bi bi-wrench-adjustable"></i> Repair jobs from booking to hand-over</li>
+        <li><i class="bi bi-people-fill"></i> Customers, vehicles and service history</li>
+        <li><i class="bi bi-box-seam"></i> Inventory alerts and purchase orders</li>
+      </ul>
+    </div>
+
+    <div class="lg-foot">© AutoCare Pro · Thimphu, Bhutan</div>
+  </section>
+
+  <!-- Right: login form -->
+  <section class="lg-form-side">
+    <div class="lg-card">
+      <div class="lg-mobile-logo">
+        <img src="../repairCar/media/logo.jpg" alt="">
+        <strong>AutoCare Pro</strong>
+      </div>
+
+      <h2>Welcome back</h2>
+      <p class="lead-txt">Sign in to the admin panel to manage the workshop.</p>
+
+      <div class="a-login-error" id="loginError"><i class="bi bi-exclamation-circle"></i> <span></span></div>
+
+      <form id="adminLoginForm" novalidate>
+        <div class="lg-field">
+          <label for="email">Email address</label>
+          <div class="lg-input">
+            <input type="email" id="email" placeholder="you@autocare.bt" autocomplete="username" required>
+            <i class="bi bi-envelope"></i>
+          </div>
+        </div>
+
+        <div class="lg-field">
+          <label for="password">Password</label>
+          <div class="lg-input">
+            <input type="password" id="password" placeholder="Enter your password" autocomplete="current-password" required>
+            <i class="bi bi-lock"></i>
+            <button type="button" class="lg-eye" id="togglePw" aria-label="Show password"><i class="bi bi-eye"></i></button>
+          </div>
+        </div>
+
+        <div class="lg-row">
+          <label class="lg-check"><input type="checkbox" id="remember" checked> Remember me</label>
+          <a href="../repairCar/forgot-password.html" class="lg-link">Forgot password?</a>
+        </div>
+
+        <button type="submit" class="lg-btn" id="loginBtn">Sign in <i class="bi bi-arrow-right"></i></button>
+      </form>
+
+      <div class="lg-demo">
+        <i class="bi bi-info-circle-fill"></i>
+        <div>Demo account: <code data-fill="email">admin@autocare.bt</code> / <code data-fill="password">admin123</code><br><small>Click to fill in.</small></div>
+      </div>
+
+      <a href="../repairCar/index.html" class="lg-back"><i class="bi bi-arrow-left"></i> Back to main website</a>
+    </div>
+  </section>
+</div>
+
+<script>
+  // Demo accounts — in a real system this check happens on the server
+  const ADMINS = [
+    { email: 'admin@autocare.bt', password: 'admin123', name: 'Admin User' }
+  ];
+  const SESSION_KEY = 'acp_admin_session';
+  const params = new URLSearchParams(location.search);
+  const form = document.getElementById('adminLoginForm');
+  const errBox = document.getElementById('loginError');
+
+  function store(key, val) { try { val === null ? localStorage.removeItem(key) : localStorage.setItem(key, val); } catch (e) {} }
+  function read(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+
+  if (params.get('logout')) store(SESSION_KEY, null);
+  else if (read(SESSION_KEY)) location.replace('index.html');
+
+  const savedEmail = read('acp_admin_email');
+  if (savedEmail) document.getElementById('email').value = savedEmail;
+
+  function showError(msg) {
+    errBox.querySelector('span').textContent = msg;
+    errBox.classList.remove('show'); void errBox.offsetWidth; errBox.classList.add('show');
+  }
+
+  document.getElementById('togglePw').addEventListener('click', function () {
+    const pw = document.getElementById('password');
+    pw.type = pw.type === 'password' ? 'text' : 'password';
+    this.innerHTML = '<i class="bi bi-eye' + (pw.type === 'text' ? '-slash' : '') + '"></i>';
+  });
+
+  document.querySelectorAll('[data-fill]').forEach(c => c.addEventListener('click', () => {
+    document.getElementById('email').value = 'admin@autocare.bt';
+    document.getElementById('password').value = 'admin123';
+  }));
+
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    const email = document.getElementById('email').value.trim().toLowerCase();
+    const password = document.getElementById('password').value;
+    if (!email || !password) return showError('Please enter your email and password.');
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return showError('That doesn\'t look like a valid email address.');
+
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Signing in…';
+
+    setTimeout(() => {
+      const user = ADMINS.find(a => a.email === email && a.password === password);
+      if (!user) {
+        btn.disabled = false;
+        btn.innerHTML = 'Sign in <i class="bi bi-arrow-right"></i>';
+        document.getElementById('password').value = '';
+        return showError('Incorrect email or password.');
+      }
+      store('acp_admin_email', document.getElementById('remember').checked ? email : null);
+      store(SESSION_KEY, JSON.stringify({ name: user.name, email: user.email, at: Date.now() }));
+      location.href = 'index.html';
+    }, 600);
+  });
+</script>
+</body>
+</html>
