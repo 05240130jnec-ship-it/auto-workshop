@@ -1,11 +1,9 @@
 import { Link } from 'react-router-dom'
-import { nu, fmtDate, relDate } from '../../data/store.js'
+import { useAuth } from '../../auth/AuthContext.js'
+import { useStore, nu, fmtDate, relDate } from '../../data/store.js'
 import { imageFor } from '../../data/services.js'
-import { api } from '../../api.js'
-import useApi from '../../useApi.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
-import Loading from '../../ui/Loading.jsx'
 
 const BADGE = {
   pending: ['review', 'IN REVIEW'],
@@ -15,45 +13,37 @@ const BADGE = {
 }
 const DOT = ['text-danger', 'text-warning', 'text-primary', 'text-success', 'text-info']
 
-// Same design as your my-repairs.html — the data now comes from MySQL.
-//   GET /api/repairs              → only this customer's repairs (the backend filters by the token)
-//   GET /api/shop/reservations    → their part orders
+// Same design as your my-repairs.html, filled with this customer's real bookings
 export default function MyRepairs() {
   usePageTitle('My Repairs')
-  const repairs = useApi('/repairs')
-  const orders = useApi('/shop/reservations')
+  const { user } = useAuth()
+  const store = useStore()
+  const { Q } = store
   const { confirm, toast, view } = useDialogs()
 
-  if (!repairs.data) {
-    return <section className="acp-section"><div className="container"><Loading error={repairs.error} onRetry={repairs.reload} /></div></section>
-  }
-
-  const mine = repairs.data
+  const mine = store.data.repairs.filter((r) => r.customerId === user.id).sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
   const active = mine.filter((r) => r.status === 'pending' || r.status === 'progress')
   const past = mine.filter((r) => r.status === 'complete' || r.status === 'cancelled')
-  const reservations = orders.data || []
+  const reservations = (store.data.reservations || []).filter((x) => x.customerId === user.id)
 
-  const specialist = (r, i) => r.mechanic_name
-    ? <><i className={'bi bi-circle-fill ' + DOT[i % DOT.length]} style={{ fontSize: '.5rem' }}></i> {r.mechanic_name.split(' ')[0]}</>
-    : <span className="text-muted">Not assigned yet</span>
+  const specialist = (r, i) => {
+    const m = Q.mechanic(r.mechanicId)
+    return m
+      ? <><i className={'bi bi-circle-fill ' + DOT[i % DOT.length]} style={{ fontSize: '.5rem' }}></i> {m.name.split(' ')[0]}</>
+      : <span className="text-muted">Not assigned yet</span>
+  }
 
   async function cancel(r) {
     const ok = await confirm(`Cancel booking #${r.id} for your ${r.vehicle}?`, { title: 'Cancel booking?', okText: 'Yes, cancel', danger: true })
     if (!ok) return
-    try {
-      await api('/repairs/' + r.id, { method: 'PATCH', body: { status: 'cancelled' } })
-      toast('Booking #' + r.id + ' cancelled', 'info')
-      repairs.reload()
-    } catch (err) {
-      toast(err.message, 'error')
-    }
+    store.update('repairs', r.id, { status: 'cancelled', notes: (r.notes ? r.notes + '\n' : '') + 'Cancelled by customer online.' })
+    toast('Booking #' + r.id + ' cancelled', 'info')
   }
 
-  // Details pop-up: loads the full repair (with parts and services) from the backend
-  async function details(id) {
-    let r
-    try { r = await api('/repairs/' + id) } catch (err) { return toast(err.message, 'error') }
+  function details(r) {
+    const m = Q.mechanic(r.mechanicId)
     const step = ['pending', 'progress', 'complete'].indexOf(r.status)
+    const a = r.appointment
     view('Booking #' + r.id, (
       <div>
         {r.status === 'cancelled'
@@ -66,17 +56,17 @@ export default function MyRepairs() {
         <div className="a-detail-grid">
           <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}</small></div>
           <div><span>Service</span><strong>{r.service}</strong></div>
-          <div><span>Mechanic</span><strong>{r.mechanic_name || 'Not assigned yet'}</strong></div>
-          <div><span>Booked</span><strong>{fmtDate(r.booked_on)}</strong></div>
-          <div><span>{r.appt_date ? 'Appointment' : 'Promised by'}</span><strong>{r.appt_date ? `${fmtDate(r.appt_date)}, ${r.appt_time}` : fmtDate(r.due)}</strong></div>
+          <div><span>Mechanic</span><strong>{m ? m.name : 'Not assigned yet'}</strong></div>
+          <div><span>Booked</span><strong>{fmtDate(r.date)}</strong></div>
+          <div><span>{a ? 'Appointment' : 'Promised by'}</span><strong>{a ? `${fmtDate(a.date)}, ${a.time}` : fmtDate(r.due)}</strong></div>
           <div><span>{r.status === 'complete' ? 'Amount' : 'Estimate'}</span><strong>{nu(r.cost)}</strong></div>
         </div>
         {r.notes && <><div className="a-section-title">Your description</div><div className="a-note mb-3">{r.notes}</div></>}
-        {r.parts.length > 0 && (
+        {(r.parts || []).length > 0 && (
           <>
             <div className="a-section-title">Parts used</div>
             <table className="a-mini-table"><tbody>
-              {r.parts.map((p) => <tr key={p.id}><td>{p.name} × {p.qty}</td><td className="text-end">{nu(p.qty * p.price)}</td></tr>)}
+              {r.parts.map((p, i) => <tr key={i}><td>{p.name} × {p.qty}</td><td className="text-end">{nu(p.qty * p.price)}</td></tr>)}
             </tbody></table>
           </>
         )}
@@ -135,12 +125,12 @@ export default function MyRepairs() {
                 </div>
                 <div className="col-md-3 col-6">
                   <p className="small text-muted mb-0">{r.status === 'pending' ? 'Appointment' : 'Estimated Completion'}</p>
-                  <p className={'fw-bold mb-0' + (r.status === 'pending' && !r.mechanic_id ? ' text-brand-red' : '')}>
-                    {r.appt_date ? `${fmtDate(r.appt_date)}, ${r.appt_time}` : relDate(r.due)}
+                  <p className={'fw-bold mb-0' + (r.status === 'pending' && !r.mechanicId ? ' text-brand-red' : '')}>
+                    {r.appointment ? `${fmtDate(r.appointment.date)}, ${r.appointment.time}` : relDate(r.due)}
                   </p>
                 </div>
                 <div className="col-md-2 text-md-end d-flex flex-md-column gap-2 align-items-md-end">
-                  <button className="btn btn-brand-yellow btn-sm" onClick={() => details(r.id)}>View Details</button>
+                  <button className="btn btn-brand-yellow btn-sm" onClick={() => details(r)}>View Details</button>
                   {r.status === 'pending' && <button className="btn btn-link btn-sm text-muted p-0" onClick={() => cancel(r)}>Cancel</button>}
                 </div>
               </div>
@@ -161,10 +151,10 @@ export default function MyRepairs() {
                   <tr key={r.id}>
                     <td>{r.vehicle}<br /><small className="text-muted">#{r.id} · {r.service}</small></td>
                     <td>{specialist(r, i + 2)}</td>
-                    <td>{fmtDate(r.completed_on || r.due)}</td>
+                    <td>{fmtDate(r.due || r.date)}</td>
                     <td>{r.status === 'complete' ? nu(r.cost) : '—'}</td>
                     <td><span className={'acp-badge ' + BADGE[r.status][0]}>{BADGE[r.status][1]}</span></td>
-                    <td><button className="btn btn-link p-0 text-brand-red fw-bold" onClick={() => details(r.id)}>Details</button></td>
+                    <td><button className="btn btn-link p-0 text-brand-red fw-bold" onClick={() => details(r)}>Details</button></td>
                   </tr>
                 ))}
               </tbody>

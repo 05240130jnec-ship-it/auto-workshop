@@ -2,14 +2,14 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
 import { HOME_FOR } from '../auth/users.js'
-import { initials } from '../data/store.js'
-import useApi from '../useApi.js'
+import { useStore, initials } from '../data/store.js'
 import useTheme from '../ui/useTheme.js'
 
 // Customer website layout: your repairCar navbar + footer around every page
 export default function SiteLayout() {
   useTheme('site')
   const { user, logout } = useAuth()
+  const { data } = useStore()
   const location = useLocation()
   const navigate = useNavigate()
   const path = location.pathname
@@ -21,10 +21,9 @@ export default function SiteLayout() {
   }, [path])
 
   const navClass = ({ isActive }) => 'nav-link' + (isActive ? ' active' : '')
-  // Bell badge: the customer's open repairs, from the backend (refreshed on every page change)
-  const isCustomer = user && user.role === 'customer'
-  const mine = useApi(isCustomer ? '/repairs?_=' + path : null)
-  const myOpen = isCustomer && mine.data ? mine.data.filter((r) => r.status === 'pending' || r.status === 'progress').length : 0
+  const myOpen = user && user.role === 'customer'
+    ? data.repairs.filter((r) => r.customerId === user.id && (r.status === 'pending' || r.status === 'progress')).length
+    : 0
 
   return (
     <>
