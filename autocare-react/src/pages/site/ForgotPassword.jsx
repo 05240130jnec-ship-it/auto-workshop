@@ -1,0 +1,68 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useStore } from '../../data/store.js'
+import usePageTitle from '../../ui/usePageTitle.js'
+
+// Your forgot-password.html. Without an email server we reset it directly:
+// enter your account email + a new password.
+export default function ForgotPassword() {
+  usePageTitle('Forgot Password')
+  const store = useStore()
+  const [f, setF] = useState({ email: '', password: '', confirm: '' })
+  const [msg, setMsg] = useState(null)
+  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  function submit(e) {
+    e.preventDefault()
+    const email = f.email.trim().toLowerCase()
+    const c = store.all('customers').find((x) => (x.email || '').toLowerCase() === email)
+    const m = store.all('mechanics').find((x) => (x.email || '').toLowerCase() === email)
+    if (!c && !m) return setMsg({ ok: false, text: 'No account found with that email.' })
+    if (f.password.length < 6) return setMsg({ ok: false, text: 'Password must be at least 6 characters.' })
+    if (f.password !== f.confirm) return setMsg({ ok: false, text: 'The two passwords do not match.' })
+    if (c) store.update('customers', c.id, { password: f.password })
+    else store.update('mechanics', m.id, { password: f.password })
+    setMsg({ ok: true, text: 'Password updated. You can log in now.' })
+    setF({ email: '', password: '', confirm: '' })
+  }
+
+  return (
+    <div className="acp-auth-bg">
+      <div className="acp-auth-card text-center">
+        <h2>Forgot Password?</h2>
+        <p className="subtitle">No worries, set a new one below</p>
+
+        {msg && <div className={'alert py-2 small ' + (msg.ok ? 'alert-success' : 'alert-danger')}>{msg.text}</div>}
+
+        <form className="text-start" onSubmit={submit}>
+          <div className="mb-3">
+            <label className="form-label small fw-bold">Email</label>
+            <div className="input-group">
+              <span className="input-group-text"><i className="bi bi-envelope"></i></span>
+              <input type="email" className="form-control" placeholder="Your account email" value={f.email} onChange={set('email')} required />
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="form-label small fw-bold">New Password</label>
+            <div className="input-group">
+              <span className="input-group-text"><i className="bi bi-lock"></i></span>
+              <input type="password" className="form-control" placeholder="Enter New Password" value={f.password} onChange={set('password')} required />
+            </div>
+          </div>
+          <div className="mb-3">
+            <label className="form-label small fw-bold">Confirm Password</label>
+            <div className="input-group">
+              <span className="input-group-text"><i className="bi bi-lock"></i></span>
+              <input type="password" className="form-control" placeholder="Confirm Password" value={f.confirm} onChange={set('confirm')} required />
+            </div>
+          </div>
+          <button type="submit" className="btn w-100 text-white" style={{ background: 'var(--brand-green)' }}>Reset</button>
+        </form>
+
+        <p className="small text-muted mt-4 mb-0">
+          Remembered your password? <Link to="/login" className="text-brand-purple fw-bold">Back to login</Link>
+        </p>
+      </div>
+    </div>
+  )
+}

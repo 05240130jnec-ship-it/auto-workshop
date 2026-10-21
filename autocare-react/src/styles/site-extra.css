@@ -1,0 +1,25 @@
+/* Small additions for the React version of the customer site */
+html.theme-site .acp-dashed { border-style: dashed !important; }
+html.theme-site .acp-notif-count {
+  position: absolute; top: -6px; right: -6px; min-width: 18px; height: 18px; padding: 0 5px;
+  border-radius: 9px; background: var(--brand-red); color: #fff; font-size: .65rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+html.theme-site .acp-user-chip--in { text-decoration: none; }
+html.theme-site .acp-initials {
+  width: 38px; height: 38px; border-radius: 50%; background: var(--brand-yellow); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: .8rem;
+}
+html.theme-site .acp-day {
+  width: 100%; aspect-ratio: 1; max-width: 40px; border: none; background: none; border-radius: 8px;
+  font-size: .85rem; font-weight: 600; color: var(--text-dark);
+}
+html.theme-site .acp-day:hover:not(:disabled) { background: var(--bg-pink); }
+html.theme-site .acp-day.selected { background: var(--brand-yellow); color: #fff; }
+html.theme-site .acp-day.off { color: #b8c0c8; font-weight: 400; cursor: not-allowed; }
+@media (min-width: 992px) { html.theme-site .acp-sticky { position: sticky; top: 90px; } }
+html.theme-site .acp-time-slot { cursor: pointer; }
+
+/* Pop-ups and buttons inside the customer site use the site's navy + orange */
+html.theme-site { --a-purple: #0f2a44; }
+html.theme-mechanic { --a-purple: #2563eb; }

@@ -1,0 +1,5 @@
+/* Global styles shared by the whole app */
+body { margin: 0; }
+.c-center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--a-bg); font-family: var(--font-body); }
+.a-logout { text-decoration: none; }
+.modal.d-block { background: transparent; }
