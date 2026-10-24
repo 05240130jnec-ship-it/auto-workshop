@@ -11,7 +11,8 @@ import { Badge, Priority, Tabs, EmptyRow, IconBtn, TableCard } from './parts.jsx
 const STATUSES = [['pending', 'Pending'], ['progress', 'In Progress'], ['complete', 'Complete'], ['cancelled', 'Cancelled']]
 const statusLabel = (s) => STATUSES.find((x) => x[0] === s)[1]
 
-// Repairs — create jobs, assign mechanics, move jobs through their status
+// Repairs — create jobs, assign mechanics, move jobs through their status.
+// Every change is saved in MySQL with store.send(...) → /api/repairs
 export default function AdminRepairs() {
   usePageTitle('Manage Repairs')
   const store = useStore()
@@ -28,25 +29,24 @@ export default function AdminRepairs() {
     .filter((r) => !query || [r.id, r.vehicle, r.plate, r.service, Q.customerName(r.customerId), Q.mechanicName(r.mechanicId)].join(' ').toLowerCase().includes(query))
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
 
-  function setStatus(id, status) {
+  async function setStatus(id, status) {
     const r = store.get('repairs', id)
     if (status === 'progress' && !r.mechanicId) { toast('Assign a mechanic before starting the job', 'warn'); return false }
-    const patch = { status }
-    if (status === 'complete') patch.completedOn = today()
-    store.update('repairs', id, patch)
+    if (!(await store.send('/repairs/' + id, { method: 'PATCH', body: { status } }))) return false
     toast(<>#{id} marked as <b>{statusLabel(status)}</b></>)
     return true
   }
 
-  function assign(r, mechanicId) {
+  async function assign(r, mechanicId) {
     if (!mechanicId) {
-      store.update('repairs', r.id, { mechanicId: null, status: 'pending' })
-      return toast('#' + r.id + ' unassigned', 'info')
+      if (await store.send('/repairs/' + r.id, { method: 'PATCH', body: { mechanic_id: null, status: 'pending' } })) toast('#' + r.id + ' unassigned', 'info')
+      return
     }
-    const patch = { mechanicId }
-    if (r.status === 'pending') patch.status = 'progress'
-    store.update('repairs', r.id, patch)
-    toast(<>#{r.id} assigned to <b>{Q.mechanicName(mechanicId)}</b>{patch.status ? ' · now In Progress' : ''}</>)
+    const body = { mechanic_id: mechanicId }
+    if (r.status === 'pending') body.status = 'progress'
+    if (await store.send('/repairs/' + r.id, { method: 'PATCH', body })) {
+      toast(<>#{r.id} assigned to <b>{Q.mechanicName(mechanicId)}</b>{body.status ? ' · now In Progress' : ''}</>)
+    }
   }
 
   const fields = () => [
@@ -71,25 +71,23 @@ export default function AdminRepairs() {
   async function addJob() {
     const v = await form({ title: 'New repair job', fields: fields(), submitText: 'Create job', validate })
     if (!v) return
-    v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
-    if (v.mechanicId && v.status === 'pending') v.status = 'progress'
-    if (v.status === 'complete') v.completedOn = today()
-    v.id = store.nextId('repairs', 'ACP-', 4)
-    v.parts = []; v.services = []
-    store.add('repairs', v)
+    const res = await store.send('/repairs', {
+      method: 'POST',
+      body: { customer_id: v.customerId, mechanic_id: v.mechanicId || null, vehicle: v.vehicle, plate: v.plate, service: v.service, priority: v.priority, due: v.due, cost: v.cost, notes: v.notes },
+    })
+    if (!res) return
+    // The backend starts a job as pending (or in progress with a mechanic); finish/cancel it if asked
+    if (v.status === 'complete' || v.status === 'cancelled') await store.send('/repairs/' + res.id, { method: 'PATCH', body: { status: v.status } })
     setFilter('all')
-    toast(<>Job <b>#{v.id}</b> created for {Q.customerName(v.customerId)}</>)
+    toast(<>Job <b>#{res.id}</b> created for {Q.customerName(v.customerId)}</>)
   }
 
   async function editJob(r) {
     const v = await form({ title: 'Edit job #' + r.id, fields: fields(), values: { ...r, mechanicId: r.mechanicId || '' }, submitText: 'Save changes', validate })
     if (!v) return
-    v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
-    if (v.status === 'complete' && r.status !== 'complete') v.completedOn = today()
-    store.update('repairs', r.id, v)
-    toast('Job #' + r.id + ' updated')
+    const body = { customer_id: v.customerId, mechanic_id: v.mechanicId || null, vehicle: v.vehicle, plate: v.plate, service: v.service, priority: v.priority, due: v.due, cost: v.cost, notes: v.notes || '' }
+    if (v.status !== r.status) body.status = v.status
+    if (await store.send('/repairs/' + r.id, { method: 'PATCH', body })) toast('Job #' + r.id + ' updated')
   }
 
   async function completeJob(r) {
@@ -99,13 +97,12 @@ export default function AdminRepairs() {
       fields: [{ name: 'cost', label: 'Final amount charged (Nu.)', type: 'number', min: 0, step: 50, required: true, col: 12, help: `Estimate was ${nu(r.cost)}${logged ? ` · mechanic logged ${nu(logged)}` : ''}` }],
     })
     if (!v) return
-    store.update('repairs', r.id, { cost: v.cost, status: 'complete', completedOn: today() })
-    toast(`#${r.id} completed · ${nu(v.cost)} charged`)
+    if (await store.send('/repairs/' + r.id, { method: 'PATCH', body: { cost: v.cost, status: 'complete' } })) toast(`#${r.id} completed · ${nu(v.cost)} charged`)
   }
 
   async function deleteJob(r) {
     const ok = await confirm(<>Job <b>#{r.id}</b> will be permanently removed.</>, { title: 'Delete this job?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('repairs', r.id); toast('Job #' + r.id + ' deleted', 'info') }
+    if (ok && (await store.send('/repairs/' + r.id, { method: 'DELETE' }))) toast('Job #' + r.id + ' deleted', 'info')
   }
 
   function viewJob(id) {
@@ -115,7 +112,7 @@ export default function AdminRepairs() {
     const m = Q.mechanic(r.mechanicId)
     const idx = ['pending', 'progress', 'complete'].indexOf(r.status)
     const history = all.filter((x) => x.plate === r.plate && x.id !== r.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
-    const act = (status) => { if (setStatus(r.id, status)) closeView() }
+    const act = async (status) => { if (await setStatus(r.id, status)) closeView() }
     view(<>Job <span className="a-id">#{r.id}</span></>, (
       <>
         {r.status === 'cancelled'

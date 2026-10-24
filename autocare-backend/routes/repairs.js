@@ -43,8 +43,19 @@ router.get('/', async (req, res) => {
     `${SELECT_REPAIR} ${where.length ? 'WHERE ' + where.join(' AND ') : ''} ORDER BY r.booked_on DESC, r.id DESC`,
     params
   )
-  res.json(rows)
+  res.json(await withLines(rows))
 })
+
+// Add each repair's parts, services and notes (3 queries for the whole list, not 3 per repair)
+async function withLines(rows) {
+  if (!rows.length) return rows
+  const ids = rows.map((r) => r.id)
+  const [parts] = await db.query('SELECT * FROM repair_parts WHERE repair_id IN (?) ORDER BY id', [ids])
+  const [services] = await db.query('SELECT * FROM repair_services WHERE repair_id IN (?) ORDER BY id', [ids])
+  const [notes] = await db.query('SELECT * FROM work_notes WHERE repair_id IN (?) ORDER BY created_at, id', [ids])
+  const of = (list, id) => list.filter((x) => x.repair_id === id)
+  return rows.map((r) => ({ ...r, parts: of(parts, r.id), services: of(services, r.id), notes_list: of(notes, r.id) }))
+}
 
 // GET /api/repairs/slots?date=2026-10-25  — how many bookings each time slot already has
 // (no private details, so any logged-in user can ask; used by the Booking page)
@@ -105,6 +116,7 @@ router.post('/', requireRole('customer', 'admin'), async (req, res) => {
 })
 
 // PATCH /api/repairs/ACP-9248  — change status / mechanic / cost
+//   admin may also correct the job details: vehicle, plate, service, priority, due, notes, customer_id
 router.patch('/:id', async (req, res) => {
   const [rows] = await db.query('SELECT * FROM repairs WHERE id = ?', [req.params.id])
   if (!rows.length) return res.status(404).json({ error: 'Repair not found' })
@@ -134,9 +146,20 @@ router.patch('/:id', async (req, res) => {
     sets.push('status = ?'); params.push(status)
     if (status === 'progress' && !repair.started_on) sets.push('started_on = CURDATE()')
     if (status === 'complete') sets.push('completed_on = CURDATE()')
+    if (status !== 'complete' && repair.status === 'complete') sets.push('completed_on = NULL')
   }
   if (mechanic_id !== undefined) { sets.push('mechanic_id = ?'); params.push(mechanic_id || null) }
   if (cost !== undefined) { sets.push('cost = ?'); params.push(Number(cost) || 0) }
+  if (role === 'admin') {
+    const b = req.body || {}
+    for (const key of ['vehicle', 'plate', 'service', 'due', 'notes', 'customer_id']) {
+      if (b[key] !== undefined) { sets.push(key + ' = ?'); params.push(key === 'plate' ? String(b[key]).toUpperCase() : b[key]) }
+    }
+    if (b.priority !== undefined) {
+      if (!['normal', 'high', 'urgent'].includes(b.priority)) return res.status(400).json({ error: 'priority must be normal, high or urgent' })
+      sets.push('priority = ?'); params.push(b.priority)
+    }
+  }
   if (!sets.length) return res.status(400).json({ error: 'Nothing to update' })
 
   params.push(req.params.id)

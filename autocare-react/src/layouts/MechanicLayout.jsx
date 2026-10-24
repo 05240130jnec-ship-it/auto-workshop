@@ -3,12 +3,14 @@ import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-do
 import { useAuth } from '../auth/AuthContext.js'
 import { useStore, initials } from '../data/store.js'
 import useTheme from '../ui/useTheme.js'
+import Loading from '../ui/Loading.jsx'
 
 // Mechanic portal layout: your machanic/ sidebar around every mechanic page
 export default function MechanicLayout() {
   useTheme('mechanic')
   const { user, logout } = useAuth()
-  const { Q } = useStore()
+  const store = useStore()
+  const { Q } = store
   const me = Q.mechanic(user.id) || {}
   const navigate = useNavigate()
   const { hash, pathname } = useLocation()
@@ -72,7 +74,7 @@ export default function MechanicLayout() {
 
       <main className="m-main">
         <button className="m-sidebar-toggle" onClick={() => setOpen(!open)} aria-label="Menu"><i className="bi bi-list"></i></button>
-        <Outlet />
+        {store.ready ? <Outlet /> : <Loading error={store.error} onRetry={store.reload} />}
       </main>
     </div>
   )

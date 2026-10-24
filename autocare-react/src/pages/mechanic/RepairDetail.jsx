@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, fmtDate, today } from '../../data/store.js'
+import { useStore, nu, fmtDate } from '../../data/store.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
@@ -9,7 +9,7 @@ import MTopbar from './MTopbar.jsx'
 const SERVICE_TYPES = ['Brake Pad Replacement', 'Engine Diagnostics', 'Oil Change', 'Car Wash', 'Wheel Alignment', 'Battery Replacement', 'AC Service', 'General Labour']
 
 // Your repair-detail.html: update status, write notes, log parts and services.
-// Parts taken here come out of the workshop inventory automatically.
+// Everything is saved in MySQL; parts taken here come out of the inventory automatically (backend transaction).
 export default function RepairDetail() {
   const { id } = useParams()
   usePageTitle('Repair ' + id)
@@ -43,65 +43,54 @@ export default function RepairDetail() {
   const servicesTotal = Q.servicesTotal(r)
   const grand = partsTotal + servicesTotal
 
-  function setStatus(status) {
+  async function setStatus(status) {
     if (status === r.status) return
-    const patch = { status }
-    if (status === 'progress' && !r.startedOn) patch.startedOn = today()
-    store.update('repairs', r.id, patch)
-    toast('Status changed to ' + (status === 'pending' ? 'Pending' : 'In Progress'))
+    if (await store.send('/repairs/' + r.id, { method: 'PATCH', body: { status } })) {
+      toast('Status changed to ' + (status === 'pending' ? 'Pending' : 'In Progress'))
+    }
   }
 
   async function complete() {
     const final = grand > 0 ? grand : r.cost
     const ok = await confirm(`Mark this job complete? The customer will be charged ${nu(final)}${grand > 0 ? ' (parts + services)' : ' (the estimate)'}.`, { title: 'Complete repair', okText: 'Mark complete' })
     if (!ok) return
-    store.update('repairs', r.id, { status: 'complete', cost: final, completedOn: today() })
+    if (!(await store.send('/repairs/' + r.id, { method: 'PATCH', body: { status: 'complete', cost: final } }))) return
     toast(r.vehicle + ' is ready for pickup 🎉')
     navigate('/mechanic/repairs')
   }
 
-  function addNote() {
+  async function addNote() {
     if (!note.trim()) return
-    const line = `[${fmtDate(today())}] ${user.name}: ${note.trim()}`
-    store.update('repairs', r.id, { workNotes: [...(r.workNotes || []), line] })
+    if (!(await store.send('/repairs/' + r.id + '/notes', { method: 'POST', body: { note: note.trim() } }))) return
     setNote('')
     toast('Note added')
   }
 
-  function addPart() {
+  async function addPart() {
     const p = store.get('inventory', partId)
     const qty = Number(partQty)
     if (!p || qty < 1) return
     if (qty > p.stock) return toast(`Only ${p.stock} × ${p.name} left in stock`, 'error')
-    store.batch((d) => {
-      d.inventory.find((x) => x.id === p.id).stock -= qty
-      const rep = d.repairs.find((x) => x.id === r.id)
-      rep.parts = [...(rep.parts || []), { partId: p.id, name: p.name, qty, price: p.price, date: today() }]
-    })
+    const res = await store.send('/repairs/' + r.id + '/parts', { method: 'POST', body: { part_id: p.id, qty } })
+    if (!res) return
     setPartQty(1)
-    toast(`${qty} × ${p.name} logged · stock now ${p.stock - qty}`)
-    if (p.stock - qty <= p.reorder) toast(p.name + ' is running low — admin has been alerted', 'warn')
+    toast(`${qty} × ${p.name} logged · stock now ${res.stock_left}`)
+    if (res.low) toast(p.name + ' is running low — admin has been alerted', 'warn')
   }
 
-  function removePart(i) {
+  async function removePart(i) {
     const item = r.parts[i]
-    store.batch((d) => {
-      const inv = d.inventory.find((x) => x.id === item.partId)
-      if (inv) inv.stock += item.qty
-      const rep = d.repairs.find((x) => x.id === r.id)
-      rep.parts = rep.parts.filter((_, j) => j !== i)
-    })
-    toast(item.name + ' returned to stock', 'info')
+    if (await store.send('/repairs/' + r.id + '/parts/' + item.lineId, { method: 'DELETE' })) toast(item.name + ' returned to stock', 'info')
   }
 
-  function addService() {
+  async function addService() {
     if (Number(svcQty) < 1 || Number(svcCost) < 0) return
-    store.update('repairs', r.id, { services: [...(r.services || []), { name: svcType, qty: Number(svcQty), cost: Number(svcCost) }] })
-    toast(svcType + ' added')
+    const body = { name: svcType, qty: Number(svcQty), cost: Number(svcCost) }
+    if (await store.send('/repairs/' + r.id + '/services', { method: 'POST', body })) toast(svcType + ' added')
   }
 
-  function removeService(i) {
-    store.update('repairs', r.id, { services: r.services.filter((_, j) => j !== i) })
+  async function removeService(i) {
+    await store.send('/repairs/' + r.id + '/services/' + r.services[i].lineId, { method: 'DELETE' })
   }
 
   return (

@@ -11,10 +11,11 @@ export default function Signup() {
   const navigate = useNavigate()
   const [f, setF] = useState({ name: '', email: '', phone: '', address: '', password: '', confirm: '', terms: false })
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   if (user) return <Navigate to={HOME_FOR[user.role]} replace />
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
     setError('')
     if (!f.name || !f.email || !f.phone || !f.address || !f.password) return setError('Please fill in every field.')
@@ -23,7 +24,9 @@ export default function Signup() {
     if (f.password.length < 6) return setError('Password must be at least 6 characters.')
     if (f.password !== f.confirm) return setError('The two passwords do not match.')
     if (!f.terms) return setError('Please agree to the Terms of Service.')
-    const res = signup(f)
+    setSaving(true)
+    const res = await signup(f) // saved in MySQL by the backend (POST /api/auth/signup)
+    setSaving(false)
     if (res.error) return setError(res.error)
     navigate('/my-repairs', { replace: true })
   }
@@ -59,7 +62,7 @@ export default function Signup() {
               I agree to the Terms of Service and Privacy Policy
             </label>
           </div>
-          <button type="submit" className="btn btn-brand-primary w-100">Create Account</button>
+          <button type="submit" className="btn btn-brand-primary w-100" disabled={saving}>{saving ? 'Creating account…' : 'Create Account'}</button>
         </form>
 
         <p className="small text-muted text-center mt-4 mb-0">

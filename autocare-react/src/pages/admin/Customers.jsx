@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useStore, nu, fmtDate, relDate, today } from '../../data/store.js'
+import { useStore, nu, fmtDate, relDate } from '../../data/store.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -43,14 +43,14 @@ export default function AdminCustomers() {
   async function add() {
     const v = await form({ title: 'Add customer', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'welcome123', help: 'Tell the customer so they can log in and change it' }], submitText: 'Add customer', validate: check() })
     if (!v) return
-    store.add('customers', { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase(), id: store.nextId('customers', 'C-', 3), joined: today() })
-    toast(<><b>{v.name}</b> added as a customer</>)
+    const res = await store.send('/customers', { method: 'POST', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } })
+    if (res) toast(<><b>{v.name}</b> added as customer #{res.id}</>)
   }
   async function edit(c) {
     const v = await form({ title: 'Edit customer', fields, values: c, submitText: 'Save changes', validate: check(c.id) })
     if (!v) return
-    store.update('customers', c.id, { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() })
-    toast('Customer details saved')
+    const body = { name: v.name, phone: normPhone(v.phone), email: v.email.toLowerCase(), address: v.address || '', status: v.status }
+    if (await store.send('/customers/' + c.id, { method: 'PATCH', body })) toast('Customer details saved')
   }
   function show(c) {
     const jobs = jobsOf(c.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -87,11 +87,11 @@ export default function AdminCustomers() {
     if (open) return toast(`${c.name} has ${open} open job(s). Finish or cancel them first.`, 'warn')
     if (jobs.length) {
       const ok = await confirm(<>{c.name} has {jobs.length} past job(s). To keep service records, they will be marked <b>inactive</b> instead of deleted.</>, { title: 'Deactivate customer?', okText: 'Deactivate' })
-      if (ok) { store.update('customers', c.id, { status: 'inactive' }); toast(c.name + ' marked inactive', 'info') }
+      if (ok && (await store.send('/customers/' + c.id, { method: 'PATCH', body: { status: 'inactive' } }))) toast(c.name + ' marked inactive', 'info')
       return
     }
     const ok = await confirm(<><b>{c.name}</b> will be permanently removed.</>, { title: 'Delete customer?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('customers', c.id); toast(c.name + ' deleted', 'info') }
+    if (ok && (await store.send('/customers/' + c.id, { method: 'DELETE' }))) toast(c.name + ' deleted', 'info')
   }
 
   useOnce(() => { if (params.get('new')) add() })

@@ -5,10 +5,10 @@ import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 
-// Your profile.html — every "Save" button now saves to the shared data
+// Your profile.html — every "Save" button saves to MySQL through the backend
 export default function Profile() {
   usePageTitle('My Profile')
-  const { user } = useAuth()
+  const { user, updateUser } = useAuth()
   const store = useStore()
   const { toast } = useDialogs()
   const m = store.get('mechanics', user.id)
@@ -21,28 +21,28 @@ export default function Profile() {
   const setP = (k) => (e) => setPro({ ...pro, [k]: e.target.value })
   const setW = (k) => (e) => setPw({ ...pw, [k]: e.target.value })
 
-  function saveInfo() {
+  async function saveInfo() {
     if (!info.name.trim()) return toast('Name cannot be empty', 'error')
-    const clash = store.all('mechanics').some((x) => x.id !== m.id && (x.email || '').toLowerCase() === info.email.toLowerCase())
-    if (clash) return toast('Another mechanic already uses that email', 'error')
-    store.update('mechanics', m.id, { ...info, name: info.name.trim(), email: info.email.trim().toLowerCase() })
+    const body = { ...info, name: info.name.trim(), email: info.email.trim().toLowerCase() }
+    if (!(await store.send('/mechanics/' + m.id, { method: 'PATCH', body }))) return
+    updateUser({ name: body.name, email: body.email }) // so the sidebar shows the new name
     toast('Personal information saved')
   }
-  function savePro() {
-    store.update('mechanics', m.id, { specialization: pro.specialization, experience: Number(pro.experience) })
-    toast('Professional details updated')
+  async function savePro() {
+    const body = { specialization: pro.specialization, experience: Number(pro.experience) }
+    if (await store.send('/mechanics/' + m.id, { method: 'PATCH', body })) toast('Professional details updated')
   }
-  function savePassword() {
-    if (pw.current !== m.password) return toast('Current password is incorrect', 'error')
+  async function savePassword() {
     if (pw.next.length < 6) return toast('New password must be at least 6 characters', 'error')
     if (pw.next !== pw.confirm) return toast('New passwords do not match', 'error')
-    store.update('mechanics', m.id, { password: pw.next })
+    // The backend checks the current password (it is stored scrambled, so only it can check)
+    if (!(await store.send('/auth/change-password', { method: 'POST', body: { current: pw.current, next: pw.next } }))) return
     setPw({ current: '', next: '', confirm: '' })
     toast('Password updated')
   }
-  function setAvailability(e) {
+  async function setAvailability(e) {
     const status = e.target.value
-    store.update('mechanics', m.id, { status })
+    if (!(await store.send('/mechanics/' + m.id, { method: 'PATCH', body: { status } }))) return
     toast(status === 'leave' ? 'Marked as on leave — the admin can see this' : status === 'busy' ? 'Marked as busy' : 'Marked as available')
   }
 

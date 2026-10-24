@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, today, daysAgo } from '../../data/store.js'
+import { nu, today, daysAgo } from '../../data/store.js'
+import { api } from '../../api.js'
 import { findItem } from '../../data/catalog.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
@@ -11,20 +11,25 @@ export default function Reserve() {
   usePageTitle('Order Part')
   const [params] = useSearchParams()
   const item = findItem(params.get('item'))
-  const { user } = useAuth()
-  const store = useStore()
   const { toast } = useDialogs()
   const navigate = useNavigate()
   const [qty, setQty] = useState(1)
   const [pickup, setPickup] = useState(daysAgo(-1))
+  const [saving, setSaving] = useState(false)
   if (!item) return <Navigate to="/shop" replace />
 
-  function submit(e) {
+  // Saved in MySQL (POST /api/shop/reservations). The backend uses its own price list.
+  async function submit(e) {
     e.preventDefault()
-    const id = store.nextId('reservations', 'ORD-', 4)
-    store.add('reservations', { id, customerId: user.id, slug: item.slug, name: item.name, price: item.price, qty: Number(qty), pickup, status: 'ready', date: today() })
-    toast(`Order #${id} placed — collect it on the pickup date`)
-    navigate('/my-repairs')
+    setSaving(true)
+    try {
+      const { id } = await api('/shop/reservations', { method: 'POST', body: { slug: item.slug, qty: Number(qty), pickup } })
+      toast(`Order #${id} placed — collect it on the pickup date`)
+      navigate('/my-repairs')
+    } catch (err) {
+      setSaving(false)
+      toast(err.message, 'error')
+    }
   }
 
   return (
@@ -55,7 +60,7 @@ export default function Reserve() {
                   <span>Total</span><span>{nu(item.price * (Number(qty) || 0))}</span>
                 </div>
                 <p className="small text-muted"><i className="bi bi-shop me-1"></i>Pay at the workshop when you collect your order.</p>
-                <button className="btn btn-brand-primary w-100">Place Order <i className="bi bi-arrow-right"></i></button>
+                <button className="btn btn-brand-primary w-100" disabled={saving}>{saving ? 'Placing order…' : <>Place Order <i className="bi bi-arrow-right"></i></>}</button>
               </form>
             </div>
           </div>

@@ -43,6 +43,7 @@ import AdminDashboard from './pages/admin/Dashboard.jsx'
 import AdminRepairs from './pages/admin/Repairs.jsx'
 import AdminOrders from './pages/admin/Orders.jsx'
 import AdminShop from './pages/admin/Shop.jsx'
+import AdminCustomerOrders from './pages/admin/CustomerOrders.jsx'
 import AdminCustomers from './pages/admin/Customers.jsx'
 import AdminMechanics from './pages/admin/Mechanics.jsx'
 import AdminInventory from './pages/admin/Inventory.jsx'
@@ -96,6 +97,7 @@ export default function App() {
         <Route path="repairs" element={<AdminRepairs />} />
         <Route path="orders" element={<AdminOrders />} />
         <Route path="shop" element={<AdminShop />} />
+        <Route path="customer-orders" element={<AdminCustomerOrders />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="mechanics" element={<AdminMechanics />} />
         <Route path="inventory" element={<AdminInventory />} />

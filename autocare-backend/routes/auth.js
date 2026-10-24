@@ -2,6 +2,8 @@
 //   POST /api/auth/login    { email, password }
 //   POST /api/auth/signup   { name, email, phone, address, password }
 //   GET  /api/auth/me       (needs token)
+//   POST /api/auth/change-password   { current, next }   (needs token)
+//   POST /api/auth/forgot-password   { email, phone, password }
 const express = require('express')
 const bcrypt = require('bcryptjs')
 const db = require('../db')
@@ -89,6 +91,27 @@ router.post('/change-password', requireAuth, async (req, res) => {
     return res.status(401).json({ error: 'Current password is incorrect' })
   }
   await db.query(`UPDATE ${table} SET password_hash = ? WHERE id = ?`, [await bcrypt.hash(String(next), 10), req.user.id])
+  res.json({ ok: true })
+})
+
+// POST /api/auth/forgot-password   { email, phone, password }
+// There is no email server, so the account's phone number is the proof that it is really you.
+// Admin passwords can't be reset this way.
+router.post('/forgot-password', async (req, res) => {
+  const email = String(req.body?.email || '').trim().toLowerCase()
+  const phone = String(req.body?.phone || '').replace(/\D/g, '')
+  const password = String(req.body?.password || '')
+  if (!email || !phone || !password) return res.status(400).json({ error: 'Email, phone number and a new password are required' })
+  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' })
+
+  const account = await findAccount(email)
+  const samePhone = (p) => { const d = String(p || '').replace(/\D/g, ''); return d && (d === phone || d.endsWith(phone) || phone.endsWith(d)) && phone.length >= 8 }
+  // Same message whether the email or the phone was wrong — don't help guessers
+  if (!account || account.role === 'admin' || !samePhone(account.phone)) {
+    return res.status(400).json({ error: 'That email and phone number do not match an account' })
+  }
+  const table = ACCOUNT_TABLES.find((t) => t.role === account.role).table
+  await db.query(`UPDATE ${table} SET password_hash = ? WHERE id = ?`, [await bcrypt.hash(password, 10), account.id])
   res.json({ ok: true })
 })
 

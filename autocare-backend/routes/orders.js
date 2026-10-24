@@ -28,6 +28,7 @@ router.get('/', requireRole('admin', 'mechanic'), async (req, res) => {
 })
 
 // POST /api/orders   { part_id, qty, note? }
+//   admin may also pass requested_by (a mechanic id) to log a mechanic's request; it then waits for approval
 router.post('/', requireRole('admin', 'mechanic'), async (req, res) => {
   const { part_id, note } = req.body || {}
   const qty = Number(req.body?.qty)
@@ -37,11 +38,13 @@ router.post('/', requireRole('admin', 'mechanic'), async (req, res) => {
 
   const id = await nextId('purchase_orders', 'PO-', 4)
   const isAdmin = req.user.role === 'admin'
+  const by = isAdmin ? (req.body.requested_by || 'admin') : req.user.id
+  const status = by === 'admin' ? 'approved' : 'pending'
   await db.query(
     `INSERT INTO purchase_orders (id, part_id, supplier_id, requested_by, qty, status, order_date, note)
      VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?)`,
-    [id, part_id, parts[0].supplier_id, isAdmin ? 'admin' : req.user.id, qty, isAdmin ? 'approved' : 'pending', note || null])
-  res.status(201).json({ id, status: isAdmin ? 'approved' : 'pending' })
+    [id, part_id, parts[0].supplier_id, by, qty, status, note || null])
+  res.status(201).json({ id, status })
 })
 
 // Load an order and check it is in the expected status

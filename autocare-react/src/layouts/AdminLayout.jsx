@@ -2,24 +2,25 @@ import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
 import { useStore } from '../data/store.js'
-import { useDialogs } from '../ui/DialogContext.js'
 import useTheme from '../ui/useTheme.js'
 import Avatar from '../pages/admin/Avatar.jsx'
+import Loading from '../ui/Loading.jsx'
 
-// Admin panel layout — same sidebar as your admin interface, with live counts
+// Admin panel layout — same sidebar as your admin interface, with live counts.
+// All data comes from the backend (MySQL) through ApiStoreProvider.
 export default function AdminLayout() {
   useTheme('admin')
   const { user, logout } = useAuth()
   const store = useStore()
   const { Q, data } = store
-  const { confirm } = useDialogs()
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
 
   const pendingRepairs = data.repairs.filter((r) => r.status === 'pending').length
   const pendingPO = Q.pendingOrders().length
   const low = Q.lowStock().length
-  const shop = (data.listings || []).filter((l) => l.status === 'review').length + (data.reservations || []).filter((x) => x.status === 'ready').length
+  const custOrders = (data.reservations || []).filter((x) => x.status === 'ready').length
+  const shop = (data.listings || []).filter((l) => l.status === 'review').length
 
   const link = (to, icon, label, count, tone, end) => (
     <li>
@@ -29,12 +30,6 @@ export default function AdminLayout() {
       </NavLink>
     </li>
   )
-
-  async function resetDemo(e) {
-    e.preventDefault()
-    const ok = await confirm('All changes (bookings, edits, deletions) will be lost and the sample data restored.', { title: 'Reset demo data?', okText: 'Reset', danger: true })
-    if (ok) store.reset()
-  }
 
   return (
     <div className="a-shell">
@@ -49,6 +44,7 @@ export default function AdminLayout() {
             {link('/admin', 'bi-grid-1x2-fill', 'Dashboard', 0, '', true)}
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
             {link('/admin/orders', 'bi-bag-check', 'Purchase Orders', pendingPO)}
+            {link('/admin/customer-orders', 'bi-bag', 'Customer Orders', custOrders)}
             {link('/admin/shop', 'bi-shop', 'Shop & Listings', shop)}
           </ul>
         </div>
@@ -65,7 +61,6 @@ export default function AdminLayout() {
           <span className="a-nav-label">Other</span>
           <ul className="a-nav">
             <li><a href="/" target="_blank" rel="noreferrer"><i className="bi bi-globe2"></i> View website</a></li>
-            <li><a href="#" onClick={resetDemo}><i className="bi bi-arrow-counterclockwise"></i> Reset demo data</a></li>
           </ul>
         </div>
         <div className="a-user-foot">
@@ -82,7 +77,7 @@ export default function AdminLayout() {
 
       <main className="a-main">
         <button className="a-sidebar-toggle" onClick={() => setOpen(!open)} aria-label="Open menu"><i className="bi bi-list"></i></button>
-        <Outlet />
+        {store.ready ? <Outlet /> : <Loading error={store.error} onRetry={store.reload} />}
       </main>
     </div>
   )

@@ -19,25 +19,23 @@ export default function Login() {
   // Already logged in? Go straight to your own area.
   if (user) return <Navigate to={HOME_FOR[user.role]} replace />
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault()
     setError('')
     if (!email || !password) return setError('Please enter your email and password.')
 
     setLoading(true)
-    setTimeout(() => {
-      const res = login(email, password)
-      setLoading(false)
-      if (res.error) return setError(res.error)
-      const u = res.user
+    const res = await login(email, password) // asks the backend (POST /api/auth/login)
+    setLoading(false)
+    if (res.error) return setError(res.error)
+    const u = res.user
 
-      // Go back to the page they tried to open, if their role is allowed there
-      const from = location.state?.from
-      const allowed = from && (u.role === 'customer'
-        ? !from.startsWith('/admin') && !from.startsWith('/mechanic')
-        : from.startsWith(HOME_FOR[u.role]))
-      navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
-    }, 500)
+    // Go back to the page they tried to open, if their role is allowed there
+    const from = location.state?.from
+    const allowed = from && (u.role === 'customer'
+      ? !from.startsWith('/admin') && !from.startsWith('/mechanic')
+      : from.startsWith(HOME_FOR[u.role]))
+    navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
   }
 
   function fill(u) {

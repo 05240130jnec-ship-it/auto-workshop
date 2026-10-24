@@ -23,8 +23,8 @@ export default function MechanicRepairs() {
   const list = mine.filter((r) => tab === 'all' || r.status === tab)
     .sort((a, b) => order[a.status] - order[b.status] || b.date.localeCompare(a.date))
 
-  function start(r) {
-    store.update('repairs', r.id, { status: 'progress', startedOn: r.startedOn || new Date().toISOString().slice(0, 10) })
+  async function start(r) {
+    if (!(await store.send('/repairs/' + r.id, { method: 'PATCH', body: { status: 'progress' } }))) return
     toast('Started work on ' + r.vehicle)
     navigate('/mechanic/repairs/' + r.id)
   }

@@ -26,17 +26,16 @@ export default function AdminSuppliers() {
     { name: 'email', label: 'Email', type: 'email' },
     { name: 'address', label: 'Address', required: true, col: 12, placeholder: 'e.g. Norzin Lam, Thimphu' },
   ]
+  const supplierBody = (v) => ({ name: v.name, person: v.person, phone: v.phone, email: v.email || '', address: v.address })
   async function add() {
     const v = await form({ title: 'Add supplier', fields, submitText: 'Add supplier' })
     if (!v) return
-    store.add('suppliers', { ...v, id: store.nextId('suppliers', 'S-', 2) })
-    toast(<><b>{v.name}</b> added</>)
+    if (await store.send('/suppliers', { method: 'POST', body: supplierBody(v) })) toast(<><b>{v.name}</b> added</>)
   }
   async function edit(s) {
     const v = await form({ title: 'Edit supplier', fields, values: s, submitText: 'Save changes' })
     if (!v) return
-    store.update('suppliers', s.id, v)
-    toast('Supplier updated')
+    if (await store.send('/suppliers/' + s.id, { method: 'PATCH', body: supplierBody(v) })) toast('Supplier updated')
   }
   function show(s) {
     const parts = partsOf(s.id), orders = ordersOf(s.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -69,7 +68,7 @@ export default function AdminSuppliers() {
     const parts = partsOf(s.id)
     if (parts.length) return toast(`${s.name} still supplies ${parts.length} product(s). Move them to another supplier first.`, 'warn')
     const ok = await confirm(<><b>{s.name}</b> will be removed.</>, { title: 'Delete supplier?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('suppliers', s.id); toast(s.name + ' deleted', 'info') }
+    if (ok && (await store.send('/suppliers/' + s.id, { method: 'DELETE' }))) toast(s.name + ' deleted', 'info')
   }
 
   useOnce(() => { if (params.get('new')) add() })

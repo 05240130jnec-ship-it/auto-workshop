@@ -14,21 +14,22 @@ import './styles/site-extra.css'
 import './styles/mechanic.css'
 import './index.css'
 
-import StoreProvider from './data/StoreProvider.jsx'
 import AuthProvider from './auth/AuthProvider.jsx'
+import ApiStoreProvider from './data/ApiStoreProvider.jsx'
 import DialogProvider from './ui/DialogProvider.jsx'
 import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <StoreProvider>
-        <AuthProvider>
-          <DialogProvider>
+      <AuthProvider>
+        <DialogProvider>
+          {/* admin + mechanic data, loaded from the backend (MySQL) */}
+          <ApiStoreProvider>
             <App />
-          </DialogProvider>
-        </AuthProvider>
-      </StoreProvider>
+          </ApiStoreProvider>
+        </DialogProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )

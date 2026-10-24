@@ -26,26 +26,20 @@ export default function AdminOrders() {
   const spent = os.filter((o) => o.status === 'received' && o.date.slice(0, 7) === today().slice(0, 7))
 
   async function approve(o) {
-    store.update('orders', o.id, { status: 'approved' })
+    if (!(await store.send('/orders/' + o.id + '/approve', { method: 'PATCH' }))) return
     toast(`${o.id} approved · ${nu(Q.poCost(o))} order sent to ${Q.supplierName(o.supplierId)}`)
   }
   async function reject(o) {
     const v = await form({ title: 'Reject ' + o.id, size: 'sm', submitText: 'Reject order', fields: [{ name: 'note', label: 'Reason (shown to the mechanic)', type: 'textarea', col: 12, required: true }] })
     if (!v) return
-    store.update('orders', o.id, { status: 'rejected', note: v.note })
-    toast(o.id + ' rejected', 'info')
+    if (await store.send('/orders/' + o.id + '/reject', { method: 'PATCH', body: { note: v.note } })) toast(o.id + ' rejected', 'info')
   }
   async function receive(o) {
     const p = Q.part(o.partId) || {}
     const ok = await confirm(<>Add <b>{o.qty} × {p.name}</b> to inventory? Stock will go from {p.stock} to {p.stock + o.qty}.</>, { title: 'Receive delivery', okText: 'Add to stock' })
     if (!ok) return
-    store.batch((d) => {
-      const inv = d.inventory.find((x) => x.id === o.partId)
-      if (inv) inv.stock += o.qty
-      const ord = d.orders.find((x) => x.id === o.id)
-      ord.status = 'received'; ord.date = today()
-    })
-    toast(`${o.qty} × ${p.name} added to stock`)
+    // The backend adds the stock AND marks the order received in one transaction
+    if (await store.send('/orders/' + o.id + '/receive', { method: 'PATCH' })) toast(`${o.qty} × ${p.name} added to stock`)
   }
   function show(o) {
     const p = Q.part(o.partId) || {}, s = Q.supplier(o.supplierId) || {}
@@ -77,11 +71,10 @@ export default function AdminOrders() {
       ],
     })
     if (!v) return
-    const p = Q.part(v.partId)
-    const id = store.nextId('orders', 'PO-', 4)
-    store.add('orders', { id, partId: v.partId, qty: v.qty, supplierId: p.supplierId, requestedBy: v.requestedBy, status: v.requestedBy === 'admin' ? 'approved' : 'pending', date: today(), note: v.note })
+    const res = await store.send('/orders', { method: 'POST', body: { part_id: v.partId, qty: Number(v.qty), requested_by: v.requestedBy || 'admin', note: v.note } })
+    if (!res) return
     setFilter('all')
-    toast(<>Order <b>{id}</b> created</>)
+    toast(<>Order <b>{res.id}</b> created</>)
   }
 
   return (

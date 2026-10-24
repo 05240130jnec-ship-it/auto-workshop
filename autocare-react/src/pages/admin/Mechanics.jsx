@@ -34,15 +34,15 @@ export default function AdminMechanics() {
   async function add() {
     const v = await form({ title: 'Add mechanic', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'mech123', help: 'They log in at /login with their email and this password' }], submitText: 'Add mechanic', validate: emailCheck() })
     if (!v) return
-    store.batch((d) => { d.mechanics.push({ ...v, email: v.email.toLowerCase(), id: store.nextId('mechanics', 'M-', 3) }) })
-    toast(<><b>{v.name}</b> joined the team</>)
+    const res = await store.send('/mechanics', { method: 'POST', body: { ...v, email: v.email.toLowerCase() } })
+    if (res) toast(<><b>{v.name}</b> joined the team as #{res.id}</>)
   }
   async function edit(m) {
     const v = await form({ title: 'Edit ' + m.name, fields, values: m, submitText: 'Save', validate: emailCheck(m.id) })
     if (!v) return
     if (v.status === 'leave' && m.status !== 'leave' && Q.activeJobs(m.id)) { toast('Use the Leave button so active jobs get handed back', 'warn'); v.status = m.status }
-    store.update('mechanics', m.id, { ...v, email: v.email.toLowerCase() })
-    toast('Saved')
+    const body = { name: v.name, phone: v.phone, email: v.email.toLowerCase(), specialization: v.specialization, experience: v.experience, status: v.status, joined: v.joined }
+    if (await store.send('/mechanics/' + m.id, { method: 'PATCH', body })) toast('Saved')
   }
   async function toggleLeave(m) {
     const jobs = Q.activeJobs(m.id)
@@ -50,16 +50,14 @@ export default function AdminMechanics() {
       const ok = await confirm(<>{m.name} still has {jobs} active job(s). Those jobs will go back to <b>Pending</b> so you can reassign them.</>, { title: 'Put on leave?', okText: 'Put on leave' })
       if (!ok) return
     }
-    store.batch((d) => {
-      d.repairs.forEach((r) => { if (m.status !== 'leave' && r.mechanicId === m.id && (r.status === 'pending' || r.status === 'progress')) { r.mechanicId = null; r.status = 'pending' } })
-      d.mechanics.find((x) => x.id === m.id).status = m.status === 'leave' ? 'active' : 'leave'
-    })
-    toast(m.name + (m.status === 'leave' ? ' is back at work' : ' is now on leave'), 'info')
+    // Going on leave: the backend hands their open jobs back to Pending in the same step
+    const res = await store.send('/mechanics/' + m.id, { method: 'PATCH', body: { status: m.status === 'leave' ? 'active' : 'leave' } })
+    if (res) toast(m.name + (m.status === 'leave' ? ' is back at work' : ' is now on leave'), 'info')
   }
   async function del(m) {
     if (Q.activeJobs(m.id)) return toast(`Reassign ${m.name}'s ${Q.activeJobs(m.id)} active job(s) first`, 'warn')
     const ok = await confirm(<><b>{m.name}</b> will be removed from the team. Their completed jobs stay in the records.</>, { title: 'Remove mechanic?', okText: 'Remove', danger: true })
-    if (ok) { store.remove('mechanics', m.id); toast(m.name + ' removed', 'info') }
+    if (ok && (await store.send('/mechanics/' + m.id, { method: 'DELETE' }))) toast(m.name + ' removed', 'info')
   }
   function jobs(m) {
     const list = store.data.repairs.filter((r) => r.mechanicId === m.id).sort((a, b) => b.date.localeCompare(a.date))

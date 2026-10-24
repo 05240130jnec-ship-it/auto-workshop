@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useStore, nu, nuShort, today, CATEGORIES } from '../../data/store.js'
+import { useStore, nu, nuShort, CATEGORIES } from '../../data/store.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -32,19 +32,20 @@ export default function AdminInventory() {
     { name: 'reorder', label: 'Reorder level', type: 'number', min: 0, required: true, col: 4, help: 'Alert when stock falls to this' },
     { name: 'price', label: 'Unit price (Nu.)', type: 'number', min: 0, step: 10, required: true, col: 4 },
   ]
+  // page field names → backend column names
+  const partBody = (v) => ({ name: v.name, sku: v.sku.toUpperCase(), category: v.category, supplier_id: v.supplierId, stock: Number(v.stock), reorder_level: Number(v.reorder), price: Number(v.price) })
   const skuCheck = (id) => (v) => store.all('inventory').some((p) => p.id !== id && p.sku.toLowerCase() === v.sku.toLowerCase()) ? 'Another part already uses SKU ' + v.sku : null
 
   async function add() {
     const v = await form({ title: 'Add part', fields: fields(), submitText: 'Add part', validate: skuCheck() })
     if (!v) return
-    store.add('inventory', { ...v, sku: v.sku.toUpperCase(), id: store.nextId('inventory', 'P-', 3) })
-    toast(<><b>{v.name}</b> added to inventory</>)
+    const res = await store.send('/inventory', { method: 'POST', body: partBody(v) })
+    if (res) toast(<><b>{v.name}</b> added to inventory</>)
   }
   async function edit(p) {
     const v = await form({ title: 'Edit part', fields: fields(), values: p, submitText: 'Save changes', validate: skuCheck(p.id) })
     if (!v) return
-    store.update('inventory', p.id, { ...v, sku: v.sku.toUpperCase() })
-    toast('Part updated')
+    if (await store.send('/inventory/' + p.id, { method: 'PATCH', body: partBody(v) })) toast('Part updated')
   }
   async function reorder(p) {
     const v = await form({
@@ -55,17 +56,16 @@ export default function AdminInventory() {
       ],
     })
     if (!v) return
-    const id = store.nextId('orders', 'PO-', 4)
-    store.add('orders', { id, partId: p.id, qty: v.qty, supplierId: p.supplierId, requestedBy: 'admin', status: 'approved', date: today(), note: v.note })
-    toast(<>Purchase order <b>{id}</b> sent to {Q.supplierName(p.supplierId)}</>)
+    const res = await store.send('/orders', { method: 'POST', body: { part_id: p.id, qty: Number(v.qty), note: v.note } })
+    if (res) toast(<>Purchase order <b>{res.id}</b> sent to {Q.supplierName(p.supplierId)}</>)
   }
   async function del(p) {
     const ok = await confirm(<><b>{p.name}</b> ({p.sku}) will be removed from inventory.</>, { title: 'Delete part?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('inventory', p.id); toast(p.name + ' deleted', 'info') }
+    if (ok && (await store.send('/inventory/' + p.id, { method: 'DELETE' }))) toast(p.name + ' deleted', 'info')
   }
-  function adjust(p, d) {
+  async function adjust(p, d) {
     if (p.stock + d < 0) return
-    store.update('inventory', p.id, { stock: p.stock + d })
+    if (!(await store.send('/inventory/' + p.id + '/adjust', { method: 'PATCH', body: { change: d } }))) return
     if (d < 0 && p.stock + d === 0) toast(p.name + ' is now out of stock', 'error')
     else if (d < 0 && p.stock + d === p.reorder) toast(p.name + ' reached its reorder level', 'warn')
   }

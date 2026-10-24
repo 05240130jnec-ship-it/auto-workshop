@@ -1,33 +1,33 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, today } from '../../data/store.js'
+import { nu } from '../../data/store.js'
 import { BOOKABLE, PICKUP_FEE, TIME_SLOTS, MAX_PER_SLOT } from '../../data/services.js'
+import { api } from '../../api.js'
+import useApi from '../../useApi.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
 
-// Booking form — same layout as your booking.html, but it really saves the booking
+// Booking form — same layout as your booking.html. The booking is saved in MySQL (POST /api/repairs).
 export default function Booking() {
   usePageTitle('Book a Service')
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const store = useStore()
 
   const [slug, setSlug] = useState(BOOKABLE.some((b) => b.slug === params.get('service')) ? params.get('service') : BOOKABLE[1].slug)
   const svc = BOOKABLE.find((b) => b.slug === slug)
 
-  // Vehicles this customer brought before (to pick quickly)
+  // Vehicles this customer brought before (to pick quickly) — from their repairs in MySQL
+  const mine = useApi('/repairs')
   const myVehicles = useMemo(() => {
     const m = {}
-    store.data.repairs.filter((r) => r.customerId === user.id).forEach((r) => { m[r.plate] = r.vehicle })
+    ;(mine.data || []).forEach((r) => { m[r.plate] = r.vehicle })
     return Object.entries(m).map(([plate, vehicle]) => ({ plate, vehicle }))
-  }, [store.data.repairs, user.id])
+  }, [mine.data])
 
-  const [vehicle, setVehicle] = useState(myVehicles[0]?.vehicle || '')
-  const [plate, setPlate] = useState(myVehicles[0]?.plate || '')
+  const [vehicle, setVehicle] = useState('')
+  const [plate, setPlate] = useState('')
   const [problem, setProblem] = useState('')
   const [photos, setPhotos] = useState([])
   const [delivery, setDelivery] = useState('dropoff')
@@ -49,24 +49,33 @@ export default function Booking() {
   const canPrev = month > new Date(now.getFullYear(), now.getMonth(), 1)
   const canNext = month < new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  // A slot is full when the workshop already has MAX_PER_SLOT bookings at that time
-  const taken = (t) => store.data.repairs.filter((r) => r.appointment && r.appointment.date === date && r.appointment.time === t && r.status !== 'cancelled').length >= MAX_PER_SLOT
+  // How many bookings each time slot already has on the chosen day (asked from the backend)
+  const slots = useApi('/repairs/slots?date=' + date)
+  const taken = (t) => ((slots.data || {})[t] || 0) >= MAX_PER_SLOT
   const total = svc.price + (delivery === 'pickup' ? PICKUP_FEE : 0)
 
-  function submit() {
+  async function submit() {
     setError('')
     if (!vehicle.trim() || !plate.trim()) return setError('Please enter your vehicle and plate number.')
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
-    if (taken(slot)) return setError('That time slot was just taken. Please choose another one.')
+    if (taken(slot)) return setError('That time slot is full. Please choose another one.')
     setSaving(true)
-    const id = store.nextId('repairs', 'ACP-', 4)
-    store.add('repairs', {
-      id, customerId: user.id, vehicle: vehicle.trim(), plate: plate.trim().toUpperCase(), service: svc.service,
-      mechanicId: null, status: 'pending', priority: 'normal', date: today(), due: date, cost: total,
-      notes: problem.trim(), parts: [], services: [],
-      appointment: { date, time: slot, delivery, photos: photos.map((f) => f.name) },
-    })
-    navigate('/confirm/' + id)
+    try {
+      const photoNote = photos.length ? `\nPhotos: ${photos.map((f) => f.name).join(', ')}` : ''
+      const { id } = await api('/repairs', {
+        method: 'POST',
+        body: {
+          vehicle: vehicle.trim(), plate: plate.trim(), service: svc.service,
+          due: date, cost: total, notes: problem.trim() + photoNote,
+          appt_date: date, appt_time: slot, delivery,
+        },
+      })
+      navigate('/confirm/' + id)
+    } catch (err) {
+      setSaving(false)
+      setError(err.message)
+      slots.reload() // maybe someone just took the slot — refresh the list
+    }
   }
 
   return (
@@ -207,7 +216,7 @@ export default function Booking() {
               {error && <div className="alert alert-danger py-2 small">{error}</div>}
 
               <button type="button" className="btn btn-brand-primary w-100 mb-2" onClick={submit} disabled={saving}>
-                Confirm Booking <i className="bi bi-arrow-right"></i>
+                {saving ? <><span className="spinner-border spinner-border-sm me-1"></span> Saving…</> : <>Confirm Booking <i className="bi bi-arrow-right"></i></>}
               </button>
               <Link to="/services" className="d-block text-center small text-muted">
                 <i className="bi bi-arrow-left"></i> Back to Services
