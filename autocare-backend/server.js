@@ -32,6 +32,7 @@ app.get('/api/db-test', async (req, res) => {
 });
 // 6. Login / signup routes → /api/auth/...
 app.use('/api/auth', require('./routes/auth'));
+app.use('/api/repairs', require('./routes/repairs'));
 // 7. Start listening
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
