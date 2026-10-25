@@ -201,4 +201,252 @@ router.patch('/customers/:id', async (req, res) => {
   const [rows] = await db.query(`SELECT ${CUSTOMER_FIELDS} FROM customers WHERE id = ?`, [req.params.id]);
   res.json(rows[0]);
 });
+// ---------- INVENTORY ----------
+
+// GET /api/admin/inventory          -> all parts
+// GET /api/admin/inventory?low=1    -> only parts at or below reorder level
+router.get('/inventory', async (req, res) => {
+  let sql = `
+    SELECT i.*, s.name AS supplierName, (i.stock <= i.reorder) AS lowStock
+    FROM inventory i
+    LEFT JOIN suppliers s ON s.id = i.supplierId`;
+  if (req.query.low) sql += ' WHERE i.stock <= i.reorder';
+  const [rows] = await db.query(sql + ' ORDER BY i.id');
+  res.json(rows);
+});
+
+// POST /api/admin/inventory  -> add a part
+router.post('/inventory', async (req, res) => {
+  const { sku, name, category, stock, reorder, price, supplierId } = req.body || {};
+  if (!sku || !name || price === undefined) {
+    return res.status(400).json({ error: 'SKU, name and price are required.' });
+  }
+
+  const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS last FROM inventory');
+  const id = 'P-' + ((last[0].last || 100) + 1);   // P-115
+
+  try {
+    await db.query(
+      `INSERT INTO inventory (id, sku, name, category, stock, reorder, price, supplierId)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, sku, name, category || 'Other', Number(stock) || 0, Number(reorder) || 5, price, supplierId || null]
+    );
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This SKU already exists.' });
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ error: 'Supplier not found.' });
+    throw err;
+  }
+  res.status(201).json({ id });
+});
+
+// PATCH /api/admin/inventory/P-101  -> edit price, stock, reorder level...
+router.patch('/inventory/:id', async (req, res) => {
+  const ok = await updateRow('inventory', req.params.id, req.body || {},
+    ['name', 'category', 'stock', 'reorder', 'price', 'supplierId']);
+  if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
+  if (!ok) return res.status(404).json({ error: 'Part not found.' });
+
+  const [rows] = await db.query('SELECT * FROM inventory WHERE id = ?', [req.params.id]);
+  res.json(rows[0]);
+});
+
+// DELETE /api/admin/inventory/P-115
+router.delete('/inventory/:id', async (req, res) => {
+  try {
+    const [result] = await db.query('DELETE FROM inventory WHERE id = ?', [req.params.id]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Part not found.' });
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({ error: 'This part is used in orders, so it cannot be deleted.' });
+    }
+    throw err;
+  }
+  res.json({ deleted: req.params.id });
+});
+
+// ---------- SUPPLIERS ----------
+
+// GET /api/admin/suppliers  -> all suppliers + how many parts each supplies
+router.get('/suppliers', async (req, res) => {
+  const [rows] = await db.query(`
+    SELECT s.*, (SELECT COUNT(*) FROM inventory i WHERE i.supplierId = s.id) AS partCount
+    FROM suppliers s ORDER BY s.id`);
+  res.json(rows);
+});
+
+// POST /api/admin/suppliers  -> add a supplier
+router.post('/suppliers', async (req, res) => {
+  const { name, person, phone, email, address } = req.body || {};
+  if (!name || !phone) return res.status(400).json({ error: 'Name and phone are required.' });
+
+  const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS last FROM suppliers');
+  const id = 'S-' + String((last[0].last || 0) + 1).padStart(2, '0');   // S-06
+
+  await db.query(
+    'INSERT INTO suppliers (id, name, person, phone, email, address) VALUES (?, ?, ?, ?, ?, ?)',
+    [id, name, person || '', phone, email || '', address || '']
+  );
+  res.status(201).json({ id });
+});
+
+// PATCH /api/admin/suppliers/S-06
+router.patch('/suppliers/:id', async (req, res) => {
+  const ok = await updateRow('suppliers', req.params.id, req.body || {},
+    ['name', 'person', 'phone', 'email', 'address']);
+  if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
+  if (!ok) return res.status(404).json({ error: 'Supplier not found.' });
+
+  const [rows] = await db.query('SELECT * FROM suppliers WHERE id = ?', [req.params.id]);
+  res.json(rows[0]);
+});
+
+// DELETE /api/admin/suppliers/S-06
+router.delete('/suppliers/:id', async (req, res) => {
+  try {
+    const [result] = await db.query('DELETE FROM suppliers WHERE id = ?', [req.params.id]);
+    if (result.affectedRows === 0) return res.status(404).json({ error: 'Supplier not found.' });
+  } catch (err) {
+    if (err.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({ error: 'This supplier has orders, so it cannot be deleted.' });
+    }
+    throw err;
+  }
+  res.json({ deleted: req.params.id });
+});
+
+// ---------- PURCHASE ORDERS ----------
+
+const SELECT_ORDER = `
+  SELECT o.*, i.name AS partName, i.stock AS currentStock, s.name AS supplierName
+  FROM orders o
+  LEFT JOIN inventory i ON i.id = o.partId
+  LEFT JOIN suppliers s ON s.id = o.supplierId`;
+
+// GET /api/admin/orders   (?status=pending works too)
+router.get('/orders', async (req, res) => {
+  const { status } = req.query;
+  if (status) {
+    const [rows] = await db.query(SELECT_ORDER + ' WHERE o.status = ? ORDER BY o.date DESC', [status]);
+    return res.json(rows);
+  }
+  const [rows] = await db.query(SELECT_ORDER + ' ORDER BY o.date DESC');
+  res.json(rows);
+});
+
+// POST /api/admin/orders  -> order more of a part from its supplier
+router.post('/orders', async (req, res) => {
+  const { partId, qty, supplierId, note } = req.body || {};
+  if (!partId || !qty) return res.status(400).json({ error: 'Part and quantity are required.' });
+
+  const [parts] = await db.query('SELECT * FROM inventory WHERE id = ?', [partId]);
+  if (parts.length === 0) return res.status(404).json({ error: 'Part not found.' });
+
+  const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 4) AS UNSIGNED)) AS last FROM orders');
+  const id = 'PO-' + ((last[0].last || 2210) + 1);   // PO-2217
+
+  await db.query(
+    `INSERT INTO orders (id, partId, qty, supplierId, requestedBy, status, date, note)
+     VALUES (?, ?, ?, ?, ?, 'pending', CURDATE(), ?)`,
+    [id, partId, Number(qty), supplierId || parts[0].supplierId, req.user.id, note || '']
+  );
+  res.status(201).json({ id });
+});
+
+// PATCH /api/admin/orders/PO-2217  -> approve, reject, or mark received
+// pending -> approved or rejected,  approved -> received (stock goes up)
+router.patch('/orders/:id', async (req, res) => {
+  const { status } = req.body || {};
+  const [rows] = await db.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'Order not found.' });
+  const order = rows[0];
+
+  const allowedNext = {
+    pending: ['approved', 'rejected'],
+    approved: ['received'],
+    received: [],
+    rejected: []
+  };
+  if (!allowedNext[order.status].includes(status)) {
+    return res.status(400).json({ error: `A ${order.status} order cannot be changed to ${status}.` });
+  }
+
+  await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, order.id]);
+  if (status === 'received') {
+    await db.query('UPDATE inventory SET stock = stock + ? WHERE id = ?', [order.qty, order.partId]);
+  }
+
+  const [updated] = await db.query(SELECT_ORDER + ' WHERE o.id = ?', [order.id]);
+  res.json(updated[0]);
+});
+// ---------- SHOP: LISTINGS (customers selling parts) ----------
+
+// GET /api/admin/shop/listings              -> all listings
+// GET /api/admin/shop/listings?status=review -> only ones waiting for a decision
+router.get('/shop/listings', async (req, res) => {
+  let sql = `
+    SELECT l.*, c.name AS customerName, c.phone AS customerPhone
+    FROM listings l
+    JOIN customers c ON c.id = l.customerId`;
+  const params = [];
+  if (req.query.status) {
+    sql += ' WHERE l.status = ?';
+    params.push(req.query.status);
+  }
+  const [rows] = await db.query(sql + ' ORDER BY l.date DESC', params);
+  res.json(rows);
+});
+
+// PATCH /api/admin/shop/listings/L-101  -> approve or reject (only while in review)
+router.patch('/shop/listings/:id', async (req, res) => {
+  const { status } = req.body || {};
+  if (!['approved', 'rejected'].includes(status)) {
+    return res.status(400).json({ error: 'Status must be approved or rejected.' });
+  }
+  const [rows] = await db.query('SELECT status FROM listings WHERE id = ?', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'Listing not found.' });
+  if (rows[0].status !== 'review') {
+    return res.status(400).json({ error: `This listing is already ${rows[0].status}.` });
+  }
+
+  await db.query('UPDATE listings SET status = ? WHERE id = ?', [status, req.params.id]);
+  res.json({ id: req.params.id, status });
+});
+
+// ---------- SHOP: RESERVATIONS (customers reserving workshop parts) ----------
+
+// GET /api/admin/shop/reservations              -> all reservations
+// GET /api/admin/shop/reservations?status=ready -> waiting for pickup
+router.get('/shop/reservations', async (req, res) => {
+  let sql = `
+    SELECT r.*, c.name AS customerName, c.phone AS customerPhone
+    FROM reservations r
+    JOIN customers c ON c.id = r.customerId`;
+  const params = [];
+  if (req.query.status) {
+    sql += ' WHERE r.status = ?';
+    params.push(req.query.status);
+  }
+  const [rows] = await db.query(sql + ' ORDER BY r.pickup', params);
+  res.json(rows);
+});
+
+// PATCH /api/admin/shop/reservations/R-1002  -> collected, or cancelled (stock goes back)
+router.patch('/shop/reservations/:id', async (req, res) => {
+  const { status } = req.body || {};
+  if (!['collected', 'cancelled'].includes(status)) {
+    return res.status(400).json({ error: 'Status must be collected or cancelled.' });
+  }
+  const [rows] = await db.query('SELECT * FROM reservations WHERE id = ?', [req.params.id]);
+  if (rows.length === 0) return res.status(404).json({ error: 'Reservation not found.' });
+  const reservation = rows[0];
+  if (reservation.status !== 'ready') {
+    return res.status(400).json({ error: `This reservation is already ${reservation.status}.` });
+  }
+
+  await db.query('UPDATE reservations SET status = ? WHERE id = ?', [status, reservation.id]);
+  if (status === 'cancelled') {
+    await db.query('UPDATE inventory SET stock = stock + ? WHERE sku = ?', [reservation.qty, reservation.slug]);
+  }
+  res.json({ id: reservation.id, status });
+});
 module.exports = router;
