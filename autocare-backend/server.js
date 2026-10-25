@@ -35,6 +35,7 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/repairs', require('./routes/repairs'));
 app.use('/api/shop', require('./routes/shop'));
 app.use('/api/admin', require('./routes/admin'));
+app.use('/api/mechanic', require('./routes/mechanic'));
 // 7. Start listening
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
