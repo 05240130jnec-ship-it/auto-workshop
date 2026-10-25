@@ -36,6 +36,19 @@ app.use('/api/repairs', require('./routes/repairs'));
 app.use('/api/shop', require('./routes/shop'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/mechanic', require('./routes/mechanic'));
+// Wrong URL -> JSON 404 instead of "Cannot GET ..."
+app.use((req, res) => {
+  res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
+});
+
+// Any crash -> JSON 500 instead of an HTML error page
+app.use((err, req, res, next) => {
+  if (err.type === 'entity.parse.failed') {
+    return res.status(400).json({ error: 'The request body is not valid JSON.' });
+  }
+  console.error(err);
+  res.status(500).json({ error: 'Something went wrong on the server.' });
+});
 // 7. Start listening
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
