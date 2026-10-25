@@ -53,7 +53,29 @@ async function seed() {
     ['P-111', 'SAF-FEX-2KG', 'Fire Extinguisher 2kg', 'Safety', 8, 4, 1500, 'S-05'],
     ['P-112', 'SAF-FAK-01', 'First Aid Kit', 'Safety', 4, 5, 900, 'S-05'],
     ['P-113', 'ACC-JMP-01', 'Jumper Cables', 'Accessories', 7, 3, 1200, 'S-03'],
-    ['P-114', 'ACC-INF-01', 'Tire Inflator', 'Accessories', 6, 3, 2800, 'S-03']
+    ['P-114', 'ACC-INF-01', 'Tire Inflator', 'Accessories', 6, 3, 2800, 'S-03'],
+        // Shop products (sku = the shop page "slug", so the website can find them)
+    ['P-201', 'engine-oil', 'Engine Oil', 'Auto Parts', 20, 5, 1000, 'S-01'],
+    ['P-202', 'brake-pads', 'Brake Pads', 'Auto Parts', 20, 5, 1800, 'S-01'],
+    ['P-203', 'lubricants', 'Lubricants', 'Auto Parts', 20, 5, 1000, 'S-01'],
+    ['P-204', 'battery', 'Batteries', 'Auto Parts', 20, 5, 4500, 'S-01'],
+    ['P-205', 'tires', 'Tires', 'Auto Parts', 20, 5, 3500, 'S-01'],
+    ['P-206', 'spark-plugs', 'Spark Plugs', 'Auto Parts', 20, 5, 350, 'S-01'],
+    ['P-207', 'seat-covers', 'Seat Covers', 'Car Accessories', 20, 5, 3500, 'S-03'],
+    ['P-208', 'phone-holder', 'Phone Holders', 'Car Accessories', 20, 5, 800, 'S-03'],
+    ['P-209', 'dash-camera', 'Dash Cameras', 'Car Accessories', 20, 5, 4500, 'S-03'],
+    ['P-210', 'car-perfume', 'Car Perfumes', 'Car Accessories', 20, 5, 500, 'S-03'],
+    ['P-211', 'speakers', 'Speakers', 'Car Accessories', 20, 5, 2800, 'S-03'],
+    ['P-212', 'alloy-wheels', 'Alloy Wheels', 'Car Accessories', 20, 5, 8500, 'S-03'],
+    ['P-213', 'car-shampoo', 'Car Shampoo', 'Cleaning Products', 20, 5, 350, 'S-04'],
+    ['P-214', 'wax-polish', 'Wax / Polish', 'Cleaning Products', 20, 5, 600, 'S-04'],
+    ['P-215', 'tire-cleaner', 'Tire Cleaner', 'Cleaning Products', 20, 5, 400, 'S-04'],
+    ['P-216', 'interior-spray', 'Interior Spray', 'Cleaning Products', 20, 5, 450, 'S-04'],
+    ['P-217', 'microfiber', 'Microfiber Cloth', 'Cleaning Products', 20, 5, 150, 'S-04'],
+    ['P-218', 'jumper-cables', 'Jumper Cables', 'Emergency & Safety', 20, 5, 900, 'S-05'],
+    ['P-219', 'tire-inflator', 'Tire Inflator', 'Emergency & Safety', 20, 5, 2200, 'S-05'],
+    ['P-220', 'tool-kit', 'Tool Kits', 'Emergency & Safety', 20, 5, 4000, 'S-05'],
+    ['P-221', 'first-aid', 'First Aid Kit', 'Emergency & Safety', 20, 5, 1200, 'S-05']
   ];
   for (const p of parts)
     await db.query('INSERT INTO inventory (id, sku, name, category, stock, reorder, price, supplierId) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', p);

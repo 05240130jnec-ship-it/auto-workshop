@@ -1,17 +1,17 @@
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, fmtDate } from '../../data/store.js'
+import { nu, fmtDate } from '../../data/store.js'
 import usePageTitle from '../../ui/usePageTitle.js'
+import useApi from '../../useApi.js'
+import Loading from '../../ui/Loading.jsx'
 
+// Shown after booking — loads the new booking from GET /api/repairs/:id
 export default function Confirm() {
   usePageTitle('Booking Confirmed')
   const { id } = useParams()
-  const { user } = useAuth()
-  const { get, Q } = useStore()
-  const r = get('repairs', id)
-  if (!r || r.customerId !== user.id) return <Navigate to="/my-repairs" replace />
-  const mech = Q.mechanic(r.mechanicId)
-  const a = r.appointment || {}
+  const { data: r, loading, error } = useApi('/repairs/' + id)
+
+  if (loading) return <section className="acp-section"><div className="container"><Loading /></div></section>
+  if (error) return <Navigate to="/my-repairs" replace />   // not found, or not this customer's booking
 
   return (
     <section className="acp-section">
@@ -42,13 +42,13 @@ export default function Confirm() {
                   </div>
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Assigned Specialist</div>
-                    <strong>{mech ? mech.name : 'Being assigned'}</strong>
-                    <div className="small text-muted">{mech ? mech.specialization : 'Usually within a few hours'}</div>
+                    <strong>{r.mechanicName || 'Being assigned'}</strong>
+                    <div className="small text-muted">{r.mechanicName ? '' : 'Usually within a few hours'}</div>
                   </div>
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Appointment</div>
-                    <strong>{a.date ? fmtDate(a.date) : fmtDate(r.due)}</strong>
-                    <div className="small text-muted">{a.time} · {a.delivery === 'pickup' ? 'Home pickup' : 'Drop-off'}</div>
+                    <strong>{fmtDate(r.apptDate || r.due)}</strong>
+                    <div className="small text-muted">{r.apptTime} · {r.delivery === 'pickup' ? 'Home pickup' : 'Drop-off'}</div>
                   </div>
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Vehicle · Estimate</div>

@@ -2,28 +2,34 @@ import { useEffect } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
 import { HOME_FOR } from '../auth/users.js'
-import { useStore, initials } from '../data/store.js'
+import { initials } from '../data/store.js'
 import useTheme from '../ui/useTheme.js'
+import useApi from '../useApi.js'
 
-// Customer website layout: your repairCar navbar + footer around every page
+// Customer website layout: navbar + footer around every page
 export default function SiteLayout() {
   useTheme('site')
   const { user, logout } = useAuth()
-  const { data } = useStore()
   const location = useLocation()
   const navigate = useNavigate()
   const path = location.pathname
 
-  // Close the mobile menu and go to the top when the page changes
+  // Bell number = my open repairs (only for logged-in customers)
+  const isCustomer = user && user.role === 'customer'
+  const repairs = useApi(isCustomer ? '/repairs' : null)
+  const myOpen = isCustomer
+    ? (repairs.data || []).filter((r) => r.status === 'pending' || r.status === 'progress').length
+    : 0
+
+  // Close the mobile menu, go to the top and refresh the bell when the page changes
   useEffect(() => {
     document.getElementById('mainNav')?.classList.remove('show')
     window.scrollTo(0, 0)
+    if (isCustomer) repairs.reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path])
 
   const navClass = ({ isActive }) => 'nav-link' + (isActive ? ' active' : '')
-  const myOpen = user && user.role === 'customer'
-    ? data.repairs.filter((r) => r.customerId === user.id && (r.status === 'pending' || r.status === 'progress')).length
-    : 0
 
   return (
     <>
@@ -61,13 +67,13 @@ export default function SiteLayout() {
                 </ul>
               </li>
               <li className="nav-item"><NavLink className={navClass} to="/contact">Contact</NavLink></li>
-              {user && user.role === 'customer' && (
+              {isCustomer && (
                 <li className="nav-item"><NavLink className={navClass} to="/my-repairs">My Repairs</NavLink></li>
               )}
             </ul>
 
             <div className="d-flex align-items-center gap-3 ms-lg-auto mt-3 mt-lg-0">
-              <Link to={user && user.role === 'customer' ? '/my-repairs' : '/login'} className="acp-icon-btn position-relative" aria-label="Notifications">
+              <Link to={isCustomer ? '/my-repairs' : '/login'} className="acp-icon-btn position-relative" aria-label="Notifications">
                 <i className="bi bi-bell"></i>
                 {myOpen > 0 && <span className="acp-notif-count">{myOpen}</span>}
               </Link>
@@ -79,7 +85,7 @@ export default function SiteLayout() {
                   <ul className="dropdown-menu dropdown-menu-end">
                     <li><span className="dropdown-item-text small text-muted">Signed in as<br /><strong className="text-dark">{user.name}</strong></span></li>
                     <li><hr className="dropdown-divider" /></li>
-                    {user.role === 'customer' ? (
+                    {isCustomer ? (
                       <>
                         <li><Link className="dropdown-item" to="/my-repairs"><i className="bi bi-wrench-adjustable me-2"></i>My repairs</Link></li>
                         <li><Link className="dropdown-item" to="/booking"><i className="bi bi-calendar-plus me-2"></i>Book a service</Link></li>

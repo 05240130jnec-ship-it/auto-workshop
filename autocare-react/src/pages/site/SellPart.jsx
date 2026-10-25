@@ -1,32 +1,57 @@
 import { useState } from 'react'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, today } from '../../data/store.js'
+import { nu } from '../../data/store.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
+import useApi from '../../useApi.js'
+import { api } from '../../api.js'
 
 const EMPTY = { name: '', category: 'Auto Parts', condition: 'New', price: '', qty: 1, description: '' }
+const STATUS = {
+  review: ['scheduled', 'In review'],
+  approved: ['completed', 'Published'],
+  rejected: ['review', 'Rejected'],
+}
 
-// Your sell-part.html form, now saving the listing for the admin to review
+// Sell a part — saved through POST /api/shop/listings, the admin reviews it
 export default function SellPart() {
   usePageTitle('Sell a Spare Part')
-  const { user } = useAuth()
-  const store = useStore()
   const { toast } = useDialogs()
   const [f, setF] = useState(EMPTY)
   const [photos, setPhotos] = useState([])
   const [error, setError] = useState('')
+  const [saving, setSaving] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
-  const mine = (store.data.listings || []).filter((l) => l.customerId === user.id)
 
-  function submit(e) {
+  const listings = useApi('/shop/listings')     // my listings
+  const mine = listings.data || []
+
+  async function submit(e) {
     e.preventDefault()
     setError('')
     if (!f.name.trim() || !f.price || !f.description.trim()) return setError('Please fill in the part name, price and description.')
     if (photos.length === 0) return setError('Please add at least 1 photo.')
-    const id = store.nextId('listings', 'L-', 3)
-    store.add('listings', { id, customerId: user.id, ...f, price: Number(f.price), qty: Number(f.qty), photos: photos.map((p) => p.name), status: 'review', date: today() })
-    setF(EMPTY); setPhotos([])
-    toast('Listing submitted — our team will review it soon')
+
+    setSaving(true)
+    try {
+      await api('/shop/listings', {
+        method: 'POST',
+        body: {
+          name: f.name.trim(),
+          category: f.category,
+          condition: f.condition,
+          price: Number(f.price),
+          qty: Number(f.qty),
+          description: f.description.trim(),
+        },
+      })
+      setF(EMPTY)
+      setPhotos([])
+      toast('Listing submitted — our team will review it soon')
+      listings.reload()
+    } catch (err) {
+      setError(err.message)
+    }
+    setSaving(false)
   }
 
   return (
@@ -91,7 +116,9 @@ export default function SellPart() {
           </div>
 
           {error && <div className="alert alert-danger py-2 small">{error}</div>}
-          <button className="btn btn-brand-primary w-100">Submit for Review <i className="bi bi-arrow-right"></i></button>
+          <button className="btn btn-brand-primary w-100" disabled={saving}>
+            {saving ? <><span className="spinner-border spinner-border-sm"></span> Submitting…</> : <>Submit for Review <i className="bi bi-arrow-right"></i></>}
+          </button>
         </form>
 
         {mine.length > 0 && (
@@ -102,10 +129,9 @@ export default function SellPart() {
                 <tbody>
                   {mine.map((l) => (
                     <tr key={l.id}>
-                      <td>{l.name}<br /><small className="text-muted">{l.category} · {l.condition}</small></td>
+                      <td>{l.name}<br /><small className="text-muted">{l.category} · {l.item_condition}</small></td>
                       <td>{nu(l.price)}</td>
-                      <td><span className={'acp-badge ' + (l.status === 'approved' ? 'completed' : l.status === 'rejected' ? 'review' : 'scheduled')}>
-                        {l.status === 'approved' ? 'Published' : l.status === 'rejected' ? 'Rejected' : 'In review'}</span></td>
+                      <td><span className={'acp-badge ' + STATUS[l.status][0]}>{STATUS[l.status][1]}</span></td>
                     </tr>
                   ))}
                 </tbody>

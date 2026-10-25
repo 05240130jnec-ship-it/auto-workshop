@@ -43,13 +43,13 @@ router.post('/reservations', async (req, res) => {
   }
 
   // Price and name come from the database, not from the customer
-  const [parts] = await db.query('SELECT * FROM inventory WHERE id = ?', [partId]);
+  const [parts] = await db.query('SELECT * FROM inventory WHERE id = ? OR sku = ?', [partId, partId]);
   if (parts.length === 0) return res.status(404).json({ error: 'Part not found.' });
   const part = parts[0];
 
   // Take the stock only if there is enough
   const [result] = await db.query(
-    'UPDATE inventory SET stock = stock - ? WHERE id = ? AND stock >= ?', [amount, partId, amount]
+        'UPDATE inventory SET stock = stock - ? WHERE id = ? AND stock >= ?', [amount, part.id, amount]
   );
   if (result.affectedRows === 0) {
     return res.status(409).json({ error: `Only ${part.stock} left in stock.` });

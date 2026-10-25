@@ -4,17 +4,18 @@ import { useAuth } from '../../auth/AuthContext.js'
 import { HOME_FOR } from '../../auth/users.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 
-// Your signup.html — now it really creates a customer account
+// Sign up page — creates a customer account in the backend (POST /api/auth/signup)
 export default function Signup() {
   usePageTitle('Sign Up')
   const { user, signup } = useAuth()
   const navigate = useNavigate()
   const [f, setF] = useState({ name: '', email: '', phone: '', address: '', password: '', confirm: '', terms: false })
   const [error, setError] = useState('')
+  const [loading, setLoading] = useState(false)
   if (user) return <Navigate to={HOME_FOR[user.role]} replace />
   const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
 
-  function submit(e) {
+  async function submit(e) {
     e.preventDefault()
     setError('')
     if (!f.name || !f.email || !f.phone || !f.address || !f.password) return setError('Please fill in every field.')
@@ -23,7 +24,10 @@ export default function Signup() {
     if (f.password.length < 6) return setError('Password must be at least 6 characters.')
     if (f.password !== f.confirm) return setError('The two passwords do not match.')
     if (!f.terms) return setError('Please agree to the Terms of Service.')
-    const res = signup(f)
+
+    setLoading(true)
+    const res = await signup(f)   // waits for the backend's answer
+    setLoading(false)
     if (res.error) return setError(res.error)
     navigate('/my-repairs', { replace: true })
   }
@@ -59,7 +63,9 @@ export default function Signup() {
               I agree to the Terms of Service and Privacy Policy
             </label>
           </div>
-          <button type="submit" className="btn btn-brand-primary w-100">Create Account</button>
+          <button type="submit" className="btn btn-brand-primary w-100" disabled={loading}>
+            {loading ? <><span className="spinner-border spinner-border-sm"></span> Creating account…</> : 'Create Account'}
+          </button>
         </form>
 
         <p className="small text-muted text-center mt-4 mb-0">
