@@ -34,6 +34,7 @@ app.get('/api/db-test', async (req, res) => {
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/repairs', require('./routes/repairs'));
 app.use('/api/shop', require('./routes/shop'));
+app.use('/api/admin', require('./routes/admin'));
 // 7. Start listening
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
