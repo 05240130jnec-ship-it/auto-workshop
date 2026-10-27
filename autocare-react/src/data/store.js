@@ -1,11 +1,4 @@
-import { createContext, useContext } from 'react'
-
-export const StoreContext = createContext(null)
-
-// const { data, Q, add, update, remove, ... } = useStore()
-export function useStore() {
-  return useContext(StoreContext)
-}
+// Small helpers shared by many pages (money, dates, names) and a few fixed lists
 
 /* ---------- small formatting helpers ---------- */
 const DAY = 86400000

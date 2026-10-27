@@ -14,21 +14,19 @@ import './styles/site-extra.css'
 import './styles/mechanic.css'
 import './index.css'
 
-import StoreProvider from './data/StoreProvider.jsx'
 import AuthProvider from './auth/AuthProvider.jsx'
 import DialogProvider from './ui/DialogProvider.jsx'
 import App from './App.jsx'
 
+// All data now comes from the backend (see src/api.js), so there is no browser "store" any more
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
-      <StoreProvider>
-        <AuthProvider>
-          <DialogProvider>
-            <App />
-          </DialogProvider>
-        </AuthProvider>
-      </StoreProvider>
+      <AuthProvider>
+        <DialogProvider>
+          <App />
+        </DialogProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
