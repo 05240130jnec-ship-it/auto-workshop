@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useStore, nu, relDate, today, SPECS } from '../../data/store.js'
+import { nu, relDate, today, SPECS } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -10,8 +12,8 @@ import { Badge, Stat } from './parts.jsx'
 
 export default function AdminMechanics() {
   usePageTitle('Mechanics')
-  const store = useStore()
-  const { Q } = store
+  const store = useAdmin()
+  const { Q, act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
   const [q, setQ] = useState('')
@@ -34,15 +36,14 @@ export default function AdminMechanics() {
   async function add() {
     const v = await form({ title: 'Add mechanic', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'mech123', help: 'They log in at /login with their email and this password' }], submitText: 'Add mechanic', validate: emailCheck() })
     if (!v) return
-    store.batch((d) => { d.mechanics.push({ ...v, email: v.email.toLowerCase(), id: store.nextId('mechanics', 'M-', 3) }) })
-    toast(<><b>{v.name}</b> joined the team</>)
+    act(() => api('/admin/mechanics', { method: 'POST', body: { ...v, email: v.email.toLowerCase() } }),
+      <><b>{v.name}</b> joined the team</>)
   }
   async function edit(m) {
     const v = await form({ title: 'Edit ' + m.name, fields, values: m, submitText: 'Save', validate: emailCheck(m.id) })
     if (!v) return
     if (v.status === 'leave' && m.status !== 'leave' && Q.activeJobs(m.id)) { toast('Use the Leave button so active jobs get handed back', 'warn'); v.status = m.status }
-    store.update('mechanics', m.id, { ...v, email: v.email.toLowerCase() })
-    toast('Saved')
+    act(() => api('/admin/mechanics/' + m.id, { method: 'PATCH', body: { ...v, email: v.email.toLowerCase() } }), 'Saved')
   }
   async function toggleLeave(m) {
     const jobs = Q.activeJobs(m.id)
@@ -50,16 +51,21 @@ export default function AdminMechanics() {
       const ok = await confirm(<>{m.name} still has {jobs} active job(s). Those jobs will go back to <b>Pending</b> so you can reassign them.</>, { title: 'Put on leave?', okText: 'Put on leave' })
       if (!ok) return
     }
-    store.batch((d) => {
-      d.repairs.forEach((r) => { if (m.status !== 'leave' && r.mechanicId === m.id && (r.status === 'pending' || r.status === 'progress')) { r.mechanicId = null; r.status = 'pending' } })
-      d.mechanics.find((x) => x.id === m.id).status = m.status === 'leave' ? 'active' : 'leave'
-    })
-    toast(m.name + (m.status === 'leave' ? ' is back at work' : ' is now on leave'), 'info')
+    act(async () => {
+      // Going on leave: hand their open jobs back to Pending first
+      if (m.status !== 'leave') {
+        const open = store.data.repairs.filter((r) => r.mechanicId === m.id && (r.status === 'pending' || r.status === 'progress'))
+        for (const r of open) {
+          await api('/admin/repairs/' + r.id, { method: 'PATCH', body: { mechanicId: null, status: 'pending' } })
+        }
+      }
+      await api('/admin/mechanics/' + m.id, { method: 'PATCH', body: { status: m.status === 'leave' ? 'active' : 'leave' } })
+    }, m.name + (m.status === 'leave' ? ' is back at work' : ' is now on leave'), 'info')
   }
   async function del(m) {
     if (Q.activeJobs(m.id)) return toast(`Reassign ${m.name}'s ${Q.activeJobs(m.id)} active job(s) first`, 'warn')
     const ok = await confirm(<><b>{m.name}</b> will be removed from the team. Their completed jobs stay in the records.</>, { title: 'Remove mechanic?', okText: 'Remove', danger: true })
-    if (ok) { store.remove('mechanics', m.id); toast(m.name + ' removed', 'info') }
+    if (ok) act(() => api('/admin/mechanics/' + m.id, { method: 'DELETE' }), m.name + ' removed', 'info')
   }
   function jobs(m) {
     const list = store.data.repairs.filter((r) => r.mechanicId === m.id).sort((a, b) => b.date.localeCompare(a.date))

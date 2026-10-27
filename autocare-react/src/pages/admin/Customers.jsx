@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { useStore, nu, fmtDate, relDate, today } from '../../data/store.js'
+import { nu, fmtDate, relDate } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -10,7 +12,8 @@ import { Badge, Tabs, EmptyRow, IconBtn, TableCard } from './parts.jsx'
 
 export default function AdminCustomers() {
   usePageTitle('Customers')
-  const store = useStore()
+  const store = useAdmin()
+  const { act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
   const [filter, setFilter] = useState('all')
@@ -33,9 +36,9 @@ export default function AdminCustomers() {
     { name: 'address', label: 'Address', placeholder: 'e.g. Motithang, Thimphu' },
     { name: 'status', label: 'Status', type: 'select', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], default: 'active' },
   ]
-  const normPhone = (p) => { const d = p.replace(/\D/g, ''); return d.length === 8 ? '+975 ' + d : d.startsWith('975') ? '+975 ' + d.slice(3) : p }
+  const normPhone = (p) => { const d = (p || '').replace(/\D/g, ''); return d.length === 8 ? '+975 ' + d : d.startsWith('975') ? '+975 ' + d.slice(3) : p }
   const check = (id) => (v) => {
-    if (store.all('customers').some((c) => c.id !== id && c.phone.replace(/\D/g, '').endsWith(v.phone.replace(/\D/g, '').slice(-8)))) return 'A customer with this phone number already exists'
+    if (store.all('customers').some((c) => c.id !== id && (c.phone || '').replace(/\D/g, '').endsWith(v.phone.replace(/\D/g, '').slice(-8)))) return 'A customer with this phone number already exists'
     if (store.all('customers').some((c) => c.id !== id && (c.email || '').toLowerCase() === v.email.toLowerCase())) return 'A customer with this email already exists'
     return null
   }
@@ -43,14 +46,14 @@ export default function AdminCustomers() {
   async function add() {
     const v = await form({ title: 'Add customer', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'welcome123', help: 'Tell the customer so they can log in and change it' }], submitText: 'Add customer', validate: check() })
     if (!v) return
-    store.add('customers', { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase(), id: store.nextId('customers', 'C-', 3), joined: today() })
-    toast(<><b>{v.name}</b> added as a customer</>)
+    act(() => api('/admin/customers', { method: 'POST', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } }),
+      <><b>{v.name}</b> added as a customer</>)
   }
   async function edit(c) {
     const v = await form({ title: 'Edit customer', fields, values: c, submitText: 'Save changes', validate: check(c.id) })
     if (!v) return
-    store.update('customers', c.id, { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() })
-    toast('Customer details saved')
+    act(() => api('/admin/customers/' + c.id, { method: 'PATCH', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } }),
+      'Customer details saved')
   }
   function show(c) {
     const jobs = jobsOf(c.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -63,7 +66,7 @@ export default function AdminCustomers() {
           <div className="ms-auto"><Badge status={c.status} /></div>
         </div>
         <div className="a-detail-grid">
-          <div><span>Phone</span><strong><a href={'tel:' + c.phone.replace(/\s/g, '')}>{c.phone}</a></strong></div>
+          <div><span>Phone</span><strong>{c.phone ? <a href={'tel:' + c.phone.replace(/\s/g, '')}>{c.phone}</a> : '—'}</strong></div>
           <div><span>Email</span><strong>{c.email ? <a href={'mailto:' + c.email}>{c.email}</a> : '—'}</strong></div>
           <div><span>Address</span><strong>{c.address || '—'}</strong></div>
           <div><span>Total spent</span><strong>{nu(spentOf(c.id))}</strong></div>
@@ -87,11 +90,11 @@ export default function AdminCustomers() {
     if (open) return toast(`${c.name} has ${open} open job(s). Finish or cancel them first.`, 'warn')
     if (jobs.length) {
       const ok = await confirm(<>{c.name} has {jobs.length} past job(s). To keep service records, they will be marked <b>inactive</b> instead of deleted.</>, { title: 'Deactivate customer?', okText: 'Deactivate' })
-      if (ok) { store.update('customers', c.id, { status: 'inactive' }); toast(c.name + ' marked inactive', 'info') }
+      if (ok) act(() => api('/admin/customers/' + c.id, { method: 'PATCH', body: { status: 'inactive' } }), c.name + ' marked inactive', 'info')
       return
     }
     const ok = await confirm(<><b>{c.name}</b> will be permanently removed.</>, { title: 'Delete customer?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('customers', c.id); toast(c.name + ' deleted', 'info') }
+    if (ok) act(() => api('/admin/customers/' + c.id, { method: 'DELETE' }), c.name + ' deleted', 'info')
   }
 
   useOnce(() => { if (params.get('new')) add() })

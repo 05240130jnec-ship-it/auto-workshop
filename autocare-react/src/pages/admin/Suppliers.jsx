@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useStore, nu, relDate } from '../../data/store.js'
+import { nu, relDate } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -9,8 +11,8 @@ import { Badge, EmptyRow, IconBtn, TableCard } from './parts.jsx'
 
 export default function AdminSuppliers() {
   usePageTitle('Suppliers')
-  const store = useStore()
-  const { Q } = store
+  const store = useAdmin()
+  const { Q, act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
   const [q, setQ] = useState('')
@@ -29,14 +31,12 @@ export default function AdminSuppliers() {
   async function add() {
     const v = await form({ title: 'Add supplier', fields, submitText: 'Add supplier' })
     if (!v) return
-    store.add('suppliers', { ...v, id: store.nextId('suppliers', 'S-', 2) })
-    toast(<><b>{v.name}</b> added</>)
+    act(() => api('/admin/suppliers', { method: 'POST', body: v }), <><b>{v.name}</b> added</>)
   }
   async function edit(s) {
     const v = await form({ title: 'Edit supplier', fields, values: s, submitText: 'Save changes' })
     if (!v) return
-    store.update('suppliers', s.id, v)
-    toast('Supplier updated')
+    act(() => api('/admin/suppliers/' + s.id, { method: 'PATCH', body: v }), 'Supplier updated')
   }
   function show(s) {
     const parts = partsOf(s.id), orders = ordersOf(s.id).sort((a, b) => b.date.localeCompare(a.date))
@@ -69,7 +69,7 @@ export default function AdminSuppliers() {
     const parts = partsOf(s.id)
     if (parts.length) return toast(`${s.name} still supplies ${parts.length} product(s). Move them to another supplier first.`, 'warn')
     const ok = await confirm(<><b>{s.name}</b> will be removed.</>, { title: 'Delete supplier?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('suppliers', s.id); toast(s.name + ' deleted', 'info') }
+    if (ok) act(() => api('/admin/suppliers/' + s.id, { method: 'DELETE' }), s.name + ' deleted', 'info')
   }
 
   useOnce(() => { if (params.get('new')) add() })

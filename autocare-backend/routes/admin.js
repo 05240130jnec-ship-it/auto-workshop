@@ -80,8 +80,15 @@ router.patch('/repairs/:id', async (req, res) => {
     if (mech.length === 0) return res.status(400).json({ error: 'Mechanic not found.' });
   }
 
+  if (body.customerId) {
+    const [cust] = await db.query('SELECT id FROM customers WHERE id = ?', [body.customerId]);
+    if (cust.length === 0) return res.status(400).json({ error: 'Customer not found.' });
+  }
+  if (body.mechanicId === '') body.mechanicId = null;   // "Assign later" in the form
+
   // Only these fields can be changed
-  const allowed = ['mechanicId', 'status', 'priority', 'due', 'cost', 'notes'];
+  const allowed = ['customerId', 'vehicle', 'plate', 'service', 'mechanicId', 'status',
+                   'priority', 'date', 'due', 'cost', 'notes'];
   const fields = allowed.filter(f => body[f] !== undefined);
   if (fields.length === 0) return res.status(400).json({ error: 'Nothing to update.' });
 
@@ -93,12 +100,48 @@ router.patch('/repairs/:id', async (req, res) => {
   const [rows] = await db.query(SELECT_REPAIR + ' WHERE r.id = ?', [req.params.id]);
   res.json(rows[0]);
 });
+
+// POST /api/admin/repairs  -> admin creates a job (e.g. a walk-in customer)
+router.post('/repairs', async (req, res) => {
+  const b = req.body || {};
+  if (!b.customerId || !b.vehicle || !b.plate || !b.service) {
+    return res.status(400).json({ error: 'Customer, vehicle, plate and service are required.' });
+  }
+  const [cust] = await db.query('SELECT id FROM customers WHERE id = ?', [b.customerId]);
+  if (cust.length === 0) return res.status(400).json({ error: 'Customer not found.' });
+
+  const status = ['pending', 'progress', 'complete', 'cancelled'].includes(b.status) ? b.status : 'pending';
+  const priority = ['normal', 'high', 'urgent'].includes(b.priority) ? b.priority : 'normal';
+  if (status === 'progress' && !b.mechanicId) {
+    return res.status(400).json({ error: 'Assign a mechanic to mark the job In Progress.' });
+  }
+
+  const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 5) AS UNSIGNED)) AS last FROM repairs');
+  const id = 'ACP-' + ((last[0].last || 9225) + 1);
+
+  await db.query(
+    `INSERT INTO repairs (id, customerId, vehicle, plate, service, mechanicId, status, priority, date, due, cost, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, b.customerId, b.vehicle, String(b.plate).toUpperCase(), b.service, b.mechanicId || null,
+     status, priority, b.date || new Date().toISOString().slice(0, 10), b.due || null,
+     Number(b.cost) || 0, b.notes || '']
+  );
+  res.status(201).json({ id });
+});
+
+// DELETE /api/admin/repairs/ACP-9251  -> remove a job (its parts and services go too)
+router.delete('/repairs/:id', async (req, res) => {
+  const [result] = await db.query('DELETE FROM repairs WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Repair not found.' });
+  res.json({ deleted: req.params.id });
+});
+
 // ---------- HELPERS ----------
 
-// Is this email already used by any account?
-async function emailTaken(email) {
+// Is this email already used by any account? (exceptId = the account being edited)
+async function emailTaken(email, exceptId = '') {
   for (const table of ['admins', 'mechanics', 'customers']) {
-    const [rows] = await db.query(`SELECT id FROM ${table} WHERE email = ?`, [email]);
+    const [rows] = await db.query(`SELECT id FROM ${table} WHERE email = ? AND id <> ?`, [email, exceptId]);
     if (rows.length > 0) return true;
   }
   return false;
@@ -129,7 +172,7 @@ router.get('/mechanics', async (req, res) => {
 
 // POST /api/admin/mechanics  -> add a mechanic
 router.post('/mechanics', async (req, res) => {
-  const { name, email, phone, password, specialization, experience } = req.body || {};
+  const { name, email, phone, password, specialization, experience, status, joined } = req.body || {};
 
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'Name, email and password are required.' });
@@ -147,8 +190,10 @@ router.post('/mechanics', async (req, res) => {
 
   await db.query(
     `INSERT INTO mechanics (id, name, email, phone, password, specialization, experience, status, joined)
-     VALUES (?, ?, ?, ?, ?, ?, ?, 'active', CURDATE())`,
-    [id, name, email, phone || '', hash, specialization || 'General', Number(experience) || 0]
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, name, email.toLowerCase(), phone || '', hash, specialization || 'General', Number(experience) || 0,
+     ['active', 'busy', 'leave'].includes(status) ? status : 'active',
+     joined || new Date().toISOString().slice(0, 10)]
   );
   res.status(201).json({ id });
 });
@@ -159,8 +204,12 @@ router.patch('/mechanics/:id', async (req, res) => {
   if (body.status && !['active', 'busy', 'leave'].includes(body.status)) {
     return res.status(400).json({ error: 'Status must be active, busy or leave.' });
   }
+  if (body.email) {
+    body.email = body.email.toLowerCase();
+    if (await emailTaken(body.email, req.params.id)) return res.status(409).json({ error: 'This email is already used.' });
+  }
   const ok = await updateRow('mechanics', req.params.id, body,
-    ['name', 'phone', 'specialization', 'experience', 'status']);
+    ['name', 'email', 'phone', 'specialization', 'experience', 'status', 'joined']);
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Mechanic not found.' });
 
@@ -188,19 +237,62 @@ router.get('/customers', async (req, res) => {
   res.json(rows);
 });
 
+// POST /api/admin/customers  -> admin adds a customer (e.g. someone who phoned in)
+router.post('/customers', async (req, res) => {
+  const { name, email, phone, address, status, password } = req.body || {};
+  if (!name || !email || !password) {
+    return res.status(400).json({ error: 'Name, email and password are required.' });
+  }
+  if (password.length < 6) {
+    return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  }
+  if (await emailTaken(email.toLowerCase())) {
+    return res.status(409).json({ error: 'This email is already used.' });
+  }
+
+  const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS last FROM customers');
+  const id = 'C-' + String((last[0].last || 0) + 1).padStart(3, '0');   // C-009
+  const hash = await bcrypt.hash(password, 10);
+
+  await db.query(
+    `INSERT INTO customers (id, name, email, phone, address, password, status, joined)
+     VALUES (?, ?, ?, ?, ?, ?, ?, CURDATE())`,
+    [id, name, email.toLowerCase(), phone || null, address || null, hash,
+     status === 'inactive' ? 'inactive' : 'active']
+  );
+  res.status(201).json({ id });
+});
+
 // PATCH /api/admin/customers/C-007  -> edit details, or block/unblock with status
 router.patch('/customers/:id', async (req, res) => {
   const body = req.body || {};
   if (body.status && !['active', 'inactive'].includes(body.status)) {
     return res.status(400).json({ error: 'Status must be active or inactive.' });
   }
-  const ok = await updateRow('customers', req.params.id, body, ['name', 'phone', 'address', 'status']);
+  if (body.email) {
+    body.email = body.email.toLowerCase();
+    if (await emailTaken(body.email, req.params.id)) return res.status(409).json({ error: 'This email is already used.' });
+  }
+  const ok = await updateRow('customers', req.params.id, body, ['name', 'email', 'phone', 'address', 'status']);
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Customer not found.' });
 
   const [rows] = await db.query(`SELECT ${CUSTOMER_FIELDS} FROM customers WHERE id = ?`, [req.params.id]);
   res.json(rows[0]);
 });
+
+// DELETE /api/admin/customers/C-009  -> only customers with no repairs
+// (deleting one with repairs would also delete their service history, so we refuse)
+router.delete('/customers/:id', async (req, res) => {
+  const [[jobs]] = await db.query('SELECT COUNT(*) AS total FROM repairs WHERE customerId = ?', [req.params.id]);
+  if (jobs.total > 0) {
+    return res.status(409).json({ error: 'This customer has repairs on record. Set them to inactive instead.' });
+  }
+  const [result] = await db.query('DELETE FROM customers WHERE id = ?', [req.params.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Customer not found.' });
+  res.json({ deleted: req.params.id });
+});
+
 // ---------- INVENTORY ----------
 
 // GET /api/admin/inventory          -> all parts
@@ -223,7 +315,7 @@ router.post('/inventory', async (req, res) => {
   }
 
   const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS last FROM inventory');
-  const id = 'P-' + ((last[0].last || 100) + 1);   // P-115
+  const id = 'P-' + ((last[0].last || 100) + 1);   // P-222
 
   try {
     await db.query(
@@ -241,8 +333,14 @@ router.post('/inventory', async (req, res) => {
 
 // PATCH /api/admin/inventory/P-101  -> edit price, stock, reorder level...
 router.patch('/inventory/:id', async (req, res) => {
-  const ok = await updateRow('inventory', req.params.id, req.body || {},
-    ['name', 'category', 'stock', 'reorder', 'price', 'supplierId']);
+  let ok;
+  try {
+    ok = await updateRow('inventory', req.params.id, req.body || {},
+      ['sku', 'name', 'category', 'stock', 'reorder', 'price', 'supplierId']);
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another part already uses this SKU.' });
+    throw err;
+  }
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Part not found.' });
 
@@ -335,7 +433,7 @@ router.get('/orders', async (req, res) => {
 
 // POST /api/admin/orders  -> order more of a part from its supplier
 router.post('/orders', async (req, res) => {
-  const { partId, qty, supplierId, note } = req.body || {};
+  const { partId, qty, supplierId, note, requestedBy } = req.body || {};
   if (!partId || !qty) return res.status(400).json({ error: 'Part and quantity are required.' });
 
   const [parts] = await db.query('SELECT * FROM inventory WHERE id = ?', [partId]);
@@ -344,18 +442,22 @@ router.post('/orders', async (req, res) => {
   const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 4) AS UNSIGNED)) AS last FROM orders');
   const id = 'PO-' + ((last[0].last || 2210) + 1);   // PO-2217
 
+  // Orders made by the admin are approved straight away; requests "on behalf of" a mechanic wait
+  const by = requestedBy || req.user.id;
+  const status = by === req.user.id ? 'approved' : 'pending';
+
   await db.query(
     `INSERT INTO orders (id, partId, qty, supplierId, requestedBy, status, date, note)
-     VALUES (?, ?, ?, ?, ?, 'pending', CURDATE(), ?)`,
-    [id, partId, Number(qty), supplierId || parts[0].supplierId, req.user.id, note || '']
+     VALUES (?, ?, ?, ?, ?, ?, CURDATE(), ?)`,
+    [id, partId, Number(qty), supplierId || parts[0].supplierId, by, status, note || '']
   );
-  res.status(201).json({ id });
+  res.status(201).json({ id, status });
 });
 
 // PATCH /api/admin/orders/PO-2217  -> approve, reject, or mark received
 // pending -> approved or rejected,  approved -> received (stock goes up)
 router.patch('/orders/:id', async (req, res) => {
-  const { status } = req.body || {};
+  const { status, note } = req.body || {};
   const [rows] = await db.query('SELECT * FROM orders WHERE id = ?', [req.params.id]);
   if (rows.length === 0) return res.status(404).json({ error: 'Order not found.' });
   const order = rows[0];
@@ -371,6 +473,7 @@ router.patch('/orders/:id', async (req, res) => {
   }
 
   await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, order.id]);
+  if (note !== undefined) await db.query('UPDATE orders SET note = ? WHERE id = ?', [note, order.id]);
   if (status === 'received') {
     await db.query('UPDATE inventory SET stock = stock + ? WHERE id = ?', [order.qty, order.partId]);
   }
@@ -378,6 +481,7 @@ router.patch('/orders/:id', async (req, res) => {
   const [updated] = await db.query(SELECT_ORDER + ' WHERE o.id = ?', [order.id]);
   res.json(updated[0]);
 });
+
 // ---------- SHOP: LISTINGS (customers selling parts) ----------
 
 // GET /api/admin/shop/listings              -> all listings
@@ -449,4 +553,5 @@ router.patch('/shop/reservations/:id', async (req, res) => {
   }
   res.json({ id: reservation.id, status });
 });
+
 module.exports = router;

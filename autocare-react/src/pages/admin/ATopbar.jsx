@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { useStore } from '../../data/store.js'
+import { useAdmin } from './AdminContext.js'
 import Avatar from './Avatar.jsx'
 
 // Title row + search + notifications bell + user chip (top of every admin page)
 export default function ATopbar({ title, sub, search, onSearch, onEnter, placeholder, children }) {
   const { user } = useAuth()
-  const { Q } = useStore()
+  const { Q } = useAdmin()
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   const input = useRef(null)

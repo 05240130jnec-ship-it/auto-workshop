@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, nuShort, relDate, today } from '../../data/store.js'
+import { nu, nuShort, relDate, today } from '../../data/store.js'
+import { useAdmin } from './AdminContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
 import Avatar from './Avatar.jsx'
@@ -13,7 +14,7 @@ const ICON = { pending: ['bi-hourglass-split', 'orange'], progress: ['bi-gear-wi
 export default function AdminDashboard() {
   usePageTitle('Admin Dashboard')
   const { user } = useAuth()
-  const { data, Q } = useStore()
+    const { data, Q } = useAdmin()
   const navigate = useNavigate()
   const [q, setQ] = useState('')
   const [grow, setGrow] = useState(false)
