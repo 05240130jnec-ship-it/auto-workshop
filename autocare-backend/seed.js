@@ -170,7 +170,8 @@ async function seed() {
       [id, partId, qty, supplierId, requestedBy, status, daysAgo(d), note]);
   }
 
-  console.log('✅ Sample data added: 1 admin, 5 mechanics, 8 customers, 5 suppliers, 14 parts, 25 repairs, 6 orders');
+    console.log(`✅ Sample data added: 1 admin, ${mechanics.length} mechanics, ${customers.length} customers, ` +
+    `${suppliers.length} suppliers, ${parts.length} parts, ${repairs.length} repairs, ${orders.length} orders`);
   await db.end();   // close the connection so the script finishes
 }
 
