@@ -1,18 +1,31 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
-import { useStore, initials } from '../data/store.js'
+import { initials } from '../data/store.js'
 import useTheme from '../ui/useTheme.js'
+import MechanicDataProvider from '../pages/mechanic/MechanicDataProvider.jsx'
+import { useMechanic } from '../pages/mechanic/MechanicContext.js'
 
-// Mechanic portal layout: your machanic/ sidebar around every mechanic page
+// Mechanic portal: loads my jobs from the backend first, then shows the sidebar + page
 export default function MechanicLayout() {
   useTheme('mechanic')
+  return (
+    <MechanicDataProvider>
+      <MechanicShell />
+    </MechanicDataProvider>
+  )
+}
+
+function MechanicShell() {
   const { user, logout } = useAuth()
-  const { Q } = useStore()
-  const me = Q.mechanic(user.id) || {}
+  const { data, reload } = useMechanic()
+  const me = data.profile || {}
   const navigate = useNavigate()
   const { hash, pathname } = useLocation()
   const [open, setOpen] = useState(false)
+
+  // Fresh data each time another page opens (the admin may have assigned new jobs)
+  useEffect(() => { reload() }, [pathname, reload])
 
   const cls = (active) => (active ? 'active' : undefined)
   const go = () => setOpen(false)

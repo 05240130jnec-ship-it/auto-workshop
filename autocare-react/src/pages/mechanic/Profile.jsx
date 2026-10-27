@@ -1,49 +1,47 @@
 import { useState } from 'react'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, fmtDate, SPECS } from '../../data/store.js'
+import { fmtDate, SPECS } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 
-// Your profile.html — every "Save" button now saves to the shared data
+// My profile — saved through PATCH /api/mechanic/profile and /api/mechanic/profile/password
+// (name and login email are managed by the admin)
 export default function Profile() {
   usePageTitle('My Profile')
-  const { user } = useAuth()
-  const store = useStore()
+  const store = useMechanic()
+  const { act, Q } = store
   const { toast } = useDialogs()
-  const m = store.get('mechanics', user.id)
-  const [info, setInfo] = useState({ name: m.name, email: m.email || '', phone: m.phone || '', dob: m.dob || '', address: m.address || '' })
+  const m = store.data.profile
+  const [phone, setPhone] = useState(m.phone || '')
   const [pro, setPro] = useState({ specialization: m.specialization, experience: m.experience })
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
-  const jobs = store.Q.activeJobs(m.id)
+  const jobs = Q.activeJobs()
 
-  const setI = (k) => (e) => setInfo({ ...info, [k]: e.target.value })
   const setP = (k) => (e) => setPro({ ...pro, [k]: e.target.value })
   const setW = (k) => (e) => setPw({ ...pw, [k]: e.target.value })
+  const saveProfile = (body, msg) => act(() => api('/mechanic/profile', { method: 'PATCH', body }), msg)
 
   function saveInfo() {
-    if (!info.name.trim()) return toast('Name cannot be empty', 'error')
-    const clash = store.all('mechanics').some((x) => x.id !== m.id && (x.email || '').toLowerCase() === info.email.toLowerCase())
-    if (clash) return toast('Another mechanic already uses that email', 'error')
-    store.update('mechanics', m.id, { ...info, name: info.name.trim(), email: info.email.trim().toLowerCase() })
-    toast('Personal information saved')
+    if (phone.replace(/\D/g, '').length < 8) return toast('Please enter a valid phone number', 'error')
+    saveProfile({ phone: phone.trim() }, 'Phone number saved')
   }
   function savePro() {
-    store.update('mechanics', m.id, { specialization: pro.specialization, experience: Number(pro.experience) })
-    toast('Professional details updated')
+    saveProfile({ specialization: pro.specialization, experience: Number(pro.experience) }, 'Professional details updated')
   }
-  function savePassword() {
-    if (pw.current !== m.password) return toast('Current password is incorrect', 'error')
+  async function savePassword() {
     if (pw.next.length < 6) return toast('New password must be at least 6 characters', 'error')
     if (pw.next !== pw.confirm) return toast('New passwords do not match', 'error')
-    store.update('mechanics', m.id, { password: pw.next })
-    setPw({ current: '', next: '', confirm: '' })
-    toast('Password updated')
+    // The backend checks the current password with bcrypt
+    const ok = await act(() => api('/mechanic/profile/password', {
+      method: 'PATCH', body: { currentPassword: pw.current, newPassword: pw.next },
+    }), 'Password updated')
+    if (ok) setPw({ current: '', next: '', confirm: '' })
   }
   function setAvailability(e) {
     const status = e.target.value
-    store.update('mechanics', m.id, { status })
-    toast(status === 'leave' ? 'Marked as on leave — the admin can see this' : status === 'busy' ? 'Marked as busy' : 'Marked as available')
+    saveProfile({ status }, status === 'leave' ? 'Marked as on leave — the admin can see this' : status === 'busy' ? 'Marked as busy' : 'Marked as available')
   }
 
   return (
@@ -76,12 +74,11 @@ export default function Profile() {
           <div className="m-panel mb-4">
             <div className="m-panel-head"><h3>Personal Information</h3></div>
             <div className="row g-3">
-              <div className="col-md-6"><label className="m-form-label">Full Name</label><input type="text" className="m-form-control" value={info.name} onChange={setI('name')} /></div>
-              <div className="col-md-6"><label className="m-form-label">Email (used to log in)</label><input type="email" className="m-form-control" value={info.email} onChange={setI('email')} /></div>
-              <div className="col-md-6"><label className="m-form-label">Phone</label><input type="tel" className="m-form-control" value={info.phone} onChange={setI('phone')} /></div>
-              <div className="col-md-6"><label className="m-form-label">Date of Birth</label><input type="date" className="m-form-control" value={info.dob} onChange={setI('dob')} /></div>
-              <div className="col-12"><label className="m-form-label">Address</label><input type="text" className="m-form-control" value={info.address} onChange={setI('address')} placeholder="e.g. Thimphu, Bhutan" /></div>
+              <div className="col-md-6"><label className="m-form-label">Full Name</label><input type="text" className="m-form-control" value={m.name} disabled /></div>
+              <div className="col-md-6"><label className="m-form-label">Email (used to log in)</label><input type="email" className="m-form-control" value={m.email} disabled /></div>
+              <div className="col-md-6"><label className="m-form-label">Phone</label><input type="tel" className="m-form-control" value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
             </div>
+            <p className="small text-muted mt-2 mb-0"><i className="bi bi-info-circle me-1"></i>To change your name or login email, ask the admin.</p>
             <button className="m-btn m-btn-primary mt-3" onClick={saveInfo}><i className="bi bi-check2"></i> Save Changes</button>
           </div>
 

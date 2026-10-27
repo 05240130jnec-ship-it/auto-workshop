@@ -1,25 +1,26 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, fmtDate, today } from '../../data/store.js'
+import { nu, fmtDate } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 
 const SERVICE_TYPES = ['Brake Pad Replacement', 'Engine Diagnostics', 'Oil Change', 'Car Wash', 'Wheel Alignment', 'Battery Replacement', 'AC Service', 'General Labour']
 
-// Your repair-detail.html: update status, write notes, log parts and services.
-// Parts taken here come out of the workshop inventory automatically.
+// Repair detail: update status, write notes, log parts and services.
+// Every button calls the backend; parts taken here come out of the inventory in MySQL.
 export default function RepairDetail() {
   const { id } = useParams()
   usePageTitle('Repair ' + id)
-  const { user } = useAuth()
-  const store = useStore()
-  const { Q } = store
+  const store = useMechanic()
+  const { Q, act } = store
   const { toast, confirm } = useDialogs()
   const navigate = useNavigate()
-  const r = store.get('repairs', id)
-  const inventory = store.all('inventory')
+  const r = store.get('repairs', id)   // only jobs assigned to me are loaded
+  const inventory = store.data.parts
+  const url = '/mechanic/repairs/' + id
 
   const [note, setNote] = useState('')
   const [partId, setPartId] = useState(inventory.find((p) => p.stock > 0)?.id || '')
@@ -28,7 +29,7 @@ export default function RepairDetail() {
   const [svcQty, setSvcQty] = useState(1)
   const [svcCost, setSvcCost] = useState(1500)
 
-  if (!r || r.mechanicId !== user.id) {
+  if (!r) {
     return (
       <>
         <MTopbar title="Repair not found" sub="This job doesn't exist or isn't assigned to you." back="/mechanic/repairs" />
@@ -37,7 +38,7 @@ export default function RepairDetail() {
     )
   }
 
-  const c = Q.customer(r.customerId) || {}
+  const c = { name: r.customerName, phone: r.customerPhone }
   const locked = r.status === 'complete' || r.status === 'cancelled'
   const partsTotal = Q.partsTotal(r)
   const servicesTotal = Q.servicesTotal(r)
@@ -45,63 +46,50 @@ export default function RepairDetail() {
 
   function setStatus(status) {
     if (status === r.status) return
-    const patch = { status }
-    if (status === 'progress' && !r.startedOn) patch.startedOn = today()
-    store.update('repairs', r.id, patch)
-    toast('Status changed to ' + (status === 'pending' ? 'Pending' : 'In Progress'))
+    act(() => api(url, { method: 'PATCH', body: { status } }),
+      'Status changed to ' + (status === 'pending' ? 'Pending' : 'In Progress'))
   }
 
   async function complete() {
     const final = grand > 0 ? grand : r.cost
     const ok = await confirm(`Mark this job complete? The customer will be charged ${nu(final)}${grand > 0 ? ' (parts + services)' : ' (the estimate)'}.`, { title: 'Complete repair', okText: 'Mark complete' })
     if (!ok) return
-    store.update('repairs', r.id, { status: 'complete', cost: final, completedOn: today() })
-    toast(r.vehicle + ' is ready for pickup 🎉')
-    navigate('/mechanic/repairs')
+    // The backend sets the bill to parts + services when the job is completed
+    const done = await act(() => api(url, { method: 'PATCH', body: { status: 'complete' } }), r.vehicle + ' is ready for pickup 🎉')
+    if (done) navigate('/mechanic/repairs')
   }
 
-  function addNote() {
+  async function addNote() {
     if (!note.trim()) return
-    const line = `[${fmtDate(today())}] ${user.name}: ${note.trim()}`
-    store.update('repairs', r.id, { workNotes: [...(r.workNotes || []), line] })
-    setNote('')
-    toast('Note added')
+    const ok = await act(() => api(url, { method: 'PATCH', body: { addNote: note.trim() } }), 'Note added')
+    if (ok) setNote('')
   }
 
-  function addPart() {
-    const p = store.get('inventory', partId)
+  async function addPart() {
+    const p = store.get('parts', partId)
     const qty = Number(partQty)
     if (!p || qty < 1) return
     if (qty > p.stock) return toast(`Only ${p.stock} × ${p.name} left in stock`, 'error')
-    store.batch((d) => {
-      d.inventory.find((x) => x.id === p.id).stock -= qty
-      const rep = d.repairs.find((x) => x.id === r.id)
-      rep.parts = [...(rep.parts || []), { partId: p.id, name: p.name, qty, price: p.price, date: today() }]
-    })
+    // POST takes the parts out of the inventory in the same step
+    const ok = await act(() => api(url + '/parts', { method: 'POST', body: { partId: p.id, qty } }),
+      `${qty} × ${p.name} logged · stock now ${p.stock - qty}`)
+    if (!ok) return
     setPartQty(1)
-    toast(`${qty} × ${p.name} logged · stock now ${p.stock - qty}`)
     if (p.stock - qty <= p.reorder) toast(p.name + ' is running low — admin has been alerted', 'warn')
   }
 
-  function removePart(i) {
-    const item = r.parts[i]
-    store.batch((d) => {
-      const inv = d.inventory.find((x) => x.id === item.partId)
-      if (inv) inv.stock += item.qty
-      const rep = d.repairs.find((x) => x.id === r.id)
-      rep.parts = rep.parts.filter((_, j) => j !== i)
-    })
-    toast(item.name + ' returned to stock', 'info')
+  function removePart(item) {
+    act(() => api(url + '/parts/' + item.id, { method: 'DELETE' }), item.name + ' returned to stock', 'info')
   }
 
   function addService() {
     if (Number(svcQty) < 1 || Number(svcCost) < 0) return
-    store.update('repairs', r.id, { services: [...(r.services || []), { name: svcType, qty: Number(svcQty), cost: Number(svcCost) }] })
-    toast(svcType + ' added')
+    act(() => api(url + '/services', { method: 'POST', body: { name: svcType, qty: Number(svcQty), cost: Number(svcCost) } }),
+      svcType + ' added')
   }
 
-  function removeService(i) {
-    store.update('repairs', r.id, { services: r.services.filter((_, j) => j !== i) })
+  function removeService(item) {
+    act(() => api(url + '/services/' + item.id, { method: 'DELETE' }), item.name + ' removed', 'info')
   }
 
   return (
@@ -181,11 +169,11 @@ export default function RepairDetail() {
               </>
             )}
             {(r.parts || []).length === 0 && <p className="small text-muted">No parts logged yet.</p>}
-            {(r.parts || []).map((p, i) => (
-              <div key={i} className="d-flex justify-content-between align-items-center mb-2 small">
+            {(r.parts || []).map((p) => (
+              <div key={p.id} className="d-flex justify-content-between align-items-center mb-2 small">
                 <span>{p.name} × {p.qty}</span>
                 <span><strong>{nu(p.qty * p.price)}</strong>
-                  {!locked && <button className="btn btn-link btn-sm text-danger p-0 ms-2" title="Remove" onClick={() => removePart(i)}><i className="bi bi-x-circle"></i></button>}
+                  {!locked && <button className="btn btn-link btn-sm text-danger p-0 ms-2" title="Remove" onClick={() => removePart(p)}><i className="bi bi-x-circle"></i></button>}
                 </span>
               </div>
             ))}
@@ -209,11 +197,11 @@ export default function RepairDetail() {
                 <button className="m-btn m-btn-primary w-100 mb-3" onClick={addService}><i className="bi bi-plus-circle"></i> Add Service</button>
               </>
             )}
-            {(r.services || []).map((s, i) => (
-              <div key={i} className="d-flex justify-content-between align-items-center mb-2 small">
+            {(r.services || []).map((s) => (
+              <div key={s.id} className="d-flex justify-content-between align-items-center mb-2 small">
                 <span>{s.name} × {s.qty}</span>
                 <span><strong>{nu(s.qty * s.cost)}</strong>
-                  {!locked && <button className="btn btn-link btn-sm text-danger p-0 ms-2" title="Remove" onClick={() => removeService(i)}><i className="bi bi-x-circle"></i></button>}
+                  {!locked && <button className="btn btn-link btn-sm text-danger p-0 ms-2" title="Remove" onClick={() => removeService(s)}><i className="bi bi-x-circle"></i></button>}
                 </span>
               </div>
             ))}

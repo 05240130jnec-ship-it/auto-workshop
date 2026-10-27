@@ -121,6 +121,7 @@ export default function AdminRepairs() {
       return toast(err.message, 'error')
     }
     r.cost = Number(r.cost) || 0
+    r.workNotes = r.workNotes ? r.workNotes.split('\n') : []   // mechanic notes are saved as lines of text
     if (r.apptDate) r.appointment = { date: r.apptDate, time: r.apptTime, delivery: r.delivery }
     const c = Q.customer(r.customerId) || {}
     const m = Q.mechanic(r.mechanicId)

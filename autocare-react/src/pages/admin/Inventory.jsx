@@ -96,4 +96,41 @@ export default function AdminInventory() {
         <Stat icon="bi-box-seam" label="Products" value={items.length} foot={units + ' units in stock'} />
         <Stat icon="bi-exclamation-triangle" tone="orange" label="Low stock" value={lowN} foot="At or below reorder level" footTone="orange" />
         <Stat icon="bi-x-octagon" tone="red" label="Out of stock" value={outN} foot={outN ? 'Order now' : 'None'} footTone={outN ? 'red' : ''} />
-        <Stat icon="bi-cash-stack"
+        <Stat icon="bi-cash-stack" tone="green" label="Stock value" value={nuShort(value)} foot="At unit price" footTone="green" />
+      </section>
+
+      <Tabs tabs={tabs} value={filter} onChange={setFilter} />
+
+      <TableCard head={['Part', 'Category', 'In Stock', 'Reorder At', 'Unit Price', 'Stock Value', 'Supplier', 'Status', '']} foot={`Showing ${rows.length} of ${items.length} products`}>
+        {rows.length === 0 && <EmptyRow cols={9} text={query ? `No parts match "${q}"` : 'No parts in this category'} />}
+        {rows.map((p) => {
+          const st = Q.stockState(p), incoming = onOrder(p.id)
+          return (
+            <tr key={p.id}>
+              <td><strong>{p.name}</strong><small>{p.sku}</small></td>
+              <td>{p.category}</td>
+              <td>
+                <div className="a-stepper">
+                  <button onClick={() => adjust(p, -1)} title="Use 1">−</button>
+                  <span className={'a-stock ' + st.key}>{p.stock}</span>
+                  <button onClick={() => adjust(p, 1)} title="Add 1">+</button>
+                </div>
+                {incoming > 0 && <small style={{ color: 'var(--a-blue)' }}>+{incoming} on order</small>}
+              </td>
+              <td>{p.reorder}</td>
+              <td>{nu(p.price)}</td>
+              <td>{nu(p.stock * p.price)}</td>
+              <td>{Q.supplierName(p.supplierId)}</td>
+              <td><span className={'a-badge a-badge-' + st.cls}>{st.label}</span></td>
+              <td><div className="a-actions">
+                <IconBtn icon="bi-cart-plus" title="Reorder" onClick={() => reorder(p)} />
+                <IconBtn icon="bi-pencil" title="Edit" onClick={() => edit(p)} />
+                <IconBtn icon="bi-trash3" title="Delete" tone="danger" onClick={() => del(p)} />
+              </div></td>
+            </tr>
+          )
+        })}
+      </TableCard>
+    </>
+  )
+}

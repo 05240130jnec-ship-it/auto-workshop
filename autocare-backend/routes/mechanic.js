@@ -36,7 +36,17 @@ router.get('/repairs', async (req, res) => {
     params.push(req.query.status);
   }
   const [rows] = await db.query(sql + ' ORDER BY r.due IS NULL, r.due, r.date', params);
-  res.json(rows);
+  if (rows.length === 0) return res.json([]);
+
+  // Attach each job's parts and services (2 queries for all jobs, not 2 per job)
+  const ids = rows.map(r => r.id);
+  const [parts] = await db.query('SELECT * FROM repair_parts WHERE repairId IN (?)', [ids]);
+  const [services] = await db.query('SELECT * FROM repair_services WHERE repairId IN (?)', [ids]);
+  res.json(rows.map(r => ({
+    ...r,
+    parts: parts.filter(p => p.repairId === r.id),
+    services: services.filter(s => s.repairId === r.id)
+  })));
 });
 
 // GET /api/mechanic/repairs/ACP-9247  -> one job with parts, services and total
@@ -49,15 +59,15 @@ router.get('/repairs/:id', async (req, res) => {
   res.json({ ...repair, parts, services, total: await totalCost(repair.id) });
 });
 
-// PATCH /api/mechanic/repairs/ACP-9247  -> start or finish a job, or add notes
-// pending -> progress -> complete
+// PATCH /api/mechanic/repairs/ACP-9247  -> start, pause or finish a job, or add a work note
+// pending -> progress -> complete   (progress -> pending is allowed too, e.g. waiting for a part)
 router.patch('/repairs/:id', async (req, res) => {
-  const { status, notes } = req.body || {};
+  const { status, notes, addNote } = req.body || {};
   const repair = await findMyRepair(req.params.id, req.user.id);
   if (!repair) return res.status(404).json({ error: 'Job not found or not assigned to you.' });
 
   if (status) {
-    const allowedNext = { pending: ['progress'], progress: ['complete'], complete: [], cancelled: [] };
+    const allowedNext = { pending: ['progress'], progress: ['complete', 'pending'], complete: [], cancelled: [] };
     if (!allowedNext[repair.status].includes(status)) {
       return res.status(400).json({ error: `A ${repair.status} job cannot be changed to ${status}.` });
     }
@@ -72,6 +82,11 @@ router.patch('/repairs/:id', async (req, res) => {
   if (notes !== undefined) {
     await db.query('UPDATE repairs SET notes = ? WHERE id = ?', [notes, repair.id]);
   }
+  // Work notes are kept as lines of text: "[2026-10-28] Ugyen Dorji: Replaced the brake pads"
+  if (addNote && addNote.trim()) {
+    const line = `[${new Date().toISOString().slice(0, 10)}] ${req.user.name}: ${addNote.trim()}`;
+    await db.query('UPDATE repairs SET workNotes = CONCAT_WS(?, workNotes, ?) WHERE id = ?', ['\n', line, repair.id]);
+  }
 
   res.json(await findMyRepair(repair.id, req.user.id));
 });
@@ -80,7 +95,7 @@ router.patch('/repairs/:id', async (req, res) => {
 
 // GET /api/mechanic/parts  -> parts to choose from
 router.get('/parts', async (req, res) => {
-  const [rows] = await db.query('SELECT id, sku, name, category, stock, price FROM inventory ORDER BY name');
+  const [rows] = await db.query('SELECT id, sku, name, category, stock, reorder, price FROM inventory ORDER BY name');
   res.json(rows);
 });
 
@@ -150,6 +165,19 @@ router.post('/repairs/:id/services', async (req, res) => {
   );
   res.status(201).json({ id: insert.insertId, name, qty: Number(qty) || 1, cost });
 });
+
+// DELETE /api/mechanic/repairs/ACP-9247/services/2  -> remove a wrong service line
+router.delete('/repairs/:id/services/:rowId', async (req, res) => {
+  const repair = await findMyRepair(req.params.id, req.user.id);
+  if (!repair) return res.status(404).json({ error: 'Job not found or not assigned to you.' });
+  if (repair.status !== 'progress') {
+    return res.status(400).json({ error: 'You can only change services while the job is in progress.' });
+  }
+  const [result] = await db.query('DELETE FROM repair_services WHERE id = ? AND repairId = ?', [req.params.rowId, repair.id]);
+  if (result.affectedRows === 0) return res.status(404).json({ error: 'Service entry not found.' });
+  res.json({ deleted: Number(req.params.rowId) });
+});
+
 // ---------- REPORTS ----------
 
 // GET /api/mechanic/reports  -> my work summary
@@ -193,11 +221,14 @@ router.get('/profile', async (req, res) => {
   res.json(rows[0]);
 });
 
-// PATCH /api/mechanic/profile  -> mechanic can change phone, specialization, photo
-// (name, email and status are controlled by the admin)
+// PATCH /api/mechanic/profile  -> mechanic can change phone, specialization, experience,
+// photo and availability (name and email are controlled by the admin)
 router.patch('/profile', async (req, res) => {
   const body = req.body || {};
-  const allowed = ['phone', 'specialization', 'photo'];
+  if (body.status && !['active', 'busy', 'leave'].includes(body.status)) {
+    return res.status(400).json({ error: 'Status must be active, busy or leave.' });
+  }
+  const allowed = ['phone', 'specialization', 'experience', 'photo', 'status'];
   const fields = allowed.filter(f => body[f] !== undefined);
   if (fields.length === 0) return res.status(400).json({ error: 'Nothing to update.' });
 
@@ -226,4 +257,5 @@ router.patch('/profile/password', async (req, res) => {
   await db.query('UPDATE mechanics SET password = ? WHERE id = ?', [hash, req.user.id]);
   res.json({ message: 'Password changed.' });
 });
+
 module.exports = router;

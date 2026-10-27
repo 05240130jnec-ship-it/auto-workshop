@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, initials } from '../../data/store.js'
+import { initials } from '../../data/store.js'
+import { useMechanic } from './MechanicContext.js'
 
 // The header row at the top of each mechanic page
 export default function MTopbar({ title, sub, back, children }) {
   const { user } = useAuth()
-  const { data } = useStore()
-  const waiting = data.repairs.filter((r) => r.mechanicId === user.id && r.status === 'pending').length
+  const { data } = useMechanic()
+  const waiting = data.repairs.filter((r) => r.status === 'pending').length
   return (
     <header className="m-topbar">
       <div>
