@@ -34,8 +34,8 @@ export default function Home() {
             </div>
             <ul className="acp-hero2-points">
               <li><i className="bi bi-patch-check-fill"></i>Certified technicians</li>
-              <li><i className="bi bi-shield-check"></i>Genuine parts</li>
-              <li><i className="bi bi-tools"></i>Free inspection</li>
+              <li><i className="bi bi-shield-fill-check"></i>Genuine parts</li>
+              <li><i className="bi bi-wrench-adjustable-circle-fill"></i>Free inspection</li>
             </ul>
           </div>
           <div className="col-lg-6">
@@ -63,6 +63,11 @@ export default function Home() {
               <Link to="/booking?service=brake-repair" className="btn btn-brand-primary btn-lg">Book Now{' '}<i className="bi bi-arrow-right ms-1"></i></Link>
               <Link to="/services/brake" className="btn btn-lg acp-btn-outline-light">Brake Repair Details</Link>
             </div>
+            <ul className="acp-hero2-points">
+              <li><i className="bi bi-tag-fill"></i>20% off brake pads</li>
+              <li><i className="bi bi-wrench-adjustable-circle-fill"></i>Free inspection</li>
+              <li><i className="bi bi-calendar-check-fill"></i>Book online in minutes</li>
+            </ul>
           </div>
           <div className="col-lg-6">
             <div className="acp-hero2-media">
