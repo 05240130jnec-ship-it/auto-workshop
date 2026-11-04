@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
-import { HOME_FOR, DEMO_ACCOUNTS } from '../auth/users.js'
+import { HOME_FOR } from '../auth/users.js'
 import usePageTitle from '../ui/usePageTitle.js'
 import '../styles/login.css'
 
@@ -37,12 +37,6 @@ export default function Login() {
       ? !from.startsWith('/admin') && !from.startsWith('/mechanic')
       : from.startsWith(HOME_FOR[u.role]))
     navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
-  }
-
-  function fill(u) {
-    setEmail(u.email)
-    setPassword(u.password)
-    setError('')
   }
 
   return (
@@ -110,18 +104,6 @@ export default function Login() {
               {loading ? <><span className="spinner-border spinner-border-sm"></span> Signing in…</> : <>Sign in <i className="bi bi-arrow-right"></i></>}
             </button>
           </form>
-
-          <div className="lg-demo">
-            <p><i className="bi bi-info-circle-fill"></i> Demo accounts — click one to fill in:</p>
-            <div className="lg-demo-list">
-              {DEMO_ACCOUNTS.map((u) => (
-                <button key={u.role} type="button" onClick={() => fill(u)}>
-                  <b>{u.label}</b>
-                  <span>{u.email}</span>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <p className="lg-signup">New customer? <Link to="/signup" className="lg-link">Create an account</Link></p>
           <Link to="/" className="lg-back"><i className="bi bi-arrow-left"></i> Back to website</Link>
