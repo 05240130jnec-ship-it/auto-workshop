@@ -66,7 +66,9 @@ CREATE TABLE `inventory` (
   `stock` int(11) DEFAULT 0,
   `reorder` int(11) DEFAULT 0,
   `price` decimal(10,2) DEFAULT 0.00,
-  `supplierId` varchar(20) DEFAULT NULL
+  `supplierId` varchar(20) DEFAULT NULL,
+  `image` varchar(200) DEFAULT NULL,
+  `inShop` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -133,6 +135,7 @@ CREATE TABLE `orders` (
 CREATE TABLE `repairs` (
   `id` varchar(20) NOT NULL,
   `customerId` varchar(20) NOT NULL,
+  `vehicleType` varchar(60) DEFAULT NULL,
   `vehicle` varchar(100) DEFAULT NULL,
   `plate` varchar(30) DEFAULT NULL,
   `service` varchar(100) DEFAULT NULL,
@@ -210,6 +213,55 @@ CREATE TABLE `suppliers` (
   `email` varchar(100) DEFAULT NULL,
   `address` varchar(200) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `services` (website services + prices)
+--
+
+CREATE TABLE `services` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `slug` varchar(60) NOT NULL UNIQUE,
+  `title` varchar(100) NOT NULL,
+  `serviceName` varchar(100) NOT NULL,
+  `price` decimal(10,2) DEFAULT 0.00,
+  `image` varchar(200) DEFAULT NULL,
+  `shortText` varchar(255) DEFAULT NULL,
+  `page` varchar(100) DEFAULT NULL,
+  `sortOrder` int(11) DEFAULT 0,
+  `active` tinyint(1) DEFAULT 1,
+  `intro` varchar(255) DEFAULT NULL,
+  `description` text DEFAULT NULL,
+  `points` text DEFAULT NULL,
+  `gallery` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `settings` (page text, contact details, booking rules)
+--
+
+CREATE TABLE `settings` (
+  `name` varchar(60) NOT NULL PRIMARY KEY,
+  `value` text DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Table structure for table `offers` (home page slideshow offers)
+--
+
+CREATE TABLE `offers` (
+  `id` int(11) NOT NULL AUTO_INCREMENT PRIMARY KEY,
+  `tag` varchar(60) DEFAULT 'Limited time offer',
+  `title` varchar(120) NOT NULL,
+  `percent` int(11) DEFAULT 0,
+  `text` varchar(255) DEFAULT NULL,
+  `points` text DEFAULT NULL,
+  `serviceSlug` varchar(60) DEFAULT NULL,
+  `image` varchar(200) DEFAULT NULL,
+  `endDate` date DEFAULT NULL,
+  `active` tinyint(1) DEFAULT 1
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
 
 --
 -- Indexes for dumped tables
@@ -360,6 +412,17 @@ ALTER TABLE `repair_services`
 ALTER TABLE `reservations`
   ADD CONSTRAINT `reservations_ibfk_1` FOREIGN KEY (`customerId`) REFERENCES `customers` (`id`) ON DELETE CASCADE;
 SET FOREIGN_KEY_CHECKS=1;
+
+-- --------------------------------------------------------
+-- Wrong login tries: after 5 wrong passwords the email is locked for 15 minutes.
+-- (routes/auth.js also creates this table by itself if it is missing.)
+CREATE TABLE IF NOT EXISTS `login_attempts` (
+  `email` varchar(120) NOT NULL,
+  `fails` int NOT NULL DEFAULT 0,
+  `lockedUntil` datetime DEFAULT NULL,
+  PRIMARY KEY (`email`)
+);
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

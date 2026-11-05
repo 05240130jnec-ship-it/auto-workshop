@@ -1,6 +1,7 @@
 // Converted from repairCar/service-engine.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ServicePrice from './ServicePrice.jsx'
 
 export default function ServiceEngine() {
   usePageTitle("Engine Diagnostics")
@@ -24,7 +25,7 @@ export default function ServiceEngine() {
       <div className="col-lg-6">
         <small className="acp-eyebrow">Our Services</small>
         <h1 className="acp-page-title mt-2 mb-2">Engine Diagnostics</h1>
-        <p className="acp-service-price mb-3">from Nu. 1,000</p>
+        <ServicePrice slug="engine-diagnostics" />
         <p className="acp-lead">Find out exactly what is wrong with your engine before you spend money fixing it.</p>
         <p className="text-muted">We use advanced scan tools to read error codes and pinpoint engine performance issues with precision.</p>
         <p className="text-muted">Our certified technicians interpret data to provide transparent repair recommendations and avoid unnecessary costs.</p>

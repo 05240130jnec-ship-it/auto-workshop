@@ -3,10 +3,10 @@
 html.theme-site {
   
   --brand-yellow: #f57c00;       
-  --brand-yellow-dark: #e06900;  
+  --brand-yellow-dark: #f57c00;   /* same orange everywhere (was #e06900) */  
   --brand-purple: #0f2a44;       
-  --brand-purple-dark: #0a1d30;  
-  --brand-navy-light: #173d63;
+  --brand-purple-dark: #0f2a44;   /* same navy everywhere (was #0a1d30) */  
+  --brand-navy-light: #0f2a44;    /* same navy everywhere (was #173d63) */
   --brand-red: #d84315;
   --brand-green: #2e7d32;
   --bg-pink: #f5f7fa;            
@@ -34,6 +34,9 @@ html.theme-site .acp-navbar {
   border-bottom: 3px solid var(--brand-yellow);
   padding: 1.1rem 2.5rem;
   min-height: 90px;
+  position: sticky;   /* stays at the top when you scroll */
+  top: 0;             /* stick to the very top of the screen */
+  z-index: 1030;      /* stay above pictures and cards */
 }
 html.theme-site .acp-brand {
   display: flex;
@@ -988,3 +991,79 @@ html.theme-site .acp-card.h-100.p-3 > img.acp-product-img.is-cutout {
 html.theme-site .acp-product-img.is-cutout { mix-blend-mode: multiply; }
 html.theme-site .acp-card.h-100.p-3:hover > img.acp-product-img { transform: scale(1.04); }
 
+/* One orange (#f57c00) and one navy (#0f2a44) on every page.
+   Buttons still darken a little when you hover over them. */
+html.theme-site .btn-brand-primary:hover,
+html.theme-site .btn-brand-yellow:hover { filter: brightness(0.92); }
+
+/* About page: the 3 sections use the SAME icon style as "Three Core Pillars"
+   (filled orange icon on a light-orange rounded square) */
+html.theme-site .acp-why-icon {
+  width: 60px; height: 60px;
+  border-radius: 16px;
+  font-size: 1.6rem;
+  color: var(--brand-yellow);
+  background: rgba(245, 124, 0, .12);
+  box-shadow: none;
+}
+html.theme-site .acp-value h3 i {
+  width: 40px; height: 40px; flex: 0 0 40px;
+  border-radius: 12px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.15rem;
+  color: var(--brand-yellow);
+  background: rgba(245, 124, 0, .12);
+}
+
+/* ===== Contact page ===== */
+html.theme-site .acp-contact-hero { padding: 3.5rem 0 3rem; }
+html.theme-site .acp-contact-hero .acp-hero2-text { max-width: 620px; }
+html.theme-site .acp-contact-value {
+  font-weight: 700;
+  color: var(--brand-purple);
+  word-break: break-word;
+  margin-bottom: 1rem;
+}
+html.theme-site .acp-hours-box {
+  background: #fff;
+  border: 1px solid var(--border-light);
+  border-top: 4px solid var(--brand-yellow);
+  border-radius: 16px;
+  padding: 1.75rem;
+  box-shadow: 0 4px 16px rgba(15, 42, 68, .06);
+}
+html.theme-site .acp-hours-box h3 {
+  display: flex; align-items: center; gap: .75rem;
+  font-size: 1.2rem; font-weight: 700; color: var(--brand-purple);
+  margin-bottom: 1rem;
+}
+html.theme-site .acp-hours-box h3 .acp-feature-icon {
+  width: 44px; height: 44px; border-radius: 12px; font-size: 1.2rem; margin: 0;
+}
+html.theme-site .acp-hours-box ul { list-style: none; padding: 0; margin: 0; }
+html.theme-site .acp-hours-box li {
+  display: flex; justify-content: space-between; gap: 1rem;
+  padding: .8rem 0;
+  border-bottom: 1px dashed var(--border-light);
+}
+html.theme-site .acp-hours-box li:last-child { border-bottom: none; }
+html.theme-site .acp-hours-box li span { color: var(--text-muted); }
+html.theme-site .acp-hours-box li strong { color: var(--brand-purple); }
+html.theme-site .acp-hours-box li strong.is-closed { color: var(--brand-red); }
+html.theme-site .acp-hours-box-note {
+  display: flex; gap: .5rem;
+  margin: 1rem 0 0; padding: .85rem 1rem;
+  border-radius: 10px;
+  background: rgba(245, 124, 0, .08);
+  color: var(--text-dark); font-size: .95rem;
+}
+html.theme-site .acp-hours-box-note i { color: var(--brand-yellow); margin-top: .15rem; }
+html.theme-site .acp-map {
+  min-height: 360px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-light);
+  box-shadow: 0 4px 16px rgba(15, 42, 68, .06);
+  background: #e9edf2;
+}
+html.theme-site .acp-map iframe { width: 100%; height: 100%; min-height: 360px; border: 0; display: block; }

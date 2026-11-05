@@ -3,6 +3,7 @@ import { AdminContext } from './AdminContext.js'
 import { api } from '../../api.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import Loading from '../../ui/Loading.jsx'
+import { reloadSettings } from '../../data/useSettings.js'
 
 // Everything the admin panel shows, loaded from the backend
 const LISTS = {
@@ -14,6 +15,7 @@ const LISTS = {
   orders: '/admin/orders',
   listings: '/admin/shop/listings',
   reservations: '/admin/shop/reservations',
+  services: '/content/services-all',   // every service (website + workshop-only), for the job form
 }
 
 // MySQL sends DECIMAL numbers as text ("1500.00"), so turn them into real numbers.
@@ -71,7 +73,8 @@ export default function AdminDataProvider({ children }) {
   const reload = useCallback(async () => {
     try {
       const names = Object.keys(LISTS)
-      const results = await Promise.all(names.map((n) => api(LISTS[n])))
+      // the lists + the website settings (categories, specialisations…) used in the forms
+      const [results] = await Promise.all([Promise.all(names.map((n) => api(LISTS[n]))), reloadSettings()])
       const next = {}
       names.forEach((n, i) => { next[n] = clean(n, results[i]) })
       setData(next)

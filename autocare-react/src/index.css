@@ -3,3 +3,11 @@ body { margin: 0; }
 .c-center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; background: var(--a-bg); font-family: var(--font-body); }
 .a-logout { text-decoration: none; }
 .modal.d-block { background: transparent; }
+
+/* Pop-up forms: the title and the Save / Cancel buttons always stay visible,
+   only the fields in the middle scroll (for long forms like Edit service) */
+.a-modal .modal-dialog-scrollable .modal-content > form {
+  display: flex; flex-direction: column;
+  max-height: 100%; min-height: 0; overflow: hidden;
+}
+.a-modal .modal-dialog-scrollable .modal-content > form > .modal-body { overflow-y: auto; }

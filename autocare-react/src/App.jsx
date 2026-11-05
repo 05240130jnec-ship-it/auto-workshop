@@ -12,14 +12,8 @@ import AuthLayout from './layouts/AuthLayout.jsx'
 import Home from './pages/site/Home.jsx'
 import About from './pages/site/About.jsx'
 import Services from './pages/site/Services.jsx'
-import ServiceEngine from './pages/site/ServiceEngine.jsx'
-import ServiceBrake from './pages/site/ServiceBrake.jsx'
-import ServiceOil from './pages/site/ServiceOil.jsx'
-import ServiceCarWash from './pages/site/ServiceCarWash.jsx'
-import Shop from './pages/site/Shop.jsx'
-import ShopAccessories from './pages/site/ShopAccessories.jsx'
-import ShopCleaning from './pages/site/ShopCleaning.jsx'
-import ShopSafety from './pages/site/ShopSafety.jsx'
+import ServiceDetail from './pages/site/ServiceDetail.jsx'
+import ShopCategory from './pages/site/ShopCategory.jsx'
 import Contact from './pages/site/Contact.jsx'
 import Booking from './pages/site/Booking.jsx'
 import Confirm from './pages/site/Confirm.jsx'
@@ -47,6 +41,7 @@ import AdminCustomers from './pages/admin/Customers.jsx'
 import AdminMechanics from './pages/admin/Mechanics.jsx'
 import AdminInventory from './pages/admin/Inventory.jsx'
 import AdminSuppliers from './pages/admin/Suppliers.jsx'
+import AdminContent from './pages/admin/Content.jsx'
 
 const customer = (page) => <RequireRole roles={['customer']}>{page}</RequireRole>
 
@@ -65,14 +60,9 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="about" element={<About />} />
         <Route path="services" element={<Services />} />
-        <Route path="services/engine" element={<ServiceEngine />} />
-        <Route path="services/brake" element={<ServiceBrake />} />
-        <Route path="services/oil" element={<ServiceOil />} />
-        <Route path="services/car-wash" element={<ServiceCarWash />} />
-        <Route path="shop" element={<Shop />} />
-        <Route path="shop/accessories" element={<ShopAccessories />} />
-        <Route path="shop/cleaning" element={<ShopCleaning />} />
-        <Route path="shop/safety" element={<ShopSafety />} />
+        <Route path="services/:key" element={<ServiceDetail />} />
+        <Route path="shop" element={<ShopCategory />} />
+        <Route path="shop/:slug" element={<ShopCategory />} />
         <Route path="contact" element={<Contact />} />
         <Route path="booking" element={customer(<Booking />)} />
         <Route path="confirm/:id" element={customer(<Confirm />)} />
@@ -100,6 +90,7 @@ export default function App() {
         <Route path="mechanics" element={<AdminMechanics />} />
         <Route path="inventory" element={<AdminInventory />} />
         <Route path="suppliers" element={<AdminSuppliers />} />
+        <Route path="content" element={<AdminContent />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />

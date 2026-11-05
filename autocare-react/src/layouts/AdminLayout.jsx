@@ -73,6 +73,7 @@ function AdminShell() {
             {link('/admin/mechanics', 'bi-person-badge', 'Mechanics')}
             {link('/admin/inventory', 'bi-box-seam', 'Inventory', low, 'red')}
             {link('/admin/suppliers', 'bi-truck', 'Suppliers')}
+            {link('/admin/content', 'bi-megaphone', 'Website Content')}
           </ul>
         </div>
         <div className="a-nav-group">
