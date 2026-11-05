@@ -52,7 +52,7 @@ router.get('/:id', async (req, res) => {
 
 // POST /api/repairs  -> book a new repair
 router.post('/', async (req, res) => {
-  const { service, notes, cost, apptDate, apptTime, delivery } = req.body;
+  const { service, notes, cost, apptDate, apptTime } = req.body;
 
   if (!req.body.vehicle || !req.body.plate || !service || !apptDate || !apptTime) {
     return res.status(400).json({ error: 'Please fill in vehicle, plate, service, date and time.' });
@@ -85,7 +85,7 @@ router.post('/', async (req, res) => {
     `INSERT INTO repairs (id, customerId, vehicleType, vehicle, plate, service, status, priority, date, cost, notes, apptDate, apptTime, delivery)
      VALUES (?, ?, ?, ?, ?, ?, 'pending', 'normal', CURDATE(), ?, ?, ?, ?, ?)`,
     [id, req.user.id, vehicleType, vehicle, plate, service, cost || 0, notes || '', apptDate, apptTime,
-     delivery === 'pickup' ? 'pickup' : 'dropoff']
+     'dropoff']                                  // no home pickup: customers bring the car themselves
   );
   res.status(201).json({ id });
 });

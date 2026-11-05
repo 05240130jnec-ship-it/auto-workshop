@@ -48,7 +48,7 @@ export default function Confirm() {
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Appointment</div>
                     <strong>{fmtDate(r.apptDate || r.due)}</strong>
-                    <div className="small text-muted">{r.apptTime} · {r.delivery === 'pickup' ? 'Home pickup' : 'Drop-off'}</div>
+                    <div className="small text-muted">{r.apptTime} · Bring it to the workshop</div>
                   </div>
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Vehicle · Estimate</div>
@@ -62,7 +62,7 @@ export default function Confirm() {
               <ul className="list-unstyled text-start small mb-4">
                 <li className="mb-2"><i className="bi bi-dot text-brand-purple fs-4 lh-1"></i>A mechanic will review your vehicle details and problem description.</li>
                 <li className="mb-2"><i className="bi bi-dot text-brand-purple fs-4 lh-1"></i>You'll see the status change to “Being repaired” once work starts.</li>
-                <li className="mb-2"><i className="bi bi-dot text-brand-purple fs-4 lh-1"></i>When it's done, the final amount appears here and your car is ready for pickup.</li>
+                <li className="mb-2"><i className="bi bi-dot text-brand-purple fs-4 lh-1"></i>When it's done, the final amount appears here and you can collect your car from the workshop.</li>
               </ul>
 
               <Link to="/my-repairs" className="btn btn-brand-primary w-100">

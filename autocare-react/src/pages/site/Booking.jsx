@@ -41,7 +41,6 @@ export default function Booking() {
   const [plate, setPlate] = useState('')
   const [problem, setProblem] = useState('')
   const [photos, setPhotos] = useState([])
-  const [delivery, setDelivery] = useState('dropoff')
 
   // Calendar: this month, next month
   const now = new Date()
@@ -72,7 +71,6 @@ export default function Booking() {
   const slotTimes = (slots.data || []).map((x) => x.time)
   const slot = slotTimes.includes(pickedSlot) ? pickedSlot : (slotTimes.find((t) => !taken(t)) || '')
   const settings = useSettings()
-  const PICKUP_FEE = settings ? Number(settings.pickupFee) || 0 : 0
   // Vehicle types come from MySQL (admin → Website Content → Lists)
   const vehicleTypes = lines(settings && settings.vehicleTypes)
 
@@ -84,7 +82,7 @@ export default function Booking() {
   const canPrev = month > new Date(now.getFullYear(), now.getMonth(), 1)
   const canNext = month < new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  const total = price + (delivery === 'pickup' ? PICKUP_FEE : 0)
+  const total = price   // no home pickup: the customer brings the vehicle to the workshop
 
   async function submit() {
     setError('')
@@ -109,7 +107,6 @@ export default function Booking() {
           cost: total,
           apptDate: date,
           apptTime: slot,
-          delivery,
         },
       })
       navigate('/confirm/' + data.id)          // e.g. /confirm/ACP-9252
@@ -223,21 +220,8 @@ export default function Booking() {
             </div>
 
             <div className="acp-card p-4">
-              <h3 className="h6 fw-bold mb-3">Delivery Preference</h3>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <div className={'acp-time-slot text-start p-3' + (delivery === 'dropoff' ? ' selected' : '')} onClick={() => setDelivery('dropoff')}>
-                    <strong><i className="bi bi-truck me-1"></i> Drop-off</strong>
-                    <p className="mb-0 small text-muted mt-1">Bring your vehicle to the workshop.</p>
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className={'acp-time-slot text-start p-3' + (delivery === 'pickup' ? ' selected' : '')} onClick={() => setDelivery('pickup')}>
-                    <strong><i className="bi bi-house-door me-1"></i> Home Pickup</strong>
-                    <p className="mb-0 small text-muted mt-1">We'll pick up the vehicle. Extra {nu(PICKUP_FEE)}.</p>
-                  </div>
-                </div>
-              </div>
+              <h3 className="h6 fw-bold mb-2"><i className="bi bi-geo-alt-fill me-1" style={{ color: 'var(--brand-yellow-dark)' }}></i>Bring your vehicle to the workshop</h3>
+              <p className="mb-0 small text-muted">Please bring your vehicle to our workshop at the time you chose{settings && settings.address ? <>: <strong>{settings.address}</strong></> : '.'}</p>
             </div>
           </div>
 
@@ -286,7 +270,6 @@ export default function Booking() {
 
               <div className="d-flex justify-content-between small mb-1"><span>{svc.title}</span><span>{nu(svc.price)}</span></div>
               {offer && <div className="d-flex justify-content-between small mb-1 text-success"><span>Offer: {offer.percent}% off</span><span>− {nu(svc.price - price)}</span></div>}
-              {delivery === 'pickup' && <div className="d-flex justify-content-between small mb-1"><span>Home pickup</span><span>{nu(PICKUP_FEE)}</span></div>}
               <div className="d-flex justify-content-between fw-bold border-top pt-2 mb-3"><span>Estimated total</span><span>{nu(total)}</span></div>
               <p className="small text-muted">You pay at the workshop after the job is done.</p>
 

@@ -58,7 +58,6 @@ export const SETTINGS_GROUPS = [
     fields: [
       { name: 'timeSlots', label: 'Time slots', type: 'textarea', required: true, col: 12, help: 'One time per line, e.g. 08:00 AM — customers can only book these times' },
       { name: 'maxPerSlot', label: 'Cars per time slot', type: 'number', min: 1, required: true, help: 'A slot is full after this many bookings' },
-      { name: 'pickupFee', label: 'Home pickup fee (Nu.)', type: 'number', min: 0, step: 50, required: true },
     ],
   },
   {

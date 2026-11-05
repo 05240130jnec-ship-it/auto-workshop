@@ -1,42 +1,61 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
-import { nu, today, daysAgo } from '../../data/store.js'
+import { nu, today, daysAgo, fmtDate } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { shopCategories, shopLink } from '../../data/content.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
 import Loading from '../../ui/Loading.jsx'
 
-// "Buy Now" on the shop pages → reserve the part (POST /api/shop/reservations), pay when you collect it
+// "Buy Now" on the shop pages → order the part (POST /api/shop/reservations).
+// The customer collects it at the workshop on the pickup date and pays there.
+// Product, price, picture and stock come from MySQL (admin → Inventory).
 export default function Reserve() {
   usePageTitle('Order Part')
   const [params] = useSearchParams()
   const sku = params.get('item')
   const { toast } = useDialogs()
   const navigate = useNavigate()
+  const settings = useSettings()
   const [qty, setQty] = useState(1)
-  const [pickup, setPickup] = useState(daysAgo(-1))
+  const [pickup, setPickup] = useState(daysAgo(-1))   // tomorrow
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // The product (name, price, picture, live stock) from MySQL — GET /api/content/products/engine-oil
+  // The product — GET /api/content/products/seat-covers
   const parts = useApi(sku ? '/content/products/' + encodeURIComponent(sku) : null)
   const item = parts.data
-  const stock = item ? item.stock : 0
+  const stock = item ? Number(item.stock) || 0 : 0
+
+  // Other products of the same shop page ("You may also like")
+  const others = useApi(item ? '/content/products?category=' + encodeURIComponent(item.category) : null)
+  const more = (others.data || []).filter((p) => p.sku !== sku && p.stock > 0).slice(0, 4)
 
   if (!sku || parts.error) return <Navigate to="/shop" replace />
   if (!item) return <section className="acp-section"><div className="container"><Loading /></div></section>
 
+  // The shop page this product belongs to (for the "Back" link)
+  const cats = shopCategories(settings)
+  const cat = cats.find((c) => c.name === item.category)
+  const backTo = cat ? shopLink(cats, cat) : '/shop'
+
+  const amount = Math.min(Math.max(Number(qty) || 1, 1), Math.max(stock, 1))
+  const total = item.price * amount
+  const lowStock = stock > 0 && stock <= 5
+
   async function submit(e) {
     e.preventDefault()
     setError('')
+    if (!pickup || pickup < today()) return setError('Please choose a pickup date from today on.')
     setSaving(true)
     try {
       const data = await api('/shop/reservations', {
         method: 'POST',
-        body: { partId: item.sku, qty: Number(qty), pickup },
+        body: { partId: item.sku, qty: amount, pickup },
       })
-      toast(`Order #${data.id} placed — collect it on the pickup date`)
+      toast(`Order #${data.id} placed — collect it on ${fmtDate(pickup)}`)
       navigate('/my-repairs')
     } catch (err) {
       setSaving(false)
@@ -46,48 +65,99 @@ export default function Reserve() {
   }
 
   return (
-    <section className="acp-section">
-      <div className="container" style={{ maxWidth: 820 }}>
-        <Link to="/shop" className="small text-muted d-inline-block mb-3"><i className="bi bi-arrow-left"></i> Back to shop</Link>
-        <div className="acp-card p-4">
-          <div className="row g-4 align-items-center">
-            <div className="col-md-5">
-              <img src={item.image} className="img-fluid rounded-3" alt={item.name} />
+    <section className="acp-section acp-order">
+      <div className="container" style={{ maxWidth: 1040 }}>
+
+        {/* Breadcrumb */}
+        <nav className="acp-order-crumbs small mb-3">
+          <Link to={backTo}><i className="bi bi-arrow-left"></i> {cat ? cat.name : 'Shop'}</Link>
+          <span>/</span><span className="text-muted">{item.name}</span>
+        </nav>
+
+        <div className="row g-4">
+          {/* ===== LEFT: picture ===== */}
+          <div className="col-lg-6">
+            <div className="acp-order-photo">
+              <span className="acp-order-tag">{item.category}</span>
+              <img src={item.image || '/media/logo.jpg'} alt={item.name} />
             </div>
-            <div className="col-md-7">
-              <small className="acp-eyebrow">{item.category}</small>
-              <h1 className="h3 fw-bold mt-2">{item.name}</h1>
-              <p className="fs-5 fw-bold mb-1" style={{ color: 'var(--brand-green)' }}>{nu(item.price)}</p>
-              <p className="small mb-3">
-                {parts.loading
-                  ? <span className="text-muted">Checking stock…</span>
-                  : stock > 0
-                    ? <span className="text-success"><i className="bi bi-check-circle me-1"></i>{stock} in stock</span>
-                    : <span className="text-danger"><i className="bi bi-x-circle me-1"></i>Out of stock</span>}
-              </p>
+          </div>
+
+          {/* ===== RIGHT: order form ===== */}
+          <div className="col-lg-6">
+            <div className="acp-order-box">
+              <h1 className="acp-order-title">{item.name}</h1>
+              <div className="d-flex align-items-center gap-3 flex-wrap mb-4">
+                <span className="acp-order-price">{nu(item.price)}</span>
+                {stock === 0
+                  ? <span className="acp-order-stock is-out"><i className="bi bi-x-circle-fill"></i> Out of stock</span>
+                  : lowStock
+                    ? <span className="acp-order-stock is-low"><i className="bi bi-exclamation-circle-fill"></i> Only {stock} left</span>
+                    : <span className="acp-order-stock"><i className="bi bi-check-circle-fill"></i> {stock} in stock</span>}
+              </div>
+
               <form onSubmit={submit}>
-                <div className="row g-3 mb-3">
-                  <div className="col-5">
-                    <label className="form-label small fw-bold">Quantity</label>
-                    <input type="number" min={1} max={stock || 1} className="form-control" value={qty} onChange={(e) => setQty(e.target.value)} required />
-                  </div>
-                  <div className="col-7">
-                    <label className="form-label small fw-bold">Pickup date</label>
-                    <input type="date" min={today()} className="form-control" value={pickup} onChange={(e) => setPickup(e.target.value)} required />
-                  </div>
+                {/* Quantity: − 1 + */}
+                <label className="form-label small fw-bold">Quantity</label>
+                <div className="acp-qty mb-4">
+                  <button type="button" onClick={() => setQty(amount - 1)} disabled={amount <= 1} aria-label="Less"><i className="bi bi-dash-lg"></i></button>
+                  <input type="number" min={1} max={stock || 1} value={qty} aria-label="Quantity"
+                    onChange={(e) => setQty(e.target.value)} onBlur={() => setQty(amount)} />
+                  <button type="button" onClick={() => setQty(amount + 1)} disabled={amount >= stock} aria-label="More"><i className="bi bi-plus-lg"></i></button>
+                  <small className="text-muted ms-2">max {stock}</small>
                 </div>
-                <div className="d-flex justify-content-between fw-bold border-top pt-2 mb-3">
-                  <span>Total</span><span>{nu(item.price * (Number(qty) || 0))}</span>
+
+                {/* Pickup date */}
+                <label className="form-label small fw-bold">When will you collect it?</label>
+                <div className="acp-order-dates mb-2">
+                  {[['Today', today()], ['Tomorrow', daysAgo(-1)], ['In 2 days', daysAgo(-2)]].map(([label, d]) => (
+                    <button type="button" key={label} className={pickup === d ? 'is-on' : ''} onClick={() => setPickup(d)}>
+                      <strong>{label}</strong><small>{fmtDate(d)}</small>
+                    </button>
+                  ))}
                 </div>
-                <p className="small text-muted"><i className="bi bi-shop me-1"></i>Pay at the workshop when you collect your order.</p>
-                {error && <div className="alert alert-danger py-2 small">{error}</div>}
-                <button className="btn btn-brand-primary w-100" disabled={saving || stock === 0}>
-                  {saving ? <><span className="spinner-border spinner-border-sm"></span> Placing order…</> : <>Place Order <i className="bi bi-arrow-right"></i></>}
+                <input type="date" min={today()} className="form-control mb-4" value={pickup} onChange={(e) => setPickup(e.target.value)} required />
+
+                {/* Summary */}
+                <div className="acp-order-summary">
+                  <div><span>{item.name} × {amount}</span><span>{nu(total)}</span></div>
+                  <div><span>Pickup</span><span>{pickup ? fmtDate(pickup) : '—'}</span></div>
+                  <div className="is-total"><span>Total to pay</span><span>{nu(total)}</span></div>
+                </div>
+
+                {error && <div className="alert alert-danger py-2 small mt-3 mb-0">{error}</div>}
+
+                <button className="btn btn-brand-primary w-100 btn-lg mt-3" disabled={saving || stock === 0}>
+                  {saving
+                    ? <><span className="spinner-border spinner-border-sm"></span> Placing order…</>
+                    : stock === 0 ? 'Out of stock' : <>Place Order · {nu(total)} <i className="bi bi-arrow-right"></i></>}
                 </button>
+                <p className="acp-order-note">
+                  <i className="bi bi-geo-alt-fill"></i>
+                  Collect and pay at our workshop{settings && settings.address ? <>: <strong>{settings.address}</strong></> : '.'}
+                </p>
               </form>
             </div>
           </div>
         </div>
+
+        {/* ===== You may also like ===== */}
+        {more.length > 0 && (
+          <div className="mt-5">
+            <h2 className="h5 fw-bold mb-3">You may also like</h2>
+            <div className="row g-3">
+              {more.map((p) => (
+                <div className="col-6 col-md-3" key={p.sku}>
+                  <Link to={'/reserve?item=' + encodeURIComponent(p.sku)} className="acp-order-more">
+                    <img src={p.image || '/media/logo.jpg'} alt="" />
+                    <strong>{p.name}</strong>
+                    <span>{nu(p.price)}</span>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )
