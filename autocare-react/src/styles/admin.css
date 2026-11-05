@@ -658,3 +658,8 @@ html.theme-admin .a-table td { padding: 12px 10px; }
   html.theme-admin .a-sidebar-toggle { display: inline-flex !important; }
   html.theme-admin .a-backdrop.show { display: block; position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 998; }
 }
+
+/* Dashboard: only one chart (Repairs by status) → full width, circle and legend side by side */
+.a-grid.a-grid-one { grid-template-columns: 1fr; }
+.a-grid-one .a-donut-wrap { justify-content: center; gap: 60px; }
+.a-grid-one .a-legend { min-width: 260px; }
