@@ -1,7 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const db = require('../db');
+const { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } = require('../vehicle-rules');
 const { requireAuth, requireRole } = require('../middleware/auth');
+const { checkVehicleType } = require('../settings');
 
 const router = express.Router();
 router.use(requireAuth, requireRole('admin'));   // only admins
@@ -85,9 +87,24 @@ router.patch('/repairs/:id', async (req, res) => {
     if (cust.length === 0) return res.status(400).json({ error: 'Customer not found.' });
   }
   if (body.mechanicId === '') body.mechanicId = null;   // "Assign later" in the form
+  // Check the car name and the Bhutan plate number when they are changed
+  if (body.vehicle !== undefined) {
+    body.vehicle = cleanVehicle(body.vehicle);
+    if (!body.vehicle) return res.status(400).json({ error: VEHICLE_ERROR });
+  }
+  if (body.plate !== undefined) {
+    body.plate = cleanPlate(body.plate);
+    if (!body.plate) return res.status(400).json({ error: PLATE_ERROR });
+  }
+  // Vehicle type: one of the list, or empty
+  if (body.vehicleType !== undefined && body.vehicleType !== '' && body.vehicleType !== null) {
+    body.vehicleType = await checkVehicleType(body.vehicleType);
+    if (!body.vehicleType) return res.status(400).json({ error: 'Please choose a vehicle type from the list.' });
+  }
+  if (body.vehicleType === '') body.vehicleType = null;
 
   // Only these fields can be changed
-  const allowed = ['customerId', 'vehicle', 'plate', 'service', 'mechanicId', 'status',
+  const allowed = ['customerId', 'vehicleType', 'vehicle', 'plate', 'service', 'mechanicId', 'status',
                    'priority', 'date', 'due', 'cost', 'notes'];
   const fields = allowed.filter(f => body[f] !== undefined);
   if (fields.length === 0) return res.status(400).json({ error: 'Nothing to update.' });
@@ -107,6 +124,15 @@ router.post('/repairs', async (req, res) => {
   if (!b.customerId || !b.vehicle || !b.plate || !b.service) {
     return res.status(400).json({ error: 'Customer, vehicle, plate and service are required.' });
   }
+  b.vehicle = cleanVehicle(b.vehicle);
+  if (!b.vehicle) return res.status(400).json({ error: VEHICLE_ERROR });
+  b.plate = cleanPlate(b.plate);
+  if (!b.plate) return res.status(400).json({ error: PLATE_ERROR });
+  let vehicleType = null;                       // optional for the admin
+  if (b.vehicleType) {
+    vehicleType = await checkVehicleType(b.vehicleType);
+    if (!vehicleType) return res.status(400).json({ error: 'Please choose a vehicle type from the list.' });
+  }
   const [cust] = await db.query('SELECT id FROM customers WHERE id = ?', [b.customerId]);
   if (cust.length === 0) return res.status(400).json({ error: 'Customer not found.' });
 
@@ -120,9 +146,9 @@ router.post('/repairs', async (req, res) => {
   const id = 'ACP-' + ((last[0].last || 9225) + 1);
 
   await db.query(
-    `INSERT INTO repairs (id, customerId, vehicle, plate, service, mechanicId, status, priority, date, due, cost, notes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    [id, b.customerId, b.vehicle, String(b.plate).toUpperCase(), b.service, b.mechanicId || null,
+    `INSERT INTO repairs (id, customerId, vehicleType, vehicle, plate, service, mechanicId, status, priority, date, due, cost, notes)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    [id, b.customerId, vehicleType, b.vehicle, b.plate, b.service, b.mechanicId || null,
      status, priority, b.date || new Date().toISOString().slice(0, 10), b.due || null,
      Number(b.cost) || 0, b.notes || '']
   );
@@ -309,7 +335,7 @@ router.get('/inventory', async (req, res) => {
 
 // POST /api/admin/inventory  -> add a part
 router.post('/inventory', async (req, res) => {
-  const { sku, name, category, stock, reorder, price, supplierId } = req.body || {};
+  const { sku, name, category, stock, reorder, price, supplierId, image, inShop } = req.body || {};
   if (!sku || !name || price === undefined) {
     return res.status(400).json({ error: 'SKU, name and price are required.' });
   }
@@ -319,9 +345,10 @@ router.post('/inventory', async (req, res) => {
 
   try {
     await db.query(
-      `INSERT INTO inventory (id, sku, name, category, stock, reorder, price, supplierId)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, sku, name, category || 'Other', Number(stock) || 0, Number(reorder) || 5, price, supplierId || null]
+      `INSERT INTO inventory (id, sku, name, category, stock, reorder, price, supplierId, image, inShop)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, sku, name, category || 'Other', Number(stock) || 0, Number(reorder) || 5, price, supplierId || null,
+       image || null, Number(inShop) ? 1 : 0]
     );
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This SKU already exists.' });
@@ -336,7 +363,7 @@ router.patch('/inventory/:id', async (req, res) => {
   let ok;
   try {
     ok = await updateRow('inventory', req.params.id, req.body || {},
-      ['sku', 'name', 'category', 'stock', 'reorder', 'price', 'supplierId']);
+      ['sku', 'name', 'category', 'stock', 'reorder', 'price', 'supplierId', 'image', 'inShop']);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another part already uses this SKU.' });
     throw err;
@@ -438,6 +465,9 @@ router.post('/orders', async (req, res) => {
 
   const [parts] = await db.query('SELECT * FROM inventory WHERE id = ?', [partId]);
   if (parts.length === 0) return res.status(404).json({ error: 'Part not found.' });
+  if (!supplierId && !parts[0].supplierId) {
+    return res.status(400).json({ error: 'This part has no supplier yet. Edit the part and choose a supplier first.' });
+  }
 
   const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 4) AS UNSIGNED)) AS last FROM orders');
   const id = 'PO-' + ((last[0].last || 2210) + 1);   // PO-2217

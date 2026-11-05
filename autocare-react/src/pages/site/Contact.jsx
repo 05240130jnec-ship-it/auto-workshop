@@ -1,73 +1,84 @@
-// Converted from repairCar/contact.html — same markup and classes as your HTML page
 import usePageTitle from '../../ui/usePageTitle.js'
+import useSettings from '../../data/useSettings.js'
+import Loading from '../../ui/Loading.jsx'
+import { rows, gmailLink, whatsappLink } from '../../data/content.js'
 
+// Contact page. Email, phone/WhatsApp, address, opening hours and the texts all come
+// from MySQL (admin → Website Content → Contact & footer). The map shows the address.
 export default function Contact() {
-  usePageTitle("Contact")
+  usePageTitle('Contact')
+  const s = useSettings()
+  if (!s) return <section className="acp-section"><div className="container"><Loading /></div></section>
+
+  const hours = rows(s.hours)
+  const mapSrc = 'https://www.google.com/maps?q=' + encodeURIComponent(s.address || 'Bhutan') + '&output=embed'
+  const mapLink = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(s.address || 'Bhutan')
+
+  const cards = [
+    { icon: 'bi-envelope-fill', title: 'Email us', text: "Send us an email and we'll get back to you within 24 hours.",
+      value: s.email, href: gmailLink(s.email), link: 'Write an email' },
+    { icon: 'bi-whatsapp', title: 'WhatsApp', text: 'Prefer instant messaging? Chat with us on WhatsApp.',
+      value: s.phone, href: whatsappLink(s.whatsapp), link: 'Start a chat' },
+    { icon: 'bi-geo-alt-fill', title: 'Visit our workshop', text: s.addressNote,
+      value: s.address, href: mapLink, link: 'Get directions' },
+  ]
+
   return (
     <>
+      {/* ===== HEADER ===== */}
+      <section className="acp-hero2 acp-page-hero acp-contact-hero text-center">
+        <div className="container">
+          <span className="acp-hero2-tag"><i className="bi bi-chat-dots-fill"></i>{' '}Contact</span>
+          <h1 className="acp-hero2-title">Get in <span>touch</span> with us</h1>
+          <p className="acp-hero2-text mx-auto mb-0">{s.contactIntro}</p>
+        </div>
+      </section>
 
-
-{/* ===== CONTACT HEADER ===== */}
-<section className="acp-contact-head text-center">
-  <div className="container">
-    <small className="acp-eyebrow">Contact</small>
-    <h2 className="fw-bold mt-2 mb-3">Get in touch with us</h2>
-    <p className="text-muted mx-auto mb-0" style={{ maxWidth: "560px" }}>We are here to help with any questions about our services, repairs, or parts. Reach out and we will respond promptly.</p>
-  </div>
-</section>
-
-{/* ===== CONTACT CARDS ===== */}
-<section className="pb-5">
-  <div className="container" style={{ maxWidth: "1080px" }}>
-    <div className="row g-4 align-items-stretch">
-
-      {/* Left: ways to reach us */}
-      <div className="col-lg-7 d-flex flex-column gap-4">
-        <div className="acp-contact-card">
-          <span className="acp-contact-icon"><i className="bi bi-envelope-fill"></i></span>
-          <div>
-            <h4 className="h5 fw-bold mb-1">Email us</h4>
-            <p className="text-muted mb-2">Send us an email and we'll get back within 24 hours.</p>
-            <a href="mailto:chungmo06@gmail.com" className="acp-contact-link">chungmo06@gmail.com{' '}<i className="bi bi-arrow-right"></i></a>
+      {/* ===== 3 WAYS TO REACH US ===== */}
+      <section className="acp-section pb-4">
+        <div className="container">
+          <div className="row g-4">
+            {cards.map((c) => (
+              <div className="col-md-4" key={c.title}>
+                <div className="acp-feature">
+                  <span className="acp-feature-icon"><i className={'bi ' + c.icon}></i></span>
+                  <h3>{c.title}</h3>
+                  <p className="mb-2">{c.text}</p>
+                  <p className="acp-contact-value">{c.value}</p>
+                  <a href={c.href} target="_blank" rel="noopener" className="acp-more-link">{c.link}{' '}<i className="bi bi-arrow-right"></i></a>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
+      </section>
 
-        <div className="acp-contact-card">
-          <span className="acp-contact-icon acp-contact-icon--green"><i className="bi bi-whatsapp"></i></span>
-          <div>
-            <h4 className="h5 fw-bold mb-1">WhatsApp</h4>
-            <p className="text-muted mb-2">Prefer instant messaging? Chat with us on WhatsApp.</p>
-            <a href="https://wa.me/97517394436" target="_blank" rel="noopener" className="acp-contact-link">+975 17394436{' '}<i className="bi bi-arrow-right"></i></a>
+      {/* ===== HOURS + MAP ===== */}
+      <section className="acp-section pt-2">
+        <div className="container">
+          <div className="row g-4 align-items-stretch">
+            <div className="col-lg-5">
+              <div className="acp-hours-box h-100">
+                <h3><span className="acp-feature-icon"><i className="bi bi-clock-fill"></i></span>Business hours</h3>
+                <ul>
+                  {hours.map(([day, time], i) => (
+                    <li key={i}>
+                      <span>{day}</span>
+                      <strong className={/closed/i.test(time || '') ? 'is-closed' : ''}>{time}</strong>
+                    </li>
+                  ))}
+                </ul>
+                {s.hoursNote && <p className="acp-hours-box-note"><i className="bi bi-info-circle-fill"></i>{s.hoursNote}</p>}
+              </div>
+            </div>
+            <div className="col-lg-7">
+              <div className="acp-map h-100">
+                <iframe title={'Map: ' + s.address} src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
+              </div>
+            </div>
           </div>
         </div>
-
-        <div className="acp-contact-card">
-          <span className="acp-contact-icon"><i className="bi bi-geo-alt-fill"></i></span>
-          <div>
-            <h4 className="h5 fw-bold mb-1">Visit our shop</h4>
-            <p className="fw-semibold mb-1">Sarpang, Bhutan</p>
-            <p className="text-muted mb-0">Located in the heart of the city. Drop by during business hours.</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Right: business hours */}
-      <div className="col-lg-5">
-        <div className="acp-hours-card h-100">
-          <h4 className="h5 fw-bold mb-4"><i className="bi bi-clock-fill me-2"></i>Business hours</h4>
-          <div className="acp-hours-row"><span>Monday – Friday</span><span>8:00 AM – 6:00 PM</span></div>
-          <div className="acp-hours-row"><span>Saturday</span><span>8:00 AM – 6:00 PM</span></div>
-          <div className="acp-hours-row acp-hours-row--closed"><span>Sunday</span><span>Closed</span></div>
-          <p className="acp-hours-note mb-0">We aim to respond within 24 hours on business days. For urgent matters, reach us on WhatsApp.</p>
-          <a href="https://wa.me/97517394436" target="_blank" rel="noopener" className="btn btn-brand-primary w-100 mt-4"><i className="bi bi-whatsapp me-2"></i>Chat on WhatsApp</a>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</section>
-
-
+      </section>
     </>
   )
 }

@@ -1,6 +1,7 @@
 // Converted from repairCar/service-car-wash.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ServicePrice from './ServicePrice.jsx'
 
 export default function ServiceCarWash() {
   usePageTitle("Car Wash")
@@ -24,7 +25,7 @@ export default function ServiceCarWash() {
       <div className="col-lg-6">
         <small className="acp-eyebrow">Our Services</small>
         <h1 className="acp-page-title mt-2 mb-2">Car Wash</h1>
-        <p className="acp-service-price mb-3">from Nu. 300</p>
+        <ServicePrice slug="car-wash" />
         <p className="acp-lead">A spotless car inside and out, cleaned with care.</p>
         <p className="text-muted">Our team washes the body, wheels and tyres with car-safe shampoo and microfibre cloths.</p>
         <p className="text-muted">Choose an interior clean as well to vacuum the seats and carpets and wipe down the dashboard.</p>

@@ -2,12 +2,11 @@ import { useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { nu, fmtDate } from '../../data/store.js'
 import { api } from '../../api.js'
+import useApi from '../../useApi.js'
 import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
-
-const SERVICE_TYPES = ['Brake Pad Replacement', 'Engine Diagnostics', 'Oil Change', 'Car Wash', 'Wheel Alignment', 'Battery Replacement', 'AC Service', 'General Labour']
 
 // Repair detail: update status, write notes, log parts and services.
 // Every button calls the backend; parts taken here come out of the inventory in MySQL.
@@ -25,9 +24,14 @@ export default function RepairDetail() {
   const [note, setNote] = useState('')
   const [partId, setPartId] = useState(inventory.find((p) => p.stock > 0)?.id || '')
   const [partQty, setPartQty] = useState(1)
-  const [svcType, setSvcType] = useState(SERVICE_TYPES[0])
+  // Service types + starting cost come from MySQL (GET /api/content/services-all)
+  const svcList = useApi('/content/services-all').data || []
+  const [svcPicked, setSvcType] = useState('')
   const [svcQty, setSvcQty] = useState(1)
-  const [svcCost, setSvcCost] = useState(1500)
+  const [svcCostTyped, setSvcCost] = useState(null)
+  const svcType = svcPicked || (svcList[0] ? svcList[0].serviceName : '')
+  const svcRow = svcList.find((s) => s.serviceName === svcType)
+  const svcCost = svcCostTyped ?? (svcRow ? svcRow.price : 0)
 
   if (!r) {
     return (
@@ -83,7 +87,7 @@ export default function RepairDetail() {
   }
 
   function addService() {
-    if (Number(svcQty) < 1 || Number(svcCost) < 0) return
+    if (!svcType || Number(svcQty) < 1 || Number(svcCost) < 0) return
     act(() => api(url + '/services', { method: 'POST', body: { name: svcType, qty: Number(svcQty), cost: Number(svcCost) } }),
       svcType + ' added')
   }
@@ -108,7 +112,7 @@ export default function RepairDetail() {
         <div className="col-lg-5">
           <div className="m-panel mb-4">
             <div className="m-panel-head"><h3>Vehicle &amp; Customer</h3></div>
-            <p className="mb-2"><strong>{r.vehicle}</strong></p>
+            <p className="mb-2"><strong>{r.vehicle}</strong>{r.vehicleType && <span className="text-muted small"> · {r.vehicleType}</span>}</p>
             <p className="text-muted small mb-3">Plate: {r.plate} · {r.service}{r.priority !== 'normal' ? ' · ' + r.priority.toUpperCase() : ''}</p>
             <hr />
             <p className="mb-1"><strong>Customer:</strong> {c.name}</p>
@@ -187,8 +191,8 @@ export default function RepairDetail() {
             {!locked && (
               <>
                 <label className="m-form-label">Service Type</label>
-                <select className="m-form-control mb-3" value={svcType} onChange={(e) => setSvcType(e.target.value)}>
-                  {SERVICE_TYPES.map((s) => <option key={s}>{s}</option>)}
+                <select className="m-form-control mb-3" value={svcType} onChange={(e) => { setSvcType(e.target.value); setSvcCost(null) }}>
+                  {svcList.map((s) => <option key={s.id} value={s.serviceName}>{s.serviceName}</option>)}
                 </select>
                 <label className="m-form-label">Hours / Qty</label>
                 <input type="number" className="m-form-control mb-3" min={1} value={svcQty} onChange={(e) => setSvcQty(e.target.value)} />

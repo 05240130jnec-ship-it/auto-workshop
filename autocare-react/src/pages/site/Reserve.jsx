@@ -1,17 +1,17 @@
 import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { nu, today, daysAgo } from '../../data/store.js'
-import { findItem } from '../../data/catalog.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
+import Loading from '../../ui/Loading.jsx'
 
 // "Buy Now" on the shop pages → reserve the part (POST /api/shop/reservations), pay when you collect it
 export default function Reserve() {
   usePageTitle('Order Part')
   const [params] = useSearchParams()
-  const item = findItem(params.get('item'))
+  const sku = params.get('item')
   const { toast } = useDialogs()
   const navigate = useNavigate()
   const [qty, setQty] = useState(1)
@@ -19,12 +19,13 @@ export default function Reserve() {
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  // Live stock from the backend (GET /api/shop/parts)
-  const parts = useApi('/shop/parts')
-  const stockRow = (parts.data || []).find((p) => p.sku === (item && item.slug))
-  const stock = stockRow ? stockRow.stock : 0
+  // The product (name, price, picture, live stock) from MySQL — GET /api/content/products/engine-oil
+  const parts = useApi(sku ? '/content/products/' + encodeURIComponent(sku) : null)
+  const item = parts.data
+  const stock = item ? item.stock : 0
 
-  if (!item) return <Navigate to="/shop" replace />
+  if (!sku || parts.error) return <Navigate to="/shop" replace />
+  if (!item) return <section className="acp-section"><div className="container"><Loading /></div></section>
 
   async function submit(e) {
     e.preventDefault()
@@ -33,7 +34,7 @@ export default function Reserve() {
     try {
       const data = await api('/shop/reservations', {
         method: 'POST',
-        body: { partId: item.slug, qty: Number(qty), pickup },
+        body: { partId: item.sku, qty: Number(qty), pickup },
       })
       toast(`Order #${data.id} placed — collect it on the pickup date`)
       navigate('/my-repairs')

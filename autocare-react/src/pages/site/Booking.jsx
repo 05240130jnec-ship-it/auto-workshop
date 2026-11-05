@@ -1,7 +1,10 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { nu } from '../../data/store.js'
-import { BOOKABLE, PICKUP_FEE, TIME_SLOTS } from '../../data/services.js'
+import { nu, fmtDate } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { cleanPlate, cleanVehicle, plateType, plateStartOk, formatPlate, PLATE_ERROR, VEHICLE_ERROR } from '../../data/vehicle.js'
+import { offerFor, salePrice, lines } from '../../data/content.js'
+import Loading from '../../ui/Loading.jsx'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
@@ -15,17 +18,25 @@ export default function Booking() {
   const [params] = useSearchParams()
   const navigate = useNavigate()
 
-  const [slug, setSlug] = useState(BOOKABLE.some((b) => b.slug === params.get('service')) ? params.get('service') : BOOKABLE[1].slug)
-  const svc = BOOKABLE.find((b) => b.slug === slug)
+  // Services, prices and running offers come from MySQL (GET /api/content/services and /offers)
+  const list = useApi('/content/services')
+  const offerList = useApi('/content/offers')
+  const services = list.data || []
+  const [picked, setSlug] = useState(params.get('service') || 'brake-repair')
+  const svc = services.find((b) => b.slug === picked) || services[0] || null
+  const slug = svc ? svc.slug : ''
+  const offer = svc ? offerFor(offerList.data, svc.slug) : null
+  const price = svc ? salePrice(svc.price, offer) : 0
 
   // Vehicles this customer brought before (to pick quickly) — from GET /api/repairs
   const history = useApi('/repairs')
   const myVehicles = useMemo(() => {
     const m = {}
-    ;(history.data || []).forEach((r) => { m[r.plate] = r.vehicle })
-    return Object.entries(m).map(([plate, vehicle]) => ({ plate, vehicle }))
+    ;(history.data || []).forEach((r) => { m[r.plate] = r })
+    return Object.values(m).map((r) => ({ plate: r.plate, vehicle: r.vehicle, vehicleType: r.vehicleType || '' }))
   }, [history.data])
 
+  const [vehicleType, setVehicleType] = useState('')
   const [vehicle, setVehicle] = useState('')
   const [plate, setPlate] = useState('')
   const [problem, setProblem] = useState('')
@@ -37,8 +48,17 @@ export default function Booking() {
   const [month, setMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   const [date, setDate] = useState(iso(tomorrow.getDay() === 0 ? new Date(tomorrow.getTime() + 86400000) : tomorrow))
-  const [slot, setSlot] = useState('09:00 AM')
+  const [pickedSlot, setSlot] = useState('')
   const [error, setError] = useState('')
+  const [tried, setTried] = useState(false)   // show red boxes only after Confirm was pressed
+  const vehicleBad = tried && !cleanVehicle(vehicle)
+  const typeBad = tried && !vehicleType
+  const [plateLeft, setPlateLeft] = useState(false)   // the customer has left the plate box
+  // Plate box turns red:
+  //  - straight away while typing, if it can not become a plate like BP-1-A1234
+  //  - after leaving the box (or pressing Confirm), if it is not a full Bhutan plate
+  const plateOk = !!cleanPlate(plate)
+  const plateBad = (plate.trim() !== '' && !plateStartOk(plate)) || ((plateLeft || tried) && !plateOk)
   const [saving, setSaving] = useState(false)
 
   // Which slots are full on the chosen date — GET /api/repairs/slots?date=...
@@ -48,6 +68,13 @@ export default function Booking() {
     const s = (slots.data || []).find((x) => x.time === t)
     return s ? s.full : false
   }
+  // The time slots and cars per slot are set by the admin (Website Content → Booking)
+  const slotTimes = (slots.data || []).map((x) => x.time)
+  const slot = slotTimes.includes(pickedSlot) ? pickedSlot : (slotTimes.find((t) => !taken(t)) || '')
+  const settings = useSettings()
+  const PICKUP_FEE = settings ? Number(settings.pickupFee) || 0 : 0
+  // Vehicle types come from MySQL (admin → Website Content → Lists)
+  const vehicleTypes = lines(settings && settings.vehicleTypes)
 
   const firstDay = month.getDay()
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
@@ -57,22 +84,27 @@ export default function Booking() {
   const canPrev = month > new Date(now.getFullYear(), now.getMonth(), 1)
   const canNext = month < new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  const total = svc.price + (delivery === 'pickup' ? PICKUP_FEE : 0)
+  const total = price + (delivery === 'pickup' ? PICKUP_FEE : 0)
 
   async function submit() {
     setError('')
+    setTried(true)
+    if (!vehicleType) return setError('Please choose your vehicle type.')
     if (!vehicle.trim() || !plate.trim()) return setError('Please enter your vehicle and plate number.')
+    if (!cleanVehicle(vehicle)) return setError(VEHICLE_ERROR)
+    if (!cleanPlate(plate)) return setError(PLATE_ERROR)
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
-    if (taken(slot)) return setError('That time slot is full. Please choose another one.')
+    if (!slot || taken(slot)) return setError('That time slot is full. Please choose another one.')
 
     setSaving(true)
     try {
       const data = await api('/repairs', {
         method: 'POST',
         body: {
-          vehicle: vehicle.trim(),
-          plate: plate.trim().toUpperCase(),
-          service: svc.service,
+          vehicleType,
+          vehicle: cleanVehicle(vehicle),
+          plate: cleanPlate(plate),          // tidy form, e.g. BP-1-A1234
+          service: svc.serviceName,
           notes: problem.trim(),
           cost: total,
           apptDate: date,
@@ -86,6 +118,17 @@ export default function Booking() {
       setError(err.message)                    // e.g. "That time slot is full..." from the backend
       slots.reload()                           // someone else may have just booked it
     }
+  }
+
+  // Wait until the services have loaded (or show the error)
+  if (!svc) {
+    return (
+      <section className="acp-section">
+        <div className="container">
+          {list.loading ? <Loading /> : <Loading error={list.error || 'No services are available right now.'} onRetry={list.reload} />}
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -105,12 +148,13 @@ export default function Booking() {
             <div className="acp-card p-4 mb-4">
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <span className="badge" style={{ background: 'var(--brand-yellow)', color: '#fff' }}>SELECTED SERVICE</span>
-                <span className="badge bg-light text-dark">Est. Price {nu(svc.price)}</span>
+                <span className="badge bg-light text-dark">Est. Price {nu(price)}</span>
               </div>
               <select className="form-select fw-bold mb-2" value={slug} onChange={(e) => setSlug(e.target.value)} aria-label="Service">
-                {BOOKABLE.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
+                {services.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
               </select>
-              <p className="text-muted mb-0">{svc.text}</p>
+              <p className="text-muted mb-0">{svc.shortText}</p>
+              {offer && <p className="small fw-bold mt-2 mb-0" style={{ color: 'var(--brand-yellow-dark)' }}><i className="bi bi-tag-fill me-1"></i>{offer.percent}% off this service {offer.endDate ? 'until ' + fmtDate(offer.endDate) : ''}</p>}
             </div>
 
             <div className="acp-card p-4 mb-4">
@@ -118,21 +162,43 @@ export default function Booking() {
               {myVehicles.length > 0 && (
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   {myVehicles.map((v) => (
-                    <button key={v.plate} type="button" className={'btn btn-sm ' + (plate === v.plate ? 'btn-brand-primary' : 'btn-outline-secondary')}
-                      onClick={() => { setVehicle(v.vehicle); setPlate(v.plate) }}>
+                    <button key={v.plate} type="button" className={'btn btn-sm ' + (plate === v.plate ? 'btn-brand-primary' : 'btn-outline-secondary' )}
+                      onClick={() => { setVehicle(v.vehicle); setPlate(v.plate); if (vehicleTypes.includes(v.vehicleType)) setVehicleType(v.vehicleType) }}>
                       <i className="bi bi-car-front me-1"></i>{v.vehicle} · {v.plate}
                     </button>
                   ))}
                 </div>
               )}
               <div className="row g-3">
+                <div className="col-12">
+                  <label className="form-label small fw-bold">Vehicle type</label>
+                  <select className={'form-select' + (typeBad ? ' is-invalid' : '')} value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
+                    <option value="">Choose your vehicle type…</option>
+                    {vehicleTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {typeBad && <div className="invalid-feedback">Please choose your vehicle type</div>}
+                </div>
                 <div className="col-md-7">
                   <label className="form-label small fw-bold">Make &amp; model</label>
-                  <input className="form-control" placeholder="e.g. Toyota Corolla 2018" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
+                  <input className={'form-control' + (vehicleBad ? ' is-invalid' : '')} placeholder="e.g. Toyota Corolla 2018" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
+                  {vehicleBad && <div className="invalid-feedback">Letters and numbers only, e.g. Toyota Corolla 2018</div>}
                 </div>
                 <div className="col-md-5">
                   <label className="form-label small fw-bold">Plate number</label>
-                  <input className="form-control" placeholder="e.g. BP-1-A1234" value={plate} onChange={(e) => setPlate(e.target.value)} />
+                  <input className={'form-control' + (plateBad ? ' is-invalid' : plateOk ? ' is-valid' : '')} placeholder="e.g. BP-1-A1234" value={plate}
+                    maxLength={12}
+                    onChange={(e) => setPlate(formatPlate(e.target.value))}   // capital letters + hyphens by themselves
+                    onBlur={() => { setPlateLeft(true); const p = cleanPlate(plate); if (p) setPlate(p) }} />
+                  {plateBad
+                    ? <div className="invalid-feedback">Must look like BP-1-A1234 (BP, BT, BG, RBP or RBG, one digit, then the number)</div>
+                    : plateType(plate)
+                      ? <div className="form-text">
+                          {/* the vehicle type, in the colours of that plate */}
+                          <span className="badge" style={{ color: plateType(plate).color, background: plateType(plate).bg }}>
+                            {cleanPlate(plate).split('-')[0]}
+                          </span>{' '}{plateType(plate).name}
+                        </div>
+                      : <div className="form-text">BP private · BT taxi · BG government · RBP police · RBG bodyguard</div>}
                 </div>
               </div>
             </div>
@@ -205,7 +271,7 @@ export default function Booking() {
 
               <h4 className="h6 fw-bold mb-2">Select a time slot {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
               <div className="row g-2 mb-3">
-                {TIME_SLOTS.map((t) => {
+                {slotTimes.map((t) => {
                   const full = taken(t)
                   return (
                     <div className="col-6" key={t}>
@@ -219,6 +285,7 @@ export default function Booking() {
               </div>
 
               <div className="d-flex justify-content-between small mb-1"><span>{svc.title}</span><span>{nu(svc.price)}</span></div>
+              {offer && <div className="d-flex justify-content-between small mb-1 text-success"><span>Offer: {offer.percent}% off</span><span>− {nu(svc.price - price)}</span></div>}
               {delivery === 'pickup' && <div className="d-flex justify-content-between small mb-1"><span>Home pickup</span><span>{nu(PICKUP_FEE)}</span></div>}
               <div className="d-flex justify-content-between fw-bold border-top pt-2 mb-3"><span>Estimated total</span><span>{nu(total)}</span></div>
               <p className="small text-muted">You pay at the workshop after the job is done.</p>

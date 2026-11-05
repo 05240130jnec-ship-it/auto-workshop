@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { nu, relDate, today, SPECS } from '../../data/store.js'
+import { nu, relDate, today } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { lines } from '../../data/content.js'
 import { api } from '../../api.js'
 import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
@@ -22,6 +24,9 @@ export default function AdminMechanics() {
   const query = q.trim().toLowerCase()
   const list = ms.filter((m) => !query || [m.id, m.name, m.specialization, m.phone, m.email].join(' ').toLowerCase().includes(query))
 
+  // Specialisations come from MySQL (admin → Website Content → Lists); keep the mechanic's own one too
+  const settings = useSettings()
+  const SPECS = [...new Set([...lines(settings && settings.specializations), ...store.all('mechanics').map((m) => m.specialization)].filter(Boolean))]
   const fields = [
     { name: 'name', label: 'Full name', required: true },
     { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '+975 17XXXXXX' },

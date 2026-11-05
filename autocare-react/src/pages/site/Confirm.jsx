@@ -53,7 +53,7 @@ export default function Confirm() {
                   <div className="col-6">
                     <div className="small text-muted text-uppercase">Vehicle · Estimate</div>
                     <strong>{r.vehicle}</strong>
-                    <div className="small text-muted">{r.plate} · {nu(r.cost)}</div>
+                    <div className="small text-muted">{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''} · {nu(r.cost)}</div>
                   </div>
                 </div>
               </div>

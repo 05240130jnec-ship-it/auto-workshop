@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { nu, nuShort, CATEGORIES } from '../../data/store.js'
+import { nu, nuShort } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { shopCategories } from '../../data/content.js'
 import { api } from '../../api.js'
 import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
@@ -20,7 +22,9 @@ export default function AdminInventory() {
 
   const items = store.data.inventory
   // Categories = the standard ones + any others already used in the database (e.g. the shop products)
-  const cats = [...new Set([...CATEGORIES, ...items.map((p) => p.category).filter(Boolean)])]
+  // Categories = the shop pages (admin → Website Content → Shop pages) + any others already used
+  const settings = useSettings()
+  const cats = [...new Set([...shopCategories(settings).map((c) => c.name), ...items.map((p) => p.category).filter(Boolean)])]
   const query = q.trim().toLowerCase()
   const onOrder = (id) => store.data.orders.filter((o) => o.partId === id && (o.status === 'pending' || o.status === 'approved')).reduce((s, o) => s + o.qty, 0)
   const rows = items
@@ -31,26 +35,37 @@ export default function AdminInventory() {
     { name: 'name', label: 'Part name', required: true, col: 8 },
     { name: 'sku', label: 'SKU / code', required: true, col: 4, placeholder: 'e.g. BRK-FR-01' },
     { name: 'category', label: 'Category', type: 'select', options: cats, required: true },
-    { name: 'supplierId', label: 'Supplier', type: 'select', required: true, empty: 'Select supplier…', options: store.all('suppliers').map((s) => ({ value: s.id, label: s.name })) },
+    { name: 'supplierId', label: 'Supplier', type: 'select', empty: 'No supplier yet', options: store.all('suppliers').map((s) => ({ value: s.id, label: s.name })), help: store.all('suppliers').length ? null : 'Add suppliers on the Suppliers page first' },
     { name: 'stock', label: 'Quantity in stock', type: 'number', min: 0, required: true, col: 4 },
     { name: 'reorder', label: 'Reorder level', type: 'number', min: 0, required: true, col: 4, help: 'Alert when stock falls to this' },
     { name: 'price', label: 'Unit price (Nu.)', type: 'number', min: 0, step: 10, required: true, col: 4 },
+    // Shop: products with "Show in shop" = Yes appear on the website shop pages (their category = the shop page)
+    { name: 'inShop', label: 'Show in shop?', type: 'select', required: true, col: 4, default: '0',
+      options: [{ value: '1', label: 'Yes — on the website' }, { value: '0', label: 'No — workshop only' }] },
+    { name: 'image', label: 'Shop picture', col: 8, placeholder: '/media/oil/oil2.jpg',
+      help: (v) => v.image
+        ? <span className="d-flex align-items-center gap-2"><img src={v.image} alt="" style={{ width: 56, height: 42, objectFit: 'cover', borderRadius: 6 }} /> Preview · a file in autocare-react/public/media</span>
+        : 'A file in autocare-react/public/media, e.g. /media/oil/oil2.jpg' },
   ]
+  // Turn the "Show in shop?" answer into 1 / 0 for MySQL
+  const forSave = (v) => ({ ...v, inShop: Number(v.inShop) ? 1 : 0, image: v.image || null, supplierId: v.supplierId || null })
+  const forForm = (p) => ({ ...p, inShop: p.inShop ? '1' : '0' })
   const skuCheck = (id) => (v) => store.all('inventory').some((p) => p.id !== id && p.sku.toLowerCase() === v.sku.toLowerCase()) ? 'Another part already uses SKU ' + v.sku : null
 
   async function add() {
     const v = await form({ title: 'Add part', fields: fields(), submitText: 'Add part', validate: skuCheck() })
     if (!v) return
-    act(() => api('/admin/inventory', { method: 'POST', body: { ...v, sku: v.sku.toUpperCase() } }),
+    act(() => api('/admin/inventory', { method: 'POST', body: forSave({ ...v, sku: v.inShop === '1' ? v.sku : v.sku.toUpperCase() }) }),
       <><b>{v.name}</b> added to inventory</>)
   }
   async function edit(p) {
-    const v = await form({ title: 'Edit part', fields: fields(), values: p, submitText: 'Save changes', validate: skuCheck(p.id) })
+    const v = await form({ title: 'Edit part', fields: fields(), values: forForm(p), submitText: 'Save changes', validate: skuCheck(p.id) })
     if (!v) return
     // (SKU is kept exactly as typed — the shop products use lowercase SKUs like "engine-oil")
-    act(() => api('/admin/inventory/' + p.id, { method: 'PATCH', body: v }), 'Part updated')
+    act(() => api('/admin/inventory/' + p.id, { method: 'PATCH', body: forSave(v) }), 'Part updated')
   }
   async function reorder(p) {
+    if (!p.supplierId) return toast(<><b>{p.name}</b> has no supplier yet. Edit the part and choose a supplier first.</>, 'warn')
     const v = await form({
       title: 'Reorder ' + p.name, size: 'sm', submitText: 'Create purchase order', values: { qty: Math.max(p.reorder * 2 - p.stock, p.reorder, 1) },
       fields: [
@@ -107,7 +122,12 @@ export default function AdminInventory() {
           const st = Q.stockState(p), incoming = onOrder(p.id)
           return (
             <tr key={p.id}>
-              <td><strong>{p.name}</strong><small>{p.sku}</small></td>
+              <td>
+                <div className="d-flex align-items-center gap-2">
+                  {p.image && <img src={p.image} alt="" style={{ width: 44, height: 34, objectFit: 'cover', borderRadius: 6, flex: '0 0 44px' }} />}
+                  <div><strong>{p.name}</strong><small>{p.sku}{p.inShop ? <> · <i className="bi bi-shop"></i> in shop</> : null}</small></div>
+                </div>
+              </td>
               <td>{p.category}</td>
               <td>
                 <div className="a-stepper">

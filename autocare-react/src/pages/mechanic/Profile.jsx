@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { fmtDate, SPECS } from '../../data/store.js'
+import { fmtDate } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { lines } from '../../data/content.js'
 import { api } from '../../api.js'
 import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
@@ -14,6 +16,9 @@ export default function Profile() {
   const { act, Q } = store
   const { toast } = useDialogs()
   const m = store.data.profile
+  // Specialisations come from MySQL (set by the admin); keep my own one in the list too
+  const settings = useSettings()
+  const SPECS = [...new Set([...lines(settings && settings.specializations), m.specialization].filter(Boolean))]
   const [phone, setPhone] = useState(m.phone || '')
   const [pro, setPro] = useState({ specialization: m.specialization, experience: m.experience })
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })

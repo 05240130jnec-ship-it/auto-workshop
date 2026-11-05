@@ -1,6 +1,7 @@
 // Converted from repairCar/service-oil.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ServicePrice from './ServicePrice.jsx'
 
 export default function ServiceOil() {
   usePageTitle("Oil Change")
@@ -24,7 +25,7 @@ export default function ServiceOil() {
       <div className="col-lg-6">
         <small className="acp-eyebrow">Our Services</small>
         <h1 className="acp-page-title mt-2 mb-2">Oil Change</h1>
-        <p className="acp-service-price mb-3">from Nu. 700</p>
+        <ServicePrice slug="oil-change" />
         <p className="acp-lead">Fresh oil keeps your engine clean, cool and running smoothly.</p>
         <p className="text-muted">We drain the old oil, replace the oil filter and refill with the right grade of oil for your engine.</p>
         <p className="text-muted">While your car is with us, we also check fluid levels, belts and hoses at no extra cost.</p>

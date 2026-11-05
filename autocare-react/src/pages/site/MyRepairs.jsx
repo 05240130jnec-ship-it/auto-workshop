@@ -75,7 +75,7 @@ export default function MyRepairs() {
             </div>
           )}
         <div className="a-detail-grid">
-          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}</small></div>
+          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''}</small></div>
           <div><span>Service</span><strong>{r.service}</strong></div>
           <div><span>Mechanic</span><strong>{r.mechanicName || 'Not assigned yet'}</strong></div>
           <div><span>Booked</span><strong>{fmtDate(r.date)}</strong></div>

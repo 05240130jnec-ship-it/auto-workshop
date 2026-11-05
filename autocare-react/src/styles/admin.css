@@ -581,3 +581,80 @@
 .a-detail-grid div span.a-badge-complete { color: var(--a-green); }
 .a-detail-grid div span.a-badge-danger { color: var(--a-red); }
 .a-mcard-head h4 { color: var(--a-text); }
+
+/* =====================================================================
+   Admin panel: same colours, font and left sidebar as the mechanic panel
+   (only inside the admin panel — the login page and pop-ups elsewhere keep their look)
+   ===================================================================== */
+html.theme-admin {
+  --a-orange: #f59e0b;
+  --a-orange-dark: #d97706;
+  --a-purple: #2563eb;      /* main accent (buttons, links, active tab) = mechanic blue */
+  --a-blue: #2563eb;
+  --font-body: 'Poppins', 'Segoe UI', Arial, sans-serif;
+  --font-heading: 'Poppins', 'Segoe UI', Arial, sans-serif;
+}
+
+/* hard-coded purple / yellow-green → mechanic blue / amber */
+html.theme-admin .a-icon-purple { background: rgba(37,99,235,0.12); }
+html.theme-admin .a-icon-orange { background: rgba(245,158,11,0.14); color: #b45309; }
+html.theme-admin .a-stat-foot.orange { color: #b45309; }
+html.theme-admin .a-badge-pending { background: rgba(245,158,11,0.16); color: #b45309; }
+html.theme-admin .a-detail-grid div span.a-badge-pending { color: #b45309; }
+html.theme-admin .a-quick-primary:hover,
+html.theme-admin .a-btn-primary:hover { background: #1d4ed8; border-color: #1d4ed8; }
+html.theme-admin .a-form-control:focus { box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15); }
+html.theme-admin .a-select-sm.unassigned { border-color: #f59e0b; background: rgba(245,158,11,.10); }
+html.theme-admin .a-tabs button.active .a-tab-count,
+html.theme-admin .a-confirm-icon { background: rgba(37,99,235,.12); }
+
+/* left sidebar: dark navy gradient like the mechanic panel */
+html.theme-admin .a-sidebar {
+  background: linear-gradient(180deg, #0b1437 0%, #0f1f5c 100%);
+  border-right: none;
+  box-shadow: 4px 0 18px rgba(11, 20, 55, 0.30);
+}
+html.theme-admin .a-brand, html.theme-admin .a-user-foot { border-color: rgba(255, 255, 255, 0.10); }
+html.theme-admin .a-brand-logo { background: #ffffff; box-shadow: 0 4px 12px rgba(0,0,0,0.25); }
+html.theme-admin .a-brand-text strong { color: #ffffff; }
+html.theme-admin .a-brand-text small { color: #bfdbfe; }
+html.theme-admin .a-nav-label { color: #93c5fd; }
+html.theme-admin .a-nav li a { color: #dbeafe; }
+html.theme-admin .a-nav li a:hover { background: rgba(255, 255, 255, 0.10); color: #ffffff; }
+html.theme-admin .a-nav li a.active {
+  background: #ffffff;
+  color: #0b1437;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+html.theme-admin .a-nav li a.active i { color: #1d4ed8; }
+html.theme-admin .a-nav-count { background: rgba(255,255,255,0.18); color: #ffffff; }
+html.theme-admin .a-nav-count.red { background: rgba(248,113,113,0.30); color: #fee2e2; }
+html.theme-admin .a-nav li a.active .a-nav-count { background: rgba(37,99,235,0.12); color: #1d4ed8; }
+html.theme-admin .a-nav li a.active .a-nav-count.red { background: rgba(220,38,38,0.12); color: #dc2626; }
+html.theme-admin .a-sidebar .a-avatar { background: #2563eb; color: #ffffff; }
+html.theme-admin .a-user-text strong { color: #ffffff; }
+html.theme-admin .a-user-text small { color: #bfdbfe; }
+html.theme-admin .a-logout { color: #dbeafe; }
+html.theme-admin .a-logout:hover { color: #fca5a5; }
+html.theme-admin .a-sidebar::-webkit-scrollbar { width: 6px; }
+html.theme-admin .a-sidebar::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.25); border-radius: 6px; }
+
+/* Everything fits the screen: no sideways dragging on laptops and desktops */
+html.theme-admin .a-tabs { flex-wrap: wrap; overflow-x: visible; }
+html.theme-admin .a-main { min-width: 0; }               /* lets the page shrink to the window */
+html.theme-admin .a-topbar > * { min-width: 0; }
+html.theme-admin .a-table th { padding: 11px 10px; }
+html.theme-admin .a-table td { padding: 12px 10px; }
+@media (min-width: 992px) {
+  html.theme-admin .a-table { min-width: 0; }          /* the table shrinks to the page instead of scrolling */
+  html.theme-admin .a-table td small { white-space: normal; }
+  html.theme-admin .a-main { padding: 24px 26px; }
+}
+/* Smaller laptop windows: the sidebar slides in from the ☰ button, so the tables get the full width */
+@media (max-width: 1279px) {
+  html.theme-admin .a-sidebar { margin-left: -260px; z-index: 999; transition: margin-left .25s ease; }
+  html.theme-admin .a-sidebar.open { margin-left: 0; }
+  html.theme-admin .a-main { margin-left: 0; }
+  html.theme-admin .a-sidebar-toggle { display: inline-flex !important; }
+  html.theme-admin .a-backdrop.show { display: block; position: fixed; inset: 0; background: rgba(15,23,42,.35); z-index: 998; }
+}

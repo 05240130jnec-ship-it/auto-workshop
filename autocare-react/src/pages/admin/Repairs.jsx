@@ -1,7 +1,10 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { nu, fmtDate, relDate, today, daysAgo, SERVICES } from '../../data/store.js'
+import { nu, fmtDate, relDate, today, daysAgo } from '../../data/store.js'
+import { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } from '../../data/vehicle.js'
 import { api } from '../../api.js'
+import useSettings from '../../data/useSettings.js'
+import { lines } from '../../data/content.js'
 import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
@@ -49,11 +52,17 @@ export default function AdminRepairs() {
       <>#{r.id} assigned to <b>{Q.mechanicName(mechanicId)}</b>{patch.status ? ' · now In Progress' : ''}</>)
   }
 
-  const fields = () => [
+  // Service names come from MySQL (admin → Website Content → Services); keep the job's own name when editing
+  // Vehicle types come from MySQL (Website Content → Lists); keep the job's own type when editing
+  const settings = useSettings()
+  const typeNames = (current) => [...new Set([...lines(settings && settings.vehicleTypes), current].filter(Boolean))]
+  const serviceNames = (current) => [...new Set([...store.all('services').map((s) => s.serviceName), current].filter(Boolean))]
+  const fields = (current, currentType) => [
     { name: 'customerId', label: 'Customer', type: 'select', required: true, empty: 'Select customer…', options: store.all('customers').map((c) => ({ value: c.id, label: `${c.name} — ${c.phone}` })) },
-    { name: 'service', label: 'Service', type: 'select', required: true, empty: 'Select service…', options: SERVICES },
+    { name: 'service', label: 'Service', type: 'select', required: true, empty: 'Select service…', options: serviceNames(current) },
+    { name: 'vehicleType', label: 'Vehicle type', type: 'select', empty: 'Select type…', options: typeNames(currentType) },
     { name: 'vehicle', label: 'Vehicle (make & model)', required: true, placeholder: 'e.g. Toyota Corolla' },
-    { name: 'plate', label: 'Plate number', required: true, placeholder: 'e.g. BP-1-A1234', help: 'Format: BP-1-A1234' },
+    { name: 'plate', label: 'Plate number', required: true, placeholder: 'e.g. BP-1-A1234', help: 'Starts with BP, BT, BG, RBP or RBG, e.g. BP-1-A1234' },
     { name: 'mechanicId', label: 'Assign mechanic', type: 'select', empty: 'Assign later', options: store.all('mechanics').filter((m) => m.status !== 'leave').map((m) => ({ value: m.id, label: `${m.name} — ${m.specialization} (${Q.activeJobs(m.id)} jobs)` })) },
     { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' }], default: 'normal' },
     { name: 'date', label: 'Booked on', type: 'date', required: true, default: today() },
@@ -63,6 +72,8 @@ export default function AdminRepairs() {
     { name: 'notes', label: 'Customer complaint / notes', type: 'textarea', col: 12, placeholder: 'What did the customer report?' },
   ]
   const validate = (v) => {
+    if (!cleanVehicle(v.vehicle)) return VEHICLE_ERROR
+    if (!cleanPlate(v.plate)) return PLATE_ERROR
     if (v.due < v.date) return "The promised date can't be before the booking date"
     if (v.status === 'progress' && !v.mechanicId) return 'Assign a mechanic to mark the job In Progress'
     return null
@@ -72,7 +83,8 @@ export default function AdminRepairs() {
     const v = await form({ title: 'New repair job', fields: fields(), submitText: 'Create job', validate })
     if (!v) return
     v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
+    v.plate = cleanPlate(v.plate)
+    v.vehicle = cleanVehicle(v.vehicle)
     if (v.mechanicId && v.status === 'pending') v.status = 'progress'
     let id = ''
     const ok = await act(async () => {
@@ -85,10 +97,11 @@ export default function AdminRepairs() {
   }
 
   async function editJob(r) {
-    const v = await form({ title: 'Edit job #' + r.id, fields: fields(), values: { ...r, mechanicId: r.mechanicId || '' }, submitText: 'Save changes', validate })
+    const v = await form({ title: 'Edit job #' + r.id, fields: fields(r.service, r.vehicleType), values: { ...r, mechanicId: r.mechanicId || '', vehicleType: r.vehicleType || '' }, submitText: 'Save changes', validate })
     if (!v) return
     v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
+    v.plate = cleanPlate(v.plate)
+    v.vehicle = cleanVehicle(v.vehicle)
     act(() => patchRepair(r.id, v), 'Job #' + r.id + ' updated')
   }
 
@@ -134,7 +147,7 @@ export default function AdminRepairs() {
           ? <div className="a-note mb-3" style={{ borderColor: '#fca5a5', color: '#b91c1c' }}><i className="bi bi-x-circle"></i> This job was cancelled.</div>
           : <div className="a-steps">{['Booked', 'In progress', 'Complete'].map((s, i) => <div key={s} className={i <= idx ? 'done' : ''}>{s}</div>)}</div>}
         <div className="a-detail-grid">
-          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}</small></div>
+          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''}</small></div>
           <div><span>Customer</span><strong>{c.name}</strong><br /><small className="text-muted">{c.phone}</small></div>
           <div><span>Service</span><strong>{r.service}</strong><Priority p={r.priority} /></div>
           <div><span>Mechanic</span><strong>{m ? m.name : <span className="text-warning">Not assigned</span>}</strong></div>
@@ -198,7 +211,7 @@ export default function AdminRepairs() {
           return (
             <tr key={r.id}>
               <td><span className="a-id">#{r.id}</span><small>{relDate(r.date)}{r.appointment ? ' · online' : ''}</small></td>
-              <td><strong>{r.vehicle}</strong><small>{r.plate}</small></td>
+              <td><strong>{r.vehicle}</strong><small>{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''}</small></td>
               <td>{c.name || 'Unknown'}<small>{c.phone}</small></td>
               <td>{r.service}<Priority p={r.priority} />
                 {open && <small style={overdue ? { color: 'var(--a-red)', fontWeight: 600 } : undefined}>Due {relDate(r.due).toLowerCase()}{overdue ? ' · overdue' : ''}</small>}

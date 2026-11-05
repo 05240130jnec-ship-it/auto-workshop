@@ -1,9 +1,16 @@
 // Converted from repairCar/services.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import useApi from '../../useApi.js'
+import Loading from '../../ui/Loading.jsx'
+import { nu } from '../../data/store.js'
+import { detailLink } from '../../data/content.js'
 
 export default function Services() {
   usePageTitle("Services")
+  // Services and prices come from MySQL (admin → Website Content → Services)
+  const list = useApi('/content/services')
+  const services = list.data || []
   return (
     <>
 
@@ -11,10 +18,9 @@ export default function Services() {
 <div className="acp-subnav">
   <nav className="container acp-subnav-inner" aria-label="Services">
       <Link className="acp-subnav-link active" to="/services">All Services</Link>
-      <Link className="acp-subnav-link" to="/services/engine">Engine Diagnostics</Link>
-      <Link className="acp-subnav-link" to="/services/brake">Brake Repair</Link>
-      <Link className="acp-subnav-link" to="/services/oil">Oil Change</Link>
-      <Link className="acp-subnav-link" to="/services/car-wash">Car Wash</Link>
+      {services.map((sv) => (
+        <Link key={sv.id} className="acp-subnav-link" to={detailLink(sv)}>{sv.title}</Link>
+      ))}
   </nav>
 </div>
 
@@ -25,63 +31,24 @@ export default function Services() {
       <h1 className="acp-page-title mt-2 mb-2">All Services</h1>
       <p className="text-muted mb-0">Pick a service to see the details, or book it straight away.</p>
     </div>
+    {(list.loading || list.error) && <Loading error={list.error} onRetry={list.reload} />}
     <div className="row g-4">
-      <div className="col-sm-6 col-lg-3">
-        <article className="acp-service-card">
-          <Link to="/services/engine" className="acp-service-card-img"><img src="/media/engine/engine1.jpg" alt="Engine Diagnostics" /></Link>
-          <div className="acp-service-card-body">
-            <h3>Engine Diagnostics</h3>
-            <p className="acp-service-card-text">Scan tools and expert checks to find engine problems early.</p>
-            <p className="acp-service-price">from Nu. 1,000</p>
-            <div className="acp-service-card-actions">
-              <Link to="/booking?service=engine-diagnostics" className="btn btn-brand-primary">Book Now</Link>
-              <Link to="/services/engine" className="acp-more-link">Details{' '}<i className="bi bi-arrow-right"></i></Link>
+      {services.map((sv) => (
+        <div className="col-sm-6 col-lg-3" key={sv.id}>
+          <article className="acp-service-card">
+            <Link to={detailLink(sv)} className="acp-service-card-img"><img src={sv.image || '/media/engine/engine3.jpg'} alt={sv.title} /></Link>
+            <div className="acp-service-card-body">
+              <h3>{sv.title}</h3>
+              <p className="acp-service-card-text">{sv.shortText}</p>
+              <p className="acp-service-price">from {nu(sv.price)}</p>
+              <div className="acp-service-card-actions">
+                <Link to={'/booking?service=' + sv.slug} className="btn btn-brand-primary">Book Now</Link>
+                <Link to={detailLink(sv)} className="acp-more-link">Details{' '}<i className="bi bi-arrow-right"></i></Link>
+              </div>
             </div>
-          </div>
-        </article>
-      </div>
-      <div className="col-sm-6 col-lg-3">
-        <article className="acp-service-card">
-          <Link to="/services/brake" className="acp-service-card-img"><img src="/media/brake/brake1.png" alt="Brake Pad Replacement" /></Link>
-          <div className="acp-service-card-body">
-            <h3>Brake Pad Replacement</h3>
-            <p className="acp-service-card-text">Inspection and replacement of pads and discs with genuine parts.</p>
-            <p className="acp-service-price">from Nu. 9,189</p>
-            <div className="acp-service-card-actions">
-              <Link to="/booking?service=brake-repair" className="btn btn-brand-primary">Book Now</Link>
-              <Link to="/services/brake" className="acp-more-link">Details{' '}<i className="bi bi-arrow-right"></i></Link>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div className="col-sm-6 col-lg-3">
-        <article className="acp-service-card">
-          <Link to="/services/oil" className="acp-service-card-img"><img src="/media/oil/oil1.jpg" alt="Oil Change" /></Link>
-          <div className="acp-service-card-body">
-            <h3>Oil Change</h3>
-            <p className="acp-service-card-text">Fresh engine oil and a new filter, usually done while you wait.</p>
-            <p className="acp-service-price">from Nu. 700</p>
-            <div className="acp-service-card-actions">
-              <Link to="/booking?service=oil-change" className="btn btn-brand-primary">Book Now</Link>
-              <Link to="/services/oil" className="acp-more-link">Details{' '}<i className="bi bi-arrow-right"></i></Link>
-            </div>
-          </div>
-        </article>
-      </div>
-      <div className="col-sm-6 col-lg-3">
-        <article className="acp-service-card">
-          <Link to="/services/car-wash" className="acp-service-card-img"><img src="/media/car%20wash/wash1.jpg" alt="Car Wash" /></Link>
-          <div className="acp-service-card-body">
-            <h3>Car Wash</h3>
-            <p className="acp-service-card-text">Exterior wash, wheels and tyres, with an optional interior clean.</p>
-            <p className="acp-service-price">from Nu. 300</p>
-            <div className="acp-service-card-actions">
-              <Link to="/booking?service=car-wash" className="btn btn-brand-primary">Book Now</Link>
-              <Link to="/services/car-wash" className="acp-more-link">Details{' '}<i className="bi bi-arrow-right"></i></Link>
-            </div>
-          </div>
-        </article>
-      </div>
+          </article>
+        </div>
+      ))}
     </div>
   </div>
 </section>
