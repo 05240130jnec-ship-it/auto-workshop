@@ -24,11 +24,11 @@ async function findAccount(email) {
 }
 
 // ---------- Stop password guessing ----------
-// After 5 wrong passwords for one email, that email is locked for 15 minutes.
+// After 5 wrong passwords for one email, that email is locked for 15 seconds.
 // The count is kept in the MySQL table `login_attempts`, so restarting the server
 // does not reset it. A correct login clears the count.
 const MAX_TRIES = 5;
-const LOCK_MINUTES = 15;
+const LOCK_SECONDS = 15;
 
 // Makes the table the first time someone logs in (so no extra setup step is needed)
 let tableReady = null;
@@ -43,12 +43,12 @@ function setupAttemptsTable() {
   return tableReady;
 }
 
-// How many minutes this email is still locked for (0 = not locked)
-async function minutesLocked(email) {
+// How many seconds this email is still locked for (0 = not locked)
+async function secondsLocked(email) {
   const [rows] = await db.query(
     'SELECT TIMESTAMPDIFF(SECOND, NOW(), lockedUntil) AS secs FROM login_attempts WHERE email = ? AND lockedUntil > NOW()',
     [email]);
-  return rows.length ? Math.max(1, Math.ceil(rows[0].secs / 60)) : 0;
+  return rows.length ? Math.max(1, Number(rows[0].secs)) : 0;
 }
 
 // Counts one wrong password. Returns how many tries are left (0 = now locked).
@@ -61,7 +61,7 @@ async function countWrongTry(email) {
   const [[row]] = await db.query('SELECT fails FROM login_attempts WHERE email = ?', [email]);
   if (row.fails >= MAX_TRIES) {
     await db.query(
-      `UPDATE login_attempts SET fails = 0, lockedUntil = NOW() + INTERVAL ${LOCK_MINUTES} MINUTE WHERE email = ?`,
+      `UPDATE login_attempts SET fails = 0, lockedUntil = NOW() + INTERVAL ${LOCK_SECONDS} SECOND WHERE email = ?`,
       [email]);
     return 0;
   }
@@ -76,9 +76,9 @@ router.post('/login', async (req, res) => {
 
   // 1. Locked? Then we do not even check the password.
   await setupAttemptsTable();
-  const locked = await minutesLocked(email);
+  const locked = await secondsLocked(email);
   if (locked) {
-    return res.status(429).json({ error: `Too many wrong attempts. Try again in ${locked} minute${locked > 1 ? 's' : ''}.` });
+    return res.status(429).json({ error: `Too many wrong attempts. Try again in ${locked} second${locked > 1 ? 's' : ''}.`, wait: locked });
   }
 
   // 2. Check the email and password
@@ -86,10 +86,10 @@ router.post('/login', async (req, res) => {
   if (!acc || !(await bcrypt.compare(password, acc.password))) {
     const left = await countWrongTry(email);
     if (left === 0) {
-      return res.status(429).json({ error: `Too many wrong attempts. Try again in ${LOCK_MINUTES} minutes.` });
+      return res.status(429).json({ error: `Too many wrong attempts. Try again in ${LOCK_SECONDS} seconds.`, wait: LOCK_SECONDS });
     }
     if (left <= 2) {
-      return res.status(401).json({ error: `Wrong email or password. ${left} ${left > 1 ? 'tries' : 'try'} left before the account is locked for ${LOCK_MINUTES} minutes.` });
+      return res.status(401).json({ error: `Wrong email or password. ${left} ${left > 1 ? 'tries' : 'try'} left before the account is locked for ${LOCK_SECONDS} seconds.` });
     }
     return res.status(401).json({ error: 'Wrong email or password.' });
   }
@@ -124,6 +124,62 @@ router.post('/signup', async (req, res) => {
 
   const user = { id, role: 'customer', name, email };
   res.status(201).json({ token: makeToken(user), user });
+});
+
+// ---------- Continue with Google ----------
+// The website shows Google's button. When the person picks their Google account, Google gives
+// the website a "credential" (a signed ID token). We ask Google if that token is real and meant
+// for OUR app (GOOGLE_CLIENT_ID in .env), then log the person in with the email inside it.
+// A new email becomes a new customer account automatically.
+
+// GET /api/auth/google-config — the website asks if Google login is set up
+router.get('/google-config', (req, res) => {
+  res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
+});
+
+// POST /api/auth/google   body: { credential }
+router.post('/google', async (req, res) => {
+  const clientId = process.env.GOOGLE_CLIENT_ID;
+  if (!clientId) return res.status(503).json({ error: 'Google login is not set up yet (GOOGLE_CLIENT_ID is missing in .env).' });
+  const credential = String(req.body.credential || '');
+  if (!credential) return res.status(400).json({ error: 'Google did not send a login. Please try again.' });
+
+  // 1. Ask Google: is this token real?
+  let info;
+  try {
+    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
+    info = await r.json();
+    if (!r.ok) throw new Error(info.error_description || 'invalid token');
+  } catch (err) {
+    return res.status(401).json({ error: 'Google login failed. Please try again.' });
+  }
+  // 2. Was it made for our website, and is the email confirmed by Google?
+  if (info.aud !== clientId) return res.status(401).json({ error: 'This Google login is not for AutoCare Pro.' });
+  if (info.email_verified !== 'true' && info.email_verified !== true) {
+    return res.status(401).json({ error: 'Your Google email is not verified.' });
+  }
+  const email = String(info.email || '').toLowerCase();
+  const name = info.name || email.split('@')[0];
+
+  // 3. Find the account, or make a new customer
+  let acc = await findAccount(email);
+  if (!acc) {
+    const [rows] = await db.query("SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS n FROM customers");
+    const id = 'C-' + String((rows[0].n || 0) + 1).padStart(3, '0');
+    // They log in with Google, so we save a random password nobody knows (the column cannot be empty)
+    const randomHash = await bcrypt.hash(require('crypto').randomBytes(24).toString('hex'), 10);
+    await db.query(
+      'INSERT INTO customers (id, name, email, phone, address, password, status, joined) VALUES (?, ?, ?, NULL, NULL, ?, ?, CURDATE())',
+      [id, name, email, randomHash, 'active']);
+    acc = { id, name, email, role: 'customer', status: 'active' };
+  }
+  if (acc.role === 'customer' && acc.status === 'inactive') {
+    return res.status(403).json({ error: 'This account is inactive. Please contact the workshop.' });
+  }
+  await db.query('DELETE FROM login_attempts WHERE email = ?', [email]).catch(() => {});
+
+  const user = { id: acc.id, role: acc.role, name: acc.name, email: acc.email };
+  res.json({ token: makeToken(user), user });
 });
 
 // GET /api/auth/me   (needs a token) — "is my login still valid?"

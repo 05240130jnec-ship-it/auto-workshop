@@ -6,6 +6,7 @@ import useTheme from '../ui/useTheme.js'
 import Avatar from '../pages/admin/Avatar.jsx'
 import AdminDataProvider from '../pages/admin/AdminDataProvider.jsx'
 import { useAdmin } from '../pages/admin/AdminContext.js'
+import { api } from '../api.js'
 
 // Admin panel: loads all data from the backend first, then shows the sidebar + page
 export default function AdminLayout() {
@@ -29,6 +30,15 @@ function AdminShell() {
   // Fetch fresh data each time the admin opens another page
   // (customers and mechanics may have changed things meanwhile)
   useEffect(() => { reload() }, [pathname, reload])
+
+  // New messages from the Contact page (number in the sidebar)
+  const [newMessages, setNewMessages] = useState(0)
+  useEffect(() => {
+    const load = () => api('/contact/admin/unread').then((r) => setNewMessages(r.count)).catch(() => {})
+    load()
+    window.addEventListener('messages-changed', load)
+    return () => window.removeEventListener('messages-changed', load)
+  }, [pathname])
 
   const pendingRepairs = data.repairs.filter((r) => r.status === 'pending').length
   const pendingPO = Q.pendingOrders().length
@@ -64,6 +74,7 @@ function AdminShell() {
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
             {link('/admin/orders', 'bi-bag-check', 'Purchase Orders', pendingPO)}
             {link('/admin/shop', 'bi-shop', 'Shop & Listings', shop)}
+            {link('/admin/messages', 'bi-envelope-fill', 'Messages', newMessages)}
           </ul>
         </div>
         <div className="a-nav-group">

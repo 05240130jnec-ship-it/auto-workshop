@@ -23,10 +23,13 @@ async function seed() {
   await db.query('DELETE FROM login_attempts').catch(() => {});
   console.log('Old data removed');
 
-  // ---------- 2. Hash the demo passwords once ----------
-  const adminPass = await bcrypt.hash('admin123', 10);
-  const mechPass  = await bcrypt.hash('mech123', 10);
-  const userPass  = await bcrypt.hash('user123', 10);
+  // ---------- 2. Hash the starting passwords once ----------
+  // They come from .env (ADMIN_PASSWORD, MECHANIC_PASSWORD, CUSTOMER_PASSWORD).
+  // If a line is missing in .env, the demo password after || is used.
+  // Only the bcrypt HASH is saved in MySQL, never the plain password.
+  const adminPass = await bcrypt.hash(process.env.ADMIN_PASSWORD || 'admin123', 10);
+  const mechPass  = await bcrypt.hash(process.env.MECHANIC_PASSWORD || 'mech123', 10);
+  const userPass  = await bcrypt.hash(process.env.CUSTOMER_PASSWORD || 'user123', 10);
 
   // ---------- 3. Admin ----------
   await db.query('INSERT INTO admins (id, name, email, password) VALUES (?, ?, ?, ?)',

@@ -1132,3 +1132,21 @@ html.theme-site .acp-order-more span { color: var(--brand-yellow); font-weight: 
   html.theme-site .acp-order-title { font-size: 1.5rem; }
   html.theme-site .acp-order-box { padding: 1.25rem; }
 }
+
+/* ===== Contact page: the message form ===== */
+html.theme-site .acp-form-box {
+  background: #fff; border: 1px solid var(--border-light); border-top: 4px solid var(--brand-yellow);
+  border-radius: 16px; padding: 1.75rem; box-shadow: 0 4px 16px rgba(15, 42, 68, .06);
+}
+html.theme-site .acp-form-box h3 {
+  display: flex; align-items: center; gap: .75rem; font-size: 1.25rem; font-weight: 700; color: var(--brand-purple); margin-bottom: .35rem;
+}
+html.theme-site .acp-form-box h3 .acp-feature-icon { margin: 0; width: 44px; height: 44px; font-size: 1.1rem; }
+html.theme-site .acp-form-box .form-control, html.theme-site .acp-form-box .form-select { padding: .65rem .9rem; border-radius: 10px; }
+html.theme-site .acp-form-done { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+html.theme-site .acp-form-done-icon {
+  width: 72px; height: 72px; border-radius: 50%; background: #e8f5e9; color: var(--brand-green);
+  display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 1rem;
+}
+html.theme-site .acp-form-done h3 { justify-content: center; }
+html.theme-site .acp-form-done p { color: #6b7280; max-width: 380px; }

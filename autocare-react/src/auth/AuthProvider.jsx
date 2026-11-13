@@ -48,6 +48,16 @@ export default function AuthProvider({ children }) {
       })
       return { user: start(data.token, data.user) }
     } catch (err) {
+      return { error: err.message, wait: err.data && err.data.wait }
+    }
+  }
+
+  // "Continue with Google": Google gives us a credential, the backend checks it (POST /api/auth/google)
+  async function loginWithGoogle(credential) {
+    try {
+      const data = await api('/auth/google', { method: 'POST', body: { credential } })
+      return { user: start(data.token, data.user) }
+    } catch (err) {
       return { error: err.message }
     }
   }
@@ -73,7 +83,7 @@ export default function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   )
