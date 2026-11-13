@@ -74,13 +74,13 @@ export default function Login() {
         </div>
 
         <div className="lg-copy">
-          <span className="tag"><i className="bi bi-shield-lock-fill"></i> One login for everyone</span>
-          <h1>Your workshop, <span>all in one place.</span></h1>
-          <p>Customers track their repairs, mechanics manage their jobs, and admins run the whole workshop.</p>
+          <span className="tag"><i className="bi bi-shield-check"></i> Trusted Toyota service</span>
+          <h1>Your car, <span>in good hands.</span></h1>
+          <p>Sign in to book a service, follow your repair step by step and order genuine parts.</p>
           <ul className="lg-feats">
-            <li><i className="bi bi-person"></i> Customers: book services and follow repair progress</li>
-            <li><i className="bi bi-wrench-adjustable"></i> Mechanics: see assigned jobs and update status</li>
-            <li><i className="bi bi-speedometer2"></i> Admins: manage jobs, staff, stock and orders</li>
+            <li><i className="bi bi-calendar-check"></i> Book a service in a few clicks</li>
+            <li><i className="bi bi-activity"></i> See your repair status live</li>
+            <li><i className="bi bi-bag-check"></i> Order parts and collect them at the workshop</li>
           </ul>
         </div>
 
