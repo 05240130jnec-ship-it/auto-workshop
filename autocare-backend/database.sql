@@ -49,7 +49,8 @@ CREATE TABLE `customers` (
   `address` varchar(200) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `status` enum('active','inactive') DEFAULT 'active',
-  `joined` date DEFAULT NULL
+  `joined` date DEFAULT NULL,
+  `photo` mediumtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -420,6 +421,17 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
   `email` varchar(120) NOT NULL,
   `fails` int NOT NULL DEFAULT 0,
   `lockedUntil` datetime DEFAULT NULL,
+  PRIMARY KEY (`email`)
+);
+
+-- "Forgot password" codes (the code is saved as a bcrypt hash, it works for 10 minutes)
+-- (routes/auth.js also creates this table by itself the first time it is needed.)
+CREATE TABLE IF NOT EXISTS `password_resets` (
+  `email` varchar(120) NOT NULL,
+  `codeHash` varchar(255) NOT NULL,
+  `tries` int NOT NULL DEFAULT 0,
+  `expiresAt` datetime NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`email`)
 );
 

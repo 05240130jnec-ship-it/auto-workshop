@@ -4,6 +4,8 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const db = require('../db');
 const { requireAuth } = require('../middleware/auth');
+const { sendMail } = require('../mailer');
+const { getSettings } = require('../settings');
 
 const router = express.Router();
 
@@ -197,6 +199,110 @@ router.post('/google', async (req, res) => {
 
   const user = { id: acc.id, role: acc.role, name: acc.name, email: acc.email };
   res.json({ token: makeToken(user), user });
+});
+
+// ---------- Forgot password: a 6-digit code by email ----------
+// 1. POST /api/auth/forgot  { email }                    -> emails a 6-digit code (valid 10 minutes)
+// 2. POST /api/auth/reset   { email, code, password }    -> sets the new password
+// The code is saved as a bcrypt HASH in the MySQL table `password_resets` (never as plain text).
+// The answer of step 1 is the same whether the email exists or not, so nobody can use this
+// page to find out who has an account.
+const CODE_MINUTES = 10;      // how long a code works
+const CODE_TRIES = 5;         // wrong codes allowed before the code stops working
+const RESEND_SECONDS = 60;    // wait between two codes for the same email
+const TABLE_OF = { admin: 'admins', mechanic: 'mechanics', customer: 'customers' };
+
+let resetsReady = null;
+function setupResetsTable() {
+  if (!resetsReady) {
+    resetsReady = db.query(`CREATE TABLE IF NOT EXISTS password_resets (
+      email varchar(120) NOT NULL PRIMARY KEY,
+      codeHash varchar(255) NOT NULL,
+      tries int NOT NULL DEFAULT 0,
+      expiresAt datetime NOT NULL,
+      createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP
+    )`).catch((err) => { resetsReady = null; throw err; });
+  }
+  return resetsReady;
+}
+
+// "Hello {name}, your code is {code}" -> the real name and code
+const fill = (text, values) => String(text || '').replace(/\{(\w+)\}/g, (m, k) => (k in values ? values[k] : m));
+
+router.post('/forgot', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
+  await setupResetsTable();
+
+  // Same email asked less than 60 seconds ago? Ask them to wait.
+  const [recent] = await db.query(
+    'SELECT ? - TIMESTAMPDIFF(SECOND, createdAt, NOW()) AS wait FROM password_resets WHERE email = ? AND createdAt > NOW() - INTERVAL ? SECOND',
+    [RESEND_SECONDS, email, RESEND_SECONDS]);
+  if (recent.length) {
+    const wait = Math.max(1, Number(recent[0].wait));
+    return res.status(429).json({ error: `Please wait ${wait} seconds before asking for a new code.`, wait });
+  }
+
+  const acc = await findAccount(email);
+  if (acc && !(acc.role === 'customer' && acc.status === 'inactive')) {
+    const code = String(Math.floor(100000 + Math.random() * 900000));   // 6 digits
+    await db.query(
+      `INSERT INTO password_resets (email, codeHash, tries, expiresAt, createdAt)
+       VALUES (?, ?, 0, NOW() + INTERVAL ${CODE_MINUTES} MINUTE, NOW())
+       ON DUPLICATE KEY UPDATE codeHash = VALUES(codeHash), tries = 0, expiresAt = VALUES(expiresAt), createdAt = NOW()`,
+      [email, await bcrypt.hash(code, 10)]);
+
+    // The email text comes from MySQL (admin -> Website Content -> Login & profile)
+    const s = await getSettings();
+    const values = { name: acc.name.split(' ')[0], code, minutes: CODE_MINUTES };
+    const text = fill(s.resetEmailText || 'Hello {name},\n\nYour AutoCare Pro password reset code is: {code}\n\nIt works for {minutes} minutes.', values);
+    try {
+      await sendMail({
+        to: email,
+        subject: fill(s.resetEmailSubject || 'Your password reset code', values),
+        text,
+        html: `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1f2933">${text
+          .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+          .replace(code, `<b style="font-size:26px;letter-spacing:6px;color:#f57c00">${code}</b>`)
+          .replace(/\n/g, '<br>')}</div>`,
+      });
+    } catch (err) {
+      console.error('Could not send the reset email:', err.message);
+      await db.query('DELETE FROM password_resets WHERE email = ?', [email]);
+      return res.status(500).json({ error: 'We could not send the email right now. Please try again later.' });
+    }
+  }
+  res.json({ ok: true, minutes: CODE_MINUTES });
+});
+
+router.post('/reset', async (req, res) => {
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const code = String(req.body.code || '').trim();
+  const password = String(req.body.password || '');
+  if (!/^\d{6}$/.test(code)) return res.status(400).json({ error: 'Please enter the 6-digit code from the email.' });
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return res.status(400).json({ error: 'Password needs at least 8 characters with a letter and a number.' });
+  }
+  await setupResetsTable();
+
+  const [rows] = await db.query('SELECT codeHash, tries, expiresAt > NOW() AS valid FROM password_resets WHERE email = ?', [email]);
+  const row = rows[0];
+  if (!row || !Number(row.valid) || row.tries >= CODE_TRIES) {
+    return res.status(400).json({ error: 'This code has expired. Please ask for a new code.' });
+  }
+  if (!(await bcrypt.compare(code, row.codeHash))) {
+    await db.query('UPDATE password_resets SET tries = tries + 1 WHERE email = ?', [email]);
+    const left = CODE_TRIES - row.tries - 1;
+    return res.status(400).json({ error: left > 0 ? `Wrong code. ${left} ${left > 1 ? 'tries' : 'try'} left.` : 'Wrong code. Please ask for a new code.' });
+  }
+
+  const acc = await findAccount(email);
+  if (!acc) return res.status(400).json({ error: 'This code has expired. Please ask for a new code.' });
+  await db.query(`UPDATE ${TABLE_OF[acc.role]} SET password = ? WHERE id = ?`, [await bcrypt.hash(password, 10), acc.id]);
+  await db.query('DELETE FROM password_resets WHERE email = ?', [email]);
+  await setupAttemptsTable();
+  await db.query('DELETE FROM login_attempts WHERE email = ?', [email]);   // unlock the login too
+  res.json({ ok: true });
 });
 
 // GET /api/auth/me   (needs a token) — "is my login still valid?"

@@ -238,3 +238,13 @@
 .lg-solo .am-head { padding-right: 0; }
 .lg-row-end { justify-content: flex-end; margin: 0 0 18px; }
 .lg-solo .lg-back { display: flex; justify-content: center; margin-top: 14px; }
+
+/* ===== Forgot password page (same card as the login page) ===== */
+.fp-icon {
+  width: 44px; height: 44px; flex: 0 0 44px; border-radius: 50%; background: #fff3e6; color: #f57c00;
+  display: flex; align-items: center; justify-content: center; font-size: 1.2rem;
+}
+.fp-info { background: #eef6ff; color: #0f2a44; border-radius: 10px; padding: 10px 12px; font-size: .86rem; margin-bottom: 16px; }
+.su-form .lg-input input.fp-code { font-size: 1.35rem; font-weight: 700; letter-spacing: .5em; text-align: center; padding-left: 14px; }
+.su-link:disabled { color: #9ca3af; cursor: default; text-decoration: none; }
+.su-form .lg-hint:not(.is-bad) { color: #6b7280; }

@@ -48,6 +48,15 @@ const DEFAULT_SETTINGS = {
   signupDoneTitle: 'Account created successfully!',
   signupDoneText: 'Welcome to AutoCare Pro, {name}. Your account is ready and you are signed in.',
 
+  // ---------- Forgot password page + the email with the code ----------
+  forgotTitle: 'Forgot your password?',
+  forgotText: 'Enter the email of your account and we will send you a 6-digit code.',
+  forgotCodeText: 'We sent a 6-digit code to {email}. Type it below with your new password.',
+  forgotDoneTitle: 'Password changed!',
+  forgotDoneText: 'Your new password is saved. You can sign in with it now.',
+  resetEmailSubject: 'Your AutoCare Pro password reset code',
+  resetEmailText: 'Hello {name},\n\nYour password reset code is: {code}\n\nIt works for {minutes} minutes. If you did not ask for this, you can ignore this email.\n\nAutoCare Pro',
+
   // ---------- My profile page (customers) ----------
   profileTitle: 'My *profile*',
   profileText: 'Keep your details up to date so the workshop can reach you about your repairs.',

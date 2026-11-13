@@ -9,7 +9,7 @@ const db = require('./db');          // our MySQL connection
 // 2. Create the app
 const app = express();
 app.use(cors());                     // allow the React site to call us
-app.use(express.json());             // understand JSON sent by the frontend
+app.use(express.json({ limit: '1mb' }));   // understand JSON sent by the frontend (1 MB: room for a profile photo)
 
 // 3. Home page
 app.get('/', (req, res) => {
@@ -38,6 +38,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/mechanic', require('./routes/mechanic'));
 app.use('/api/content', require('./routes/content'));   // services, offers, shop products
 app.use('/api/contact', require('./routes/contact'));   // contact form messages
+app.use('/api/profile', require('./routes/profile'));   // customer: my profile + photo
 // Wrong URL -> JSON 404 instead of "Cannot GET ..."
 app.use((req, res) => {
   res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });

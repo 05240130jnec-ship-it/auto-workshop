@@ -8,7 +8,6 @@ import NotFound from './pages/NotFound.jsx'
 
 // Customer website (from your repairCar folder)
 import SiteLayout from './layouts/SiteLayout.jsx'
-import AuthLayout from './layouts/AuthLayout.jsx'
 import Home from './pages/site/Home.jsx'
 import About from './pages/site/About.jsx'
 import Services from './pages/site/Services.jsx'
@@ -20,6 +19,7 @@ import Confirm from './pages/site/Confirm.jsx'
 import MyRepairs from './pages/site/MyRepairs.jsx'
 import SellPart from './pages/site/SellPart.jsx'
 import Reserve from './pages/site/Reserve.jsx'
+import CustomerProfile from './pages/site/Profile.jsx'
 import ForgotPassword from './pages/site/ForgotPassword.jsx'
 
 // Mechanic portal (from your machanic folder)
@@ -51,9 +51,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Login signup />} />
       <Route path="/no-access" element={<NoAccess />} />
-      <Route element={<AuthLayout />}>
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-      </Route>
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Customer website — anyone can browse; booking/buying needs a customer login */}
       <Route element={<SiteLayout />}>
@@ -69,6 +67,7 @@ export default function App() {
         <Route path="my-repairs" element={customer(<MyRepairs />)} />
         <Route path="sell-part" element={customer(<SellPart />)} />
         <Route path="reserve" element={customer(<Reserve />)} />
+        <Route path="profile" element={customer(<CustomerProfile />)} />
       </Route>
 
       {/* Mechanic portal — mechanics only */}
