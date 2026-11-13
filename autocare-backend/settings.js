@@ -39,6 +39,19 @@ const DEFAULT_SETTINGS = {
   introTicks: 'Certified technicians\nGenuine spare parts\nFast turnaround\nFair pricing',
   introImage: '/media/engine/engine2.jpg',
 
+  // ---------- Login page + "Create an account" pop-up ----------
+  loginButton: 'Log in',                      // the button in the navbar for visitors
+  loginFormTitle: 'Welcome back',
+  loginFormText: 'Sign in and we’ll take you to the right place.',
+  signupTitle: 'Create your account',
+  signupText: "It's free and only takes a minute",
+  signupDoneTitle: 'Account created successfully!',
+  signupDoneText: 'Welcome to AutoCare Pro, {name}. Your account is ready and you are signed in.',
+
+  // ---------- My profile page (customers) ----------
+  profileTitle: 'My *profile*',
+  profileText: 'Keep your details up to date so the workshop can reach you about your repairs.',
+
   // ---------- About page ----------
   // Login page + "Create an account" pop-up
   loginTag: 'Trusted Toyota service',

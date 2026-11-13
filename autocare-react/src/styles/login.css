@@ -226,3 +226,15 @@
   .lg-google-btn img { width: 18px; height: 18px; display: block; }
   .lg-google-btn:hover { border-color: #f57c00; background: #fffaf4; }
   .lg-google-btn:disabled { opacity: .7; cursor: wait; }
+
+/* ===== Login page: one card in the middle, the same look as the "Create an account" pop-up ===== */
+.lg.lg-page {
+  display: flex; align-items: center; justify-content: center; padding: 32px 16px;
+  background:
+    linear-gradient(160deg, rgba(10,29,48,.94) 0%, rgba(15,42,68,.9) 55%, rgba(23,61,99,.86) 100%),
+    url('/media/banner1.jpg') center/cover no-repeat;
+}
+.lg-solo { max-width: 440px; }
+.lg-solo .am-head { padding-right: 0; }
+.lg-row-end { justify-content: flex-end; margin: 0 0 18px; }
+.lg-solo .lg-back { display: flex; justify-content: center; margin-top: 14px; }

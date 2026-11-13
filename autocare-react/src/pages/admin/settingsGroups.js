@@ -42,12 +42,9 @@ export const SETTINGS_GROUPS = [
   {
     key: 'login', label: 'Login & profile',
     fields: [
-      { name: 'loginTag', label: 'Left side: small label' },
-      { name: 'loginTitle', label: 'Left side: title', help: STARS },
-      { name: 'loginText', label: 'Left side: text', type: 'textarea', col: 12 },
-      { name: 'loginPoints', label: 'Left side: points', type: 'textarea', col: 12, help: 'icon|text — one per line, e.g. bi-activity|See your repair status live' },
-      { name: 'loginFormTitle', label: 'Form: title', placeholder: 'Welcome back' },
-      { name: 'loginFormText', label: 'Form: text under the title' },
+      { name: 'loginButton', label: 'Navbar: log in button text', placeholder: 'Log in' },
+      { name: 'loginFormTitle', label: 'Login page: title', placeholder: 'Welcome back' },
+      { name: 'loginFormText', label: 'Login page: text under the title' },
       { name: 'signupTitle', label: 'Create account pop-up: title' },
       { name: 'signupText', label: 'Create account pop-up: text under the title' },
       { name: 'signupDoneTitle', label: 'After sign-up: title' },

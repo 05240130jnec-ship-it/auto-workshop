@@ -6,12 +6,11 @@ import usePageTitle from '../ui/usePageTitle.js'
 import LoginForm from '../auth/LoginForm.jsx'
 import SignupModal from '../ui/SignupModal.jsx'
 import useSettings from '../data/useSettings.js'
-import Stars from '../ui/Stars.jsx'
-import { rows } from '../data/content.js'
 import '../styles/login.css'
 
 // The login page (/login). The person icon in the navbar opens it.
-// "Create an account" opens the sign-up form as a pop-up on top of this page.
+// It looks like the "Create an account" pop-up: one small card in the middle of the page.
+// "Create an account" opens the sign-up pop-up on top of this page.
 // /signup shows this same page with the pop-up already open.
 export default function Login({ signup = false }) {
   usePageTitle(signup ? 'Create Account' : 'Log in')
@@ -20,7 +19,7 @@ export default function Login({ signup = false }) {
   const location = useLocation()
   const [showSignup, setShowSignup] = useState(signup)   // the "Create an account" pop-up
   const [created, setCreated] = useState(null)           // the new account → "created" message
-  // All texts come from MySQL (admin → Website Content → Login page)
+  // The texts come from MySQL (admin → Website Content → Login & profile)
   const s = useSettings() || {}
 
   // Already logged in (and not just created now)? Go straight to your own area.
@@ -39,44 +38,26 @@ export default function Login({ signup = false }) {
       : from.startsWith(HOME_FOR[u.role]))
     navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
   }
+
   return (
-    <div className="lg">
-      <section className="lg-brand">
-        <div className="lg-logo">
+    <div className="lg lg-page">
+      <div className="am-card su-card lg-solo">
+        {/* Logo + title, the same as the sign-up pop-up */}
+        <div className="am-head">
           <img src="/media/logo.jpg" alt="AutoCare Pro logo" />
-          <div><strong>AutoCare Pro</strong><small>Car care, done right</small></div>
-        </div>
-
-        <div className="lg-copy">
-          {s.loginTag && <span className="tag"><i className="bi bi-shield-check"></i> {s.loginTag}</span>}
-          <h1><Stars text={s.loginTitle} /></h1>
-          <p>{s.loginText}</p>
-          <ul className="lg-feats">
-            {rows(s.loginPoints).map(([icon, text], i) => (
-              <li key={i}><i className={'bi ' + (text ? icon : 'bi-check-lg')}></i> {text || icon}</li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="lg-foot">© AutoCare Pro · Thimphu, Bhutan</div>
-      </section>
-
-      <section className="lg-form-side">
-        <div className="lg-card">
-          <div className="lg-mobile-logo">
-            <img src="/media/logo.jpg" alt="" />
-            <strong>AutoCare Pro</strong>
+          <div>
+            <strong>{s.loginFormTitle || 'Welcome back'}</strong>
+            <small>{s.loginFormText}</small>
           </div>
-
-          <h2>{s.loginFormTitle || 'Welcome back'}</h2>
-          <p className="lead-txt">{s.loginFormText}</p>
-
-          <LoginForm onDone={goOn} />
-
-          <p className="lg-signup">New customer? <button type="button" className="lg-link lg-link-btn" onClick={() => setShowSignup(true)}>Create an account</button></p>
-          <Link to="/" className="lg-back"><i className="bi bi-arrow-left"></i> Back to website</Link>
         </div>
-      </section>
+
+        <div className="su-form">
+          <LoginForm onDone={goOn} />
+        </div>
+
+        <p className="su-foot">New customer? <button type="button" className="su-link" onClick={() => setShowSignup(true)}>Create an account</button></p>
+        <Link to="/" className="lg-back"><i className="bi bi-arrow-left"></i> Back to website</Link>
+      </div>
 
       <SignupModal
         open={showSignup || !!created}
