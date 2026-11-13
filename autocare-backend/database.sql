@@ -49,7 +49,8 @@ CREATE TABLE `customers` (
   `address` varchar(200) DEFAULT NULL,
   `password` varchar(255) NOT NULL,
   `status` enum('active','inactive') DEFAULT 'active',
-  `joined` date DEFAULT NULL
+  `joined` date DEFAULT NULL,
+  `photo` mediumtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

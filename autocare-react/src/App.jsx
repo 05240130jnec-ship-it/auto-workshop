@@ -20,6 +20,7 @@ import Confirm from './pages/site/Confirm.jsx'
 import MyRepairs from './pages/site/MyRepairs.jsx'
 import SellPart from './pages/site/SellPart.jsx'
 import Reserve from './pages/site/Reserve.jsx'
+import CustomerProfile from './pages/site/Profile.jsx'
 import ForgotPassword from './pages/site/ForgotPassword.jsx'
 
 // Mechanic portal (from your machanic folder)
@@ -69,6 +70,7 @@ export default function App() {
         <Route path="my-repairs" element={customer(<MyRepairs />)} />
         <Route path="sell-part" element={customer(<SellPart />)} />
         <Route path="reserve" element={customer(<Reserve />)} />
+        <Route path="profile" element={customer(<CustomerProfile />)} />
       </Route>
 
       {/* Mechanic portal — mechanics only */}

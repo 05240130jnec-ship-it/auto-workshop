@@ -252,7 +252,7 @@ router.delete('/mechanics/:id', async (req, res) => {
 
 // ---------- CUSTOMERS ----------
 
-const CUSTOMER_FIELDS = 'id, name, email, phone, address, status, joined';
+const CUSTOMER_FIELDS = 'id, name, email, phone, address, status, joined, photo';
 
 // GET /api/admin/customers  -> all customers + how many repairs each has
 router.get('/customers', async (req, res) => {
@@ -289,17 +289,15 @@ router.post('/customers', async (req, res) => {
   res.status(201).json({ id });
 });
 
-// PATCH /api/admin/customers/C-007  -> edit details, or block/unblock with status
+// PATCH /api/admin/customers/C-007  -> block / unblock only: { status: 'active' | 'inactive' }
+// The admin can SEE a customer's details but cannot change them: only the customer can
+// (website → My profile). This protects the customer's data and login.
 router.patch('/customers/:id', async (req, res) => {
-  const body = req.body || {};
-  if (body.status && !['active', 'inactive'].includes(body.status)) {
-    return res.status(400).json({ error: 'Status must be active or inactive.' });
+  const status = (req.body || {}).status;
+  if (!['active', 'inactive'].includes(status)) {
+    return res.status(400).json({ error: 'The admin can only block or unblock a customer (status active or inactive).' });
   }
-  if (body.email) {
-    body.email = body.email.toLowerCase();
-    if (await emailTaken(body.email, req.params.id)) return res.status(409).json({ error: 'This email is already used.' });
-  }
-  const ok = await updateRow('customers', req.params.id, body, ['name', 'email', 'phone', 'address', 'status']);
+  const ok = await updateRow('customers', req.params.id, { status }, ['status']);
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Customer not found.' });
 
