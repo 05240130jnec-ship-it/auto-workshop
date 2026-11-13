@@ -5,12 +5,9 @@ import { HOME_FOR } from '../auth/users.js'
 import usePageTitle from '../ui/usePageTitle.js'
 import LoginForm from '../auth/LoginForm.jsx'
 import SignupModal from '../ui/SignupModal.jsx'
-<<<<<<< HEAD
-=======
 import useSettings from '../data/useSettings.js'
 import Stars from '../ui/Stars.jsx'
 import { rows } from '../data/content.js'
->>>>>>> profile-user
 import '../styles/login.css'
 
 // The login page (/login). The person icon in the navbar opens it.
@@ -23,11 +20,8 @@ export default function Login({ signup = false }) {
   const location = useLocation()
   const [showSignup, setShowSignup] = useState(signup)   // the "Create an account" pop-up
   const [created, setCreated] = useState(null)           // the new account → "created" message
-<<<<<<< HEAD
-=======
   // All texts come from MySQL (admin → Website Content → Login page)
   const s = useSettings() || {}
->>>>>>> profile-user
 
   // Already logged in (and not just created now)? Go straight to your own area.
   if (user && !created) return <Navigate to={HOME_FOR[user.role]} replace />
@@ -87,10 +81,7 @@ export default function Login({ signup = false }) {
       <SignupModal
         open={showSignup || !!created}
         created={created}
-<<<<<<< HEAD
-=======
         texts={s}
->>>>>>> profile-user
         onCreated={setCreated}
         onClose={closeSignup}
         onBook={() => navigate('/booking', { replace: true })}
