@@ -40,7 +40,7 @@ export const SETTINGS_GROUPS = [
     ],
   },
   {
-    key: 'login', label: 'Login page',
+    key: 'login', label: 'Login & profile',
     fields: [
       { name: 'loginTag', label: 'Left side: small label' },
       { name: 'loginTitle', label: 'Left side: title', help: STARS },
@@ -52,6 +52,8 @@ export const SETTINGS_GROUPS = [
       { name: 'signupText', label: 'Create account pop-up: text under the title' },
       { name: 'signupDoneTitle', label: 'After sign-up: title' },
       { name: 'signupDoneText', label: 'After sign-up: message', type: 'textarea', col: 12, help: '{name} is replaced by the customer’s first name' },
+      { name: 'profileTitle', label: 'My profile page: title', help: STARS },
+      { name: 'profileText', label: 'My profile page: text under the title', type: 'textarea', col: 12 },
     ],
   },
   {
