@@ -42,6 +42,7 @@ export const SETTINGS_GROUPS = [
   {
     key: 'login', label: 'Login & profile',
     fields: [
+      { name: 'loginButton', label: 'Navbar: log in button text', placeholder: 'Log in' },
       { name: 'loginFormTitle', label: 'Login page: title', placeholder: 'Welcome back' },
       { name: 'loginFormText', label: 'Login page: text under the title' },
       { name: 'signupTitle', label: 'Create account pop-up: title' },

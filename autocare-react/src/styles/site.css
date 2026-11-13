@@ -1150,3 +1150,11 @@ html.theme-site .acp-form-done-icon {
 }
 html.theme-site .acp-form-done h3 { justify-content: center; }
 html.theme-site .acp-form-done p { color: #6b7280; max-width: 380px; }
+
+/* Navbar "Log in" button for visitors (text comes from Website Content) */
+html.theme-site .acp-login-btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px;
+  border: 1.5px solid var(--brand-yellow); color: var(--brand-yellow); font-weight: 600; font-size: .9rem;
+  text-decoration: none; white-space: nowrap; transition: background .15s, color .15s;
+}
+html.theme-site .acp-login-btn:hover { background: var(--brand-yellow); color: #fff; }
