@@ -1,6 +1,6 @@
-# AutoCare Pro – Backend
+# AutoConnection – Backend
 
-REST API for the AutoCare Pro auto workshop management system.
+REST API for the AutoConnection auto workshop management system.
 Built with Node.js, Express, MySQL, JWT and bcrypt.
 
 ## Requirements
@@ -9,7 +9,7 @@ Built with Node.js, Express, MySQL, JWT and bcrypt.
 
 ## Setup
 1. Start **MySQL** in XAMPP.
-2. In phpMyAdmin, create a database called `autocare`, open its **Import** tab and import `database.sql`.
+2. In phpMyAdmin, create a database called `autoconnection`, open its **Import** tab and import `database.sql`.
 3. Copy `.env.example`, rename the copy to `.env` and set your own `JWT_SECRET`.
 4. In this folder, run:
    ```

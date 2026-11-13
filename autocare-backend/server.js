@@ -13,12 +13,12 @@ app.use(express.json());             // understand JSON sent by the frontend
 
 // 3. Home page
 app.get('/', (req, res) => {
-  res.send('AutoCare Pro API is running. Try /api/health');
+  res.send('AutoConnection API is running. Try /api/health');
 });
 
 // 4. Test the server: GET /api/health
 app.get('/api/health', (req, res) => {
-  res.json({ status: 'ok', message: 'AutoCare Pro backend is running' });
+  res.json({ status: 'ok', message: 'AutoConnection backend is running' });
 });
 
 // 5. Test the database: GET /api/db-test
