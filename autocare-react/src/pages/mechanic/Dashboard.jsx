@@ -25,7 +25,6 @@ export default function MechanicDashboard() {
 
   const order = { progress: 0, pending: 1, complete: 2, cancelled: 3 }
   const list = [...mine].sort((a, b) => order[a.status] - order[b.status] || b.date.localeCompare(a.date)).slice(0, 4)
-  const next = progress[0] || pending[0]
   const first = user.name.split(' ')[0]
 
   return (
@@ -89,18 +88,6 @@ export default function MechanicDashboard() {
               </Link>
             ))}
           </div>
-        </div>
-      </section>
-
-      <section className="m-panel">
-        <div className="m-panel-head">
-          <h3>Quick actions</h3>
-        </div>
-        <div className="m-quick-grid">
-          <Link to={next ? '/mechanic/repairs/' + next.id : '/mechanic/repairs'} className="m-quick-btn m-quick-primary"><i className="bi bi-wrench-adjustable"></i> {progress[0] ? 'Continue current repair' : 'Start next repair'}</Link>
-          <Link to={next ? '/mechanic/repairs/' + next.id : '/mechanic/repairs'} className="m-quick-btn"><i className="bi bi-box-seam"></i> Log parts used</Link>
-          <Link to="/mechanic/reports" className="m-quick-btn"><i className="bi bi-file-earmark-bar-graph"></i> My reports</Link>
-          <Link to="/mechanic/profile" className="m-quick-btn"><i className="bi bi-person-badge"></i> Update availability</Link>
         </div>
       </section>
     </>
