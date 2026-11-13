@@ -1151,6 +1151,47 @@ html.theme-site .acp-form-done-icon {
 html.theme-site .acp-form-done h3 { justify-content: center; }
 html.theme-site .acp-form-done p { color: #6b7280; max-width: 380px; }
 
+/* ===== My profile (customers) ===== */
+html.theme-site .acp-pf-card {
+  background: #fff; border: 1px solid var(--border-light); border-radius: 16px; padding: 1.6rem;
+  box-shadow: 0 4px 16px rgba(15, 42, 68, .06);
+}
+html.theme-site .acp-pf-photo {
+  position: relative; width: 132px; height: 132px; margin: 0 auto 1rem; border-radius: 50%; overflow: hidden;
+  background: var(--brand-yellow); color: #fff; display: flex; align-items: center; justify-content: center;
+  font-size: 2.6rem; font-weight: 800; box-shadow: 0 0 0 5px #fff3e6;
+}
+html.theme-site .acp-pf-photo img { width: 100%; height: 100%; object-fit: cover; }
+html.theme-site .acp-pf-busy { position: absolute; inset: 0; background: rgba(255,255,255,.7); display: flex; align-items: center; justify-content: center; color: var(--brand-yellow); }
+html.theme-site .acp-pf-name { font-size: 1.25rem; font-weight: 800; color: var(--brand-purple); margin: 0 0 .15rem; }
+html.theme-site .acp-pf-email { color: #6b7280; margin: 0 0 .25rem; word-break: break-all; }
+html.theme-site .acp-pf-since { font-size: .82rem; color: #9ca3af; margin: 0 0 1.25rem; }
+html.theme-site .acp-pf-hint { font-size: .78rem; color: #9ca3af; margin: .75rem 0 0; }
+html.theme-site .acp-pf-remove { border: 1px solid var(--border-light); background: #fff; color: #6b7280; }
+html.theme-site .acp-pf-remove:hover { border-color: #dc2626; color: #dc2626; }
+html.theme-site .acp-pf-title { font-size: 1.1rem; font-weight: 700; color: var(--brand-purple); margin-bottom: 1.1rem; }
+html.theme-site .acp-pf-pw { position: relative; }
+html.theme-site .acp-pf-pw input { padding-right: 44px; }
+html.theme-site .acp-pf-pw button {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%); border: none; background: none;
+  width: 34px; height: 34px; border-radius: 8px; color: #9ca3af;
+}
+html.theme-site .acp-pf-pw button:hover { background: #f3f4f6; color: var(--brand-purple); }
+html.theme-site .acp-pf-pw .is-invalid { background-image: none; }
+/* My profile: one form */
+html.theme-site .acp-pf-one { padding: 2rem; }
+html.theme-site .acp-pf-top { text-align: center; padding-bottom: 1.5rem; margin-bottom: 1.5rem; border-bottom: 1px solid var(--border-light); }
+html.theme-site .acp-pf-top .acp-pf-photo { overflow: visible; }
+html.theme-site .acp-pf-top .acp-pf-photo img, html.theme-site .acp-pf-top .acp-pf-busy { border-radius: 50%; }
+html.theme-site .acp-pf-top .acp-pf-since { margin-bottom: .5rem; }
+html.theme-site .acp-pf-cam {
+  position: absolute; right: 2px; bottom: 2px; width: 38px; height: 38px; border-radius: 50%; border: 3px solid #fff;
+  background: var(--brand-purple); color: #fff; font-size: .95rem; display: flex; align-items: center; justify-content: center;
+}
+html.theme-site .acp-pf-cam:hover { background: var(--brand-yellow); }
+html.theme-site .acp-pf-link { background: none; border: none; padding: 0; color: #dc2626; font-size: .85rem; font-weight: 600; }
+html.theme-site .acp-pf-link:hover { text-decoration: underline; }
+
 /* Navbar "Log in" button for visitors (text comes from Website Content) */
 html.theme-site .acp-login-btn {
   display: inline-flex; align-items: center; gap: 6px; padding: 7px 16px; border-radius: 999px;
