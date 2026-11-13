@@ -40,6 +40,20 @@ const DEFAULT_SETTINGS = {
   introImage: '/media/engine/engine2.jpg',
 
   // ---------- About page ----------
+  // Login page + "Create an account" pop-up
+  loginTag: 'Trusted Toyota service',
+  loginTitle: 'Your car, *in good hands.*',
+  loginText: 'Sign in to book a service, follow your repair step by step and order genuine parts.',
+  loginPoints: 'bi-calendar-check|Book a service in a few clicks\nbi-activity|See your repair status live\nbi-bag-check|Order parts and collect them at the workshop',
+  loginFormTitle: 'Welcome back',
+  loginFormText: 'Sign in and we’ll take you to the right place.',
+  signupTitle: 'Create your account',
+  signupText: "It's free and only takes a minute",
+  signupDoneTitle: 'Account created successfully!',
+  signupDoneText: 'Welcome to AutoCare Pro, {name}. Your account is ready and you are signed in.',
+  // My profile page (customers)
+  profileTitle: 'My *profile*',
+  profileText: 'Keep your details up to date so the workshop can reach you about your repairs.',
   aboutTitle: 'About *AutoCarePro*',
   aboutText: 'Your trusted web-based auto workshop, where expert repairs meet genuine spare parts, all managed on one smart digital platform.',
   aboutImage: '/media/car%20wash/wash2.jpg',
@@ -158,6 +172,14 @@ async function upgradeDatabase() {
   if (Number(col[0].n) === 0) {
     await db.query('ALTER TABLE repairs ADD COLUMN vehicleType varchar(60) DEFAULT NULL AFTER customerId');
     console.log('Database: added the column repairs.vehicleType');
+  }
+  // Profile photo of customers (saved in the database as text)
+  const [pc] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'photo'`);
+  if (Number(pc[0].n) === 0) {
+    await db.query('ALTER TABLE customers ADD COLUMN photo MEDIUMTEXT NULL');
+    console.log('Database: added the column customers.photo');
   }
   // Messages from the contact form (Contact page -> admin → Messages)
   await db.query(`CREATE TABLE IF NOT EXISTS contact_messages (
