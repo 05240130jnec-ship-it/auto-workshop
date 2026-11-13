@@ -107,10 +107,18 @@ router.post('/login', async (req, res) => {
 
 // POST /api/auth/signup   body: { name, email, phone, address, password }
 router.post('/signup', async (req, res) => {
-  const { name, phone, address, password } = req.body;
-  const email = (req.body.email || '').trim().toLowerCase();
-  if (!name || !email || !password) return res.status(400).json({ error: 'Name, email and password are required.' });
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters.' });
+  const name = String(req.body.name || '').trim().replace(/\s+/g, ' ');
+  const email = String(req.body.email || '').trim().toLowerCase();
+  const phone = String(req.body.phone || '').replace(/[\s-]/g, '');
+  const address = String(req.body.address || '').trim();
+  const password = String(req.body.password || '');
+  // The website checks these too, but someone could skip the website
+  if (!/^[A-Za-z][A-Za-z .'-]{1,59}$/.test(name)) return res.status(400).json({ error: 'Please enter your full name (letters and spaces only).' });
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return res.status(400).json({ error: 'Please enter a valid email address.' });
+  if (!/^(\+?975)?[1-8]\d{7}$/.test(phone)) return res.status(400).json({ error: 'Please enter a valid Bhutan phone number, e.g. 17123456.' });
+  if (password.length < 8 || !/[A-Za-z]/.test(password) || !/\d/.test(password)) {
+    return res.status(400).json({ error: 'Password needs at least 8 characters with a letter and a number.' });
+  }
   if (await findAccount(email)) return res.status(409).json({ error: 'An account with this email already exists.' });
 
   // Next customer id: C-001, C-002 … → C-009
@@ -137,24 +145,33 @@ router.get('/google-config', (req, res) => {
   res.json({ clientId: process.env.GOOGLE_CLIENT_ID || null });
 });
 
-// POST /api/auth/google   body: { credential }
+// POST /api/auth/google   body: { accessToken }  (our Google button)  or  { credential }  (Google's own button)
 router.post('/google', async (req, res) => {
   const clientId = process.env.GOOGLE_CLIENT_ID;
   if (!clientId) return res.status(503).json({ error: 'Google login is not set up yet (GOOGLE_CLIENT_ID is missing in .env).' });
   const credential = String(req.body.credential || '');
-  if (!credential) return res.status(400).json({ error: 'Google did not send a login. Please try again.' });
+  const accessToken = String(req.body.accessToken || '');
+  if (!credential && !accessToken) return res.status(400).json({ error: 'Google did not send a login. Please try again.' });
 
-  // 1. Ask Google: is this token real?
+  // 1. Ask Google: is this token real? (and get the name + email)
   let info;
   try {
-    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential));
+    const url = accessToken
+      ? 'https://oauth2.googleapis.com/tokeninfo?access_token=' + encodeURIComponent(accessToken)
+      : 'https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(credential);
+    const r = await fetch(url);
     info = await r.json();
     if (!r.ok) throw new Error(info.error_description || 'invalid token');
+    if (accessToken) {
+      // the access token does not contain the name, so ask Google for it
+      const u = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', { headers: { Authorization: 'Bearer ' + accessToken } });
+      if (u.ok) { const me = await u.json(); info.name = me.name; info.email = info.email || me.email; }
+    }
   } catch (err) {
     return res.status(401).json({ error: 'Google login failed. Please try again.' });
   }
   // 2. Was it made for our website, and is the email confirmed by Google?
-  if (info.aud !== clientId) return res.status(401).json({ error: 'This Google login is not for AutoCare Pro.' });
+  if (info.aud !== clientId && info.azp !== clientId) return res.status(401).json({ error: 'This Google login is not for AutoCare Pro.' });
   if (info.email_verified !== 'true' && info.email_verified !== true) {
     return res.status(401).json({ error: 'Your Google email is not verified.' });
   }
