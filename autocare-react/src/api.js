@@ -35,6 +35,7 @@ export async function api(path, { method = 'GET', body } = {}) {
   if (!res.ok) {
     const err = new Error((data && data.error) || `Request failed (${res.status})`)
     err.status = res.status
+    err.data = data          // the full answer, e.g. { error, wait } after too many wrong passwords
     throw err
   }
   return data
