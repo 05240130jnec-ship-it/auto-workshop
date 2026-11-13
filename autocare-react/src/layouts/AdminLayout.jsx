@@ -1,20 +1,44 @@
-import { useState } from 'react'
-import { NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
-import { useStore } from '../data/store.js'
 import { useDialogs } from '../ui/DialogContext.js'
 import useTheme from '../ui/useTheme.js'
 import Avatar from '../pages/admin/Avatar.jsx'
+import AdminDataProvider from '../pages/admin/AdminDataProvider.jsx'
+import { useAdmin } from '../pages/admin/AdminContext.js'
+import { api } from '../api.js'
 
-// Admin panel layout — same sidebar as your admin interface, with live counts
+// Admin panel: loads all data from the backend first, then shows the sidebar + page
 export default function AdminLayout() {
   useTheme('admin')
+  return (
+    <AdminDataProvider>
+      <AdminShell />
+    </AdminDataProvider>
+  )
+}
+
+// Sidebar with live counts
+function AdminShell() {
   const { user, logout } = useAuth()
-  const store = useStore()
-  const { Q, data } = store
-  const { confirm } = useDialogs()
+  const { Q, data, reload } = useAdmin()
+  const { toast } = useDialogs()
   const navigate = useNavigate()
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
+
+  // Fetch fresh data each time the admin opens another page
+  // (customers and mechanics may have changed things meanwhile)
+  useEffect(() => { reload() }, [pathname, reload])
+
+  // New messages from the Contact page (number in the sidebar)
+  const [newMessages, setNewMessages] = useState(0)
+  useEffect(() => {
+    const load = () => api('/contact/admin/unread').then((r) => setNewMessages(r.count)).catch(() => {})
+    load()
+    window.addEventListener('messages-changed', load)
+    return () => window.removeEventListener('messages-changed', load)
+  }, [pathname])
 
   const pendingRepairs = data.repairs.filter((r) => r.status === 'pending').length
   const pendingPO = Q.pendingOrders().length
@@ -30,10 +54,10 @@ export default function AdminLayout() {
     </li>
   )
 
-  async function resetDemo(e) {
+  async function refresh(e) {
     e.preventDefault()
-    const ok = await confirm('All changes (bookings, edits, deletions) will be lost and the sample data restored.', { title: 'Reset demo data?', okText: 'Reset', danger: true })
-    if (ok) store.reset()
+    await reload()
+    toast('Data refreshed', 'info')
   }
 
   return (
@@ -50,6 +74,7 @@ export default function AdminLayout() {
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
             {link('/admin/orders', 'bi-bag-check', 'Purchase Orders', pendingPO)}
             {link('/admin/shop', 'bi-shop', 'Shop & Listings', shop)}
+            {link('/admin/messages', 'bi-envelope-fill', 'Messages', newMessages)}
           </ul>
         </div>
         <div className="a-nav-group">
@@ -59,13 +84,14 @@ export default function AdminLayout() {
             {link('/admin/mechanics', 'bi-person-badge', 'Mechanics')}
             {link('/admin/inventory', 'bi-box-seam', 'Inventory', low, 'red')}
             {link('/admin/suppliers', 'bi-truck', 'Suppliers')}
+            {link('/admin/content', 'bi-megaphone', 'Website Content')}
           </ul>
         </div>
         <div className="a-nav-group">
           <span className="a-nav-label">Other</span>
           <ul className="a-nav">
             <li><a href="/" target="_blank" rel="noreferrer"><i className="bi bi-globe2"></i> View website</a></li>
-            <li><a href="#" onClick={resetDemo}><i className="bi bi-arrow-counterclockwise"></i> Reset demo data</a></li>
+            <li><a href="#" onClick={refresh}><i className="bi bi-arrow-clockwise"></i> Refresh data</a></li>
           </ul>
         </div>
         <div className="a-user-foot">

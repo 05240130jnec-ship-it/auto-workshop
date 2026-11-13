@@ -1,6 +1,11 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useStore, nu, fmtDate, relDate, today, daysAgo, SERVICES } from '../../data/store.js'
+import { nu, fmtDate, relDate, today, daysAgo } from '../../data/store.js'
+import { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } from '../../data/vehicle.js'
+import { api } from '../../api.js'
+import useSettings from '../../data/useSettings.js'
+import { lines } from '../../data/content.js'
+import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -11,11 +16,11 @@ import { Badge, Priority, Tabs, EmptyRow, IconBtn, TableCard } from './parts.jsx
 const STATUSES = [['pending', 'Pending'], ['progress', 'In Progress'], ['complete', 'Complete'], ['cancelled', 'Cancelled']]
 const statusLabel = (s) => STATUSES.find((x) => x[0] === s)[1]
 
-// Repairs — create jobs, assign mechanics, move jobs through their status
+// Repairs — create jobs, assign mechanics, move jobs through their status (all saved in MySQL)
 export default function AdminRepairs() {
   usePageTitle('Manage Repairs')
-  const store = useStore()
-  const { Q } = store
+  const store = useAdmin()
+  const { Q, act } = store
   const { toast, confirm, form, view, closeView } = useDialogs()
   const [params] = useSearchParams()
   const [filter, setFilter] = useState('all')
@@ -28,32 +33,36 @@ export default function AdminRepairs() {
     .filter((r) => !query || [r.id, r.vehicle, r.plate, r.service, Q.customerName(r.customerId), Q.mechanicName(r.mechanicId)].join(' ').toLowerCase().includes(query))
     .sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id))
 
-  function setStatus(id, status) {
+  // PATCH /api/admin/repairs/:id with only the fields that change
+  const patchRepair = (id, body) => api('/admin/repairs/' + id, { method: 'PATCH', body })
+
+  async function setStatus(id, status) {
     const r = store.get('repairs', id)
     if (status === 'progress' && !r.mechanicId) { toast('Assign a mechanic before starting the job', 'warn'); return false }
-    const patch = { status }
-    if (status === 'complete') patch.completedOn = today()
-    store.update('repairs', id, patch)
-    toast(<>#{id} marked as <b>{statusLabel(status)}</b></>)
-    return true
+    return act(() => patchRepair(id, { status }), <>#{id} marked as <b>{statusLabel(status)}</b></>)
   }
 
   function assign(r, mechanicId) {
     if (!mechanicId) {
-      store.update('repairs', r.id, { mechanicId: null, status: 'pending' })
-      return toast('#' + r.id + ' unassigned', 'info')
+      return act(() => patchRepair(r.id, { mechanicId: null, status: 'pending' }), '#' + r.id + ' unassigned', 'info')
     }
     const patch = { mechanicId }
     if (r.status === 'pending') patch.status = 'progress'
-    store.update('repairs', r.id, patch)
-    toast(<>#{r.id} assigned to <b>{Q.mechanicName(mechanicId)}</b>{patch.status ? ' · now In Progress' : ''}</>)
+    act(() => patchRepair(r.id, patch),
+      <>#{r.id} assigned to <b>{Q.mechanicName(mechanicId)}</b>{patch.status ? ' · now In Progress' : ''}</>)
   }
 
-  const fields = () => [
+  // Service names come from MySQL (admin → Website Content → Services); keep the job's own name when editing
+  // Vehicle types come from MySQL (Website Content → Lists); keep the job's own type when editing
+  const settings = useSettings()
+  const typeNames = (current) => [...new Set([...lines(settings && settings.vehicleTypes), current].filter(Boolean))]
+  const serviceNames = (current) => [...new Set([...store.all('services').map((s) => s.serviceName), current].filter(Boolean))]
+  const fields = (current, currentType) => [
     { name: 'customerId', label: 'Customer', type: 'select', required: true, empty: 'Select customer…', options: store.all('customers').map((c) => ({ value: c.id, label: `${c.name} — ${c.phone}` })) },
-    { name: 'service', label: 'Service', type: 'select', required: true, empty: 'Select service…', options: SERVICES },
+    { name: 'service', label: 'Service', type: 'select', required: true, empty: 'Select service…', options: serviceNames(current) },
+    { name: 'vehicleType', label: 'Vehicle type', type: 'select', empty: 'Select type…', options: typeNames(currentType) },
     { name: 'vehicle', label: 'Vehicle (make & model)', required: true, placeholder: 'e.g. Toyota Corolla' },
-    { name: 'plate', label: 'Plate number', required: true, placeholder: 'e.g. BP-1-A1234', help: 'Format: BP-1-A1234' },
+    { name: 'plate', label: 'Plate number', required: true, placeholder: 'e.g. BP-1-A1234', help: 'Starts with BP, BT, BG, RBP or RBG, e.g. BP-1-A1234' },
     { name: 'mechanicId', label: 'Assign mechanic', type: 'select', empty: 'Assign later', options: store.all('mechanics').filter((m) => m.status !== 'leave').map((m) => ({ value: m.id, label: `${m.name} — ${m.specialization} (${Q.activeJobs(m.id)} jobs)` })) },
     { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' }], default: 'normal' },
     { name: 'date', label: 'Booked on', type: 'date', required: true, default: today() },
@@ -63,6 +72,8 @@ export default function AdminRepairs() {
     { name: 'notes', label: 'Customer complaint / notes', type: 'textarea', col: 12, placeholder: 'What did the customer report?' },
   ]
   const validate = (v) => {
+    if (!cleanVehicle(v.vehicle)) return VEHICLE_ERROR
+    if (!cleanPlate(v.plate)) return PLATE_ERROR
     if (v.due < v.date) return "The promised date can't be before the booking date"
     if (v.status === 'progress' && !v.mechanicId) return 'Assign a mechanic to mark the job In Progress'
     return null
@@ -72,57 +83,71 @@ export default function AdminRepairs() {
     const v = await form({ title: 'New repair job', fields: fields(), submitText: 'Create job', validate })
     if (!v) return
     v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
+    v.plate = cleanPlate(v.plate)
+    v.vehicle = cleanVehicle(v.vehicle)
     if (v.mechanicId && v.status === 'pending') v.status = 'progress'
-    if (v.status === 'complete') v.completedOn = today()
-    v.id = store.nextId('repairs', 'ACP-', 4)
-    v.parts = []; v.services = []
-    store.add('repairs', v)
+    let id = ''
+    const ok = await act(async () => {
+      const res = await api('/admin/repairs', { method: 'POST', body: v })   // backend makes the new ACP id
+      id = res.id
+    })
+    if (!ok) return
     setFilter('all')
-    toast(<>Job <b>#{v.id}</b> created for {Q.customerName(v.customerId)}</>)
+    toast(<>Job <b>#{id}</b> created for {Q.customerName(v.customerId)}</>)
   }
 
   async function editJob(r) {
-    const v = await form({ title: 'Edit job #' + r.id, fields: fields(), values: { ...r, mechanicId: r.mechanicId || '' }, submitText: 'Save changes', validate })
+    const v = await form({ title: 'Edit job #' + r.id, fields: fields(r.service, r.vehicleType), values: { ...r, mechanicId: r.mechanicId || '', vehicleType: r.vehicleType || '' }, submitText: 'Save changes', validate })
     if (!v) return
     v.mechanicId = v.mechanicId || null
-    v.plate = v.plate.toUpperCase()
-    if (v.status === 'complete' && r.status !== 'complete') v.completedOn = today()
-    store.update('repairs', r.id, v)
-    toast('Job #' + r.id + ' updated')
+    v.plate = cleanPlate(v.plate)
+    v.vehicle = cleanVehicle(v.vehicle)
+    act(() => patchRepair(r.id, v), 'Job #' + r.id + ' updated')
   }
 
-  async function completeJob(r) {
+  async function completeJob(row) {
+    let r
+    try {
+      r = await api('/admin/repairs/' + row.id)   // full job with the parts + services the mechanic logged
+    } catch (err) {
+      return toast(err.message, 'error')
+    }
     const logged = Q.partsTotal(r) + Q.servicesTotal(r)
     const v = await form({
       title: 'Complete job #' + r.id, size: 'sm', submitText: 'Mark complete', values: { cost: logged || r.cost },
       fields: [{ name: 'cost', label: 'Final amount charged (Nu.)', type: 'number', min: 0, step: 50, required: true, col: 12, help: `Estimate was ${nu(r.cost)}${logged ? ` · mechanic logged ${nu(logged)}` : ''}` }],
     })
     if (!v) return
-    store.update('repairs', r.id, { cost: v.cost, status: 'complete', completedOn: today() })
-    toast(`#${r.id} completed · ${nu(v.cost)} charged`)
+    act(() => patchRepair(r.id, { cost: v.cost, status: 'complete' }), `#${r.id} completed · ${nu(v.cost)} charged`)
   }
 
   async function deleteJob(r) {
     const ok = await confirm(<>Job <b>#{r.id}</b> will be permanently removed.</>, { title: 'Delete this job?', okText: 'Delete', danger: true })
-    if (ok) { store.remove('repairs', r.id); toast('Job #' + r.id + ' deleted', 'info') }
+    if (ok) act(() => api('/admin/repairs/' + r.id, { method: 'DELETE' }), 'Job #' + r.id + ' deleted', 'info')
   }
 
-  function viewJob(id) {
-    const r = store.get('repairs', id)
-    if (!r) return
+  async function viewJob(id) {
+    let r
+    try {
+      r = await api('/admin/repairs/' + id)   // includes parts + services
+    } catch (err) {
+      return toast(err.message, 'error')
+    }
+    r.cost = Number(r.cost) || 0
+    r.workNotes = r.workNotes ? r.workNotes.split('\n') : []   // mechanic notes are saved as lines of text
+    if (r.apptDate) r.appointment = { date: r.apptDate, time: r.apptTime, delivery: r.delivery }
     const c = Q.customer(r.customerId) || {}
     const m = Q.mechanic(r.mechanicId)
     const idx = ['pending', 'progress', 'complete'].indexOf(r.status)
     const history = all.filter((x) => x.plate === r.plate && x.id !== r.id).sort((a, b) => b.date.localeCompare(a.date)).slice(0, 5)
-    const act = (status) => { if (setStatus(r.id, status)) closeView() }
+    const go = async (status) => { if (await setStatus(r.id, status)) closeView() }
     view(<>Job <span className="a-id">#{r.id}</span></>, (
       <>
         {r.status === 'cancelled'
           ? <div className="a-note mb-3" style={{ borderColor: '#fca5a5', color: '#b91c1c' }}><i className="bi bi-x-circle"></i> This job was cancelled.</div>
           : <div className="a-steps">{['Booked', 'In progress', 'Complete'].map((s, i) => <div key={s} className={i <= idx ? 'done' : ''}>{s}</div>)}</div>}
         <div className="a-detail-grid">
-          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}</small></div>
+          <div><span>Vehicle</span><strong>{r.vehicle}</strong><br /><small className="text-muted">{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''}</small></div>
           <div><span>Customer</span><strong>{c.name}</strong><br /><small className="text-muted">{c.phone}</small></div>
           <div><span>Service</span><strong>{r.service}</strong><Priority p={r.priority} /></div>
           <div><span>Mechanic</span><strong>{m ? m.name : <span className="text-warning">Not assigned</span>}</strong></div>
@@ -153,8 +178,8 @@ export default function AdminRepairs() {
     ), (
       <>
         {r.status === 'pending' && <>
-          <button className="a-btn a-btn-outline" onClick={() => act('cancelled')}>Cancel job</button>
-          <button className="a-btn a-btn-primary" onClick={() => act('progress')}><i className="bi bi-play-fill"></i> Start job</button>
+          <button className="a-btn a-btn-outline" onClick={() => go('cancelled')}>Cancel job</button>
+          <button className="a-btn a-btn-primary" onClick={() => go('progress')}><i className="bi bi-play-fill"></i> Start job</button>
         </>}
         {r.status === 'progress' && <button className="a-btn a-btn-success" onClick={() => { closeView(); completeJob(r) }}><i className="bi bi-check2-circle"></i> Mark complete</button>}
       </>
@@ -186,7 +211,7 @@ export default function AdminRepairs() {
           return (
             <tr key={r.id}>
               <td><span className="a-id">#{r.id}</span><small>{relDate(r.date)}{r.appointment ? ' · online' : ''}</small></td>
-              <td><strong>{r.vehicle}</strong><small>{r.plate}</small></td>
+              <td><strong>{r.vehicle}</strong><small>{r.plate}{r.vehicleType ? ' · ' + r.vehicleType : ''}</small></td>
               <td>{c.name || 'Unknown'}<small>{c.phone}</small></td>
               <td>{r.service}<Priority p={r.priority} />
                 {open && <small style={overdue ? { color: 'var(--a-red)', fontWeight: 600 } : undefined}>Due {relDate(r.due).toLowerCase()}{overdue ? ' · overdue' : ''}</small>}

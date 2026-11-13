@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { useStore, nu, nuShort, fmtDate, relDate, today } from '../../data/store.js'
+import { nu, nuShort, fmtDate, relDate, today } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -10,8 +12,8 @@ const STATUSES = [['pending', 'Pending'], ['approved', 'Approved'], ['received',
 // Purchase orders — approve/reject requests, receive deliveries into stock
 export default function AdminOrders() {
   usePageTitle('Purchase Orders')
-  const store = useStore()
-  const { Q } = store
+  const store = useAdmin()
+  const { Q, act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
@@ -25,27 +27,23 @@ export default function AdminOrders() {
   const pend = os.filter((o) => o.status === 'pending'), appr = os.filter((o) => o.status === 'approved')
   const spent = os.filter((o) => o.status === 'received' && o.date.slice(0, 7) === today().slice(0, 7))
 
-  async function approve(o) {
-    store.update('orders', o.id, { status: 'approved' })
-    toast(`${o.id} approved · ${nu(Q.poCost(o))} order sent to ${Q.supplierName(o.supplierId)}`)
+  // PATCH /api/admin/orders/:id — the backend checks the order of steps and adds stock on "received"
+  const patchOrder = (id, body) => api('/admin/orders/' + id, { method: 'PATCH', body })
+
+  function approve(o) {
+    act(() => patchOrder(o.id, { status: 'approved' }),
+      `${o.id} approved · ${nu(Q.poCost(o))} order sent to ${Q.supplierName(o.supplierId)}`)
   }
   async function reject(o) {
     const v = await form({ title: 'Reject ' + o.id, size: 'sm', submitText: 'Reject order', fields: [{ name: 'note', label: 'Reason (shown to the mechanic)', type: 'textarea', col: 12, required: true }] })
     if (!v) return
-    store.update('orders', o.id, { status: 'rejected', note: v.note })
-    toast(o.id + ' rejected', 'info')
+    act(() => patchOrder(o.id, { status: 'rejected', note: v.note }), o.id + ' rejected', 'info')
   }
   async function receive(o) {
     const p = Q.part(o.partId) || {}
     const ok = await confirm(<>Add <b>{o.qty} × {p.name}</b> to inventory? Stock will go from {p.stock} to {p.stock + o.qty}.</>, { title: 'Receive delivery', okText: 'Add to stock' })
     if (!ok) return
-    store.batch((d) => {
-      const inv = d.inventory.find((x) => x.id === o.partId)
-      if (inv) inv.stock += o.qty
-      const ord = d.orders.find((x) => x.id === o.id)
-      ord.status = 'received'; ord.date = today()
-    })
-    toast(`${o.qty} × ${p.name} added to stock`)
+    act(() => patchOrder(o.id, { status: 'received' }), `${o.qty} × ${p.name} added to stock`)
   }
   function show(o) {
     const p = Q.part(o.partId) || {}, s = Q.supplier(o.supplierId) || {}
@@ -77,9 +75,13 @@ export default function AdminOrders() {
       ],
     })
     if (!v) return
-    const p = Q.part(v.partId)
-    const id = store.nextId('orders', 'PO-', 4)
-    store.add('orders', { id, partId: v.partId, qty: v.qty, supplierId: p.supplierId, requestedBy: v.requestedBy, status: v.requestedBy === 'admin' ? 'approved' : 'pending', date: today(), note: v.note })
+    let id = ''
+    const ok = await act(async () => {
+      // Admin orders are approved straight away; orders for a mechanic wait for approval
+      const res = await api('/admin/orders', { method: 'POST', body: { partId: v.partId, qty: v.qty, requestedBy: v.requestedBy, note: v.note } })
+      id = res.id
+    })
+    if (!ok) return
     setFilter('all')
     toast(<>Order <b>{id}</b> created</>)
   }

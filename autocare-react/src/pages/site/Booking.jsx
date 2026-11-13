@@ -1,45 +1,100 @@
 import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, today } from '../../data/store.js'
-import { BOOKABLE, PICKUP_FEE, TIME_SLOTS, MAX_PER_SLOT } from '../../data/services.js'
+import { nu, fmtDate } from '../../data/store.js'
+import useSettings from '../../data/useSettings.js'
+import { cleanPlate, plateType, plateStartOk, formatPlate, PLATE_ERROR } from '../../data/vehicle.js'
+import { offerFor, salePrice, lines } from '../../data/content.js'
+import Loading from '../../ui/Loading.jsx'
 import usePageTitle from '../../ui/usePageTitle.js'
+import useApi from '../../useApi.js'
+import { api } from '../../api.js'
 
 const WEEK = ['S', 'M', 'T', 'W', 'T', 'F', 'S']
 const iso = (d) => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0')
 
-// Booking form — same layout as your booking.html, but it really saves the booking
+// Booking form — saves the booking in MySQL through POST /api/repairs
 export default function Booking() {
   usePageTitle('Book a Service')
   const [params] = useSearchParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
-  const store = useStore()
 
-  const [slug, setSlug] = useState(BOOKABLE.some((b) => b.slug === params.get('service')) ? params.get('service') : BOOKABLE[1].slug)
-  const svc = BOOKABLE.find((b) => b.slug === slug)
+  // Services, prices and running offers come from MySQL (GET /api/content/services and /offers)
+  const list = useApi('/content/services')
+  const offerList = useApi('/content/offers')
+  const services = list.data || []
+  const [picked, setSlug] = useState(params.get('service') || 'brake-repair')
+  const svc = services.find((b) => b.slug === picked) || services[0] || null
+  const slug = svc ? svc.slug : ''
+  const offer = svc ? offerFor(offerList.data, svc.slug) : null
+  const price = svc ? salePrice(svc.price, offer) : 0
 
-  // Vehicles this customer brought before (to pick quickly)
+  // Vehicles this customer brought before (to pick quickly) — from GET /api/repairs
+  const history = useApi('/repairs')
   const myVehicles = useMemo(() => {
     const m = {}
-    store.data.repairs.filter((r) => r.customerId === user.id).forEach((r) => { m[r.plate] = r.vehicle })
-    return Object.entries(m).map(([plate, vehicle]) => ({ plate, vehicle }))
-  }, [store.data.repairs, user.id])
+    ;(history.data || []).forEach((r) => { m[r.plate] = r })
+    return Object.values(m).map((r) => ({ plate: r.plate, vehicle: r.vehicle, vehicleType: r.vehicleType || '' }))
+  }, [history.data])
 
-  const [vehicle, setVehicle] = useState(myVehicles[0]?.vehicle || '')
-  const [plate, setPlate] = useState(myVehicles[0]?.plate || '')
+  // We service Toyota only: type -> model -> year (the lists come from admin → Website Content → Lists)
+  const [vehicleType, setVehicleType] = useState('')
+  const [model, setModel] = useState('')
+  const [year, setYear] = useState('')
+  const vehicle = model && year ? `Toyota ${model} ${year}` : ''   // e.g. "Toyota Hilux 2019"
+  const [plate, setPlate] = useState('')
   const [problem, setProblem] = useState('')
   const [photos, setPhotos] = useState([])
-  const [delivery, setDelivery] = useState('dropoff')
 
   // Calendar: this month, next month
   const now = new Date()
   const [month, setMonth] = useState(new Date(now.getFullYear(), now.getMonth(), 1))
   const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
   const [date, setDate] = useState(iso(tomorrow.getDay() === 0 ? new Date(tomorrow.getTime() + 86400000) : tomorrow))
-  const [slot, setSlot] = useState('09:00 AM')
+  const [pickedSlot, setSlot] = useState('')
   const [error, setError] = useState('')
+  const [tried, setTried] = useState(false)   // show red boxes only after Confirm was pressed
+  const modelBad = tried && !model
+  const yearBad = tried && !year
+  const typeBad = tried && !vehicleType
+  const [plateLeft, setPlateLeft] = useState(false)   // the customer has left the plate box
+  // Plate box turns red:
+  //  - straight away while typing, if it can not become a plate like BP-1-A1234
+  //  - after leaving the box (or pressing Confirm), if it is not a full Bhutan plate
+  const plateOk = !!cleanPlate(plate)
+  const plateBad = (plate.trim() !== '' && !plateStartOk(plate)) || ((plateLeft || tried) && !plateOk)
   const [saving, setSaving] = useState(false)
+
+  // Which slots are full on the chosen date — GET /api/repairs/slots?date=...
+  // (loads again automatically every time the date changes)
+  const slots = useApi('/repairs/slots?date=' + date)
+  const taken = (t) => {
+    const s = (slots.data || []).find((x) => x.time === t)
+    return s ? s.full : false
+  }
+  // The time slots and cars per slot are set by the admin (Website Content → Booking)
+  const slotTimes = (slots.data || []).map((x) => x.time)
+  const slot = slotTimes.includes(pickedSlot) ? pickedSlot : (slotTimes.find((t) => !taken(t)) || '')
+  const settings = useSettings()
+  // Vehicle types come from MySQL (admin → Website Content → Lists)
+  const vehicleTypes = lines(settings && settings.vehicleTypes)
+  // Toyota models: "SUV|Land Cruiser Prado" -> { type: 'SUV', model: 'Land Cruiser Prado' }
+  const toyotaModels = lines(settings && settings.carModels)
+    .map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0] && p[1])
+    .map(([type, name]) => ({ type, model: name }))
+  const modelsOfType = toyotaModels.filter((m) => m.type === vehicleType)
+  const thisYear = new Date().getFullYear()
+  const years = Array.from({ length: thisYear - 1995 + 2 }, (_, i) => thisYear + 1 - i)   // next year … 1995
+
+  // A saved vehicle "Toyota Hilux 2019" -> fill in type, model and year
+  function pickSaved(v) {
+    setPlate(v.plate)
+    const m = toyotaModels.find((x) => v.vehicle === 'Toyota ' + x.model || v.vehicle.startsWith('Toyota ' + x.model + ' '))
+    if (!m) return
+    setVehicleType(m.type)
+    setModel(m.model)
+    const y = v.vehicle.slice(('Toyota ' + m.model).length).trim()
+    setYear(/^\d{4}$/.test(y) ? y : '')
+  }
 
   const firstDay = month.getDay()
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
@@ -49,24 +104,51 @@ export default function Booking() {
   const canPrev = month > new Date(now.getFullYear(), now.getMonth(), 1)
   const canNext = month < new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  // A slot is full when the workshop already has MAX_PER_SLOT bookings at that time
-  const taken = (t) => store.data.repairs.filter((r) => r.appointment && r.appointment.date === date && r.appointment.time === t && r.status !== 'cancelled').length >= MAX_PER_SLOT
-  const total = svc.price + (delivery === 'pickup' ? PICKUP_FEE : 0)
+  const total = price   // no home pickup: the customer brings the vehicle to the workshop
 
-  function submit() {
+  async function submit() {
     setError('')
-    if (!vehicle.trim() || !plate.trim()) return setError('Please enter your vehicle and plate number.')
+    setTried(true)
+    if (!vehicleType) return setError('Please choose your vehicle type.')
+    if (!model) return setError('Please choose your Toyota model.')
+    if (!year) return setError('Please choose the year of your vehicle.')
+    if (!plate.trim()) return setError('Please enter your plate number.')
+    if (!cleanPlate(plate)) return setError(PLATE_ERROR)
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
-    if (taken(slot)) return setError('That time slot was just taken. Please choose another one.')
+    if (!slot || taken(slot)) return setError('That time slot is full. Please choose another one.')
+
     setSaving(true)
-    const id = store.nextId('repairs', 'ACP-', 4)
-    store.add('repairs', {
-      id, customerId: user.id, vehicle: vehicle.trim(), plate: plate.trim().toUpperCase(), service: svc.service,
-      mechanicId: null, status: 'pending', priority: 'normal', date: today(), due: date, cost: total,
-      notes: problem.trim(), parts: [], services: [],
-      appointment: { date, time: slot, delivery, photos: photos.map((f) => f.name) },
-    })
-    navigate('/confirm/' + id)
+    try {
+      const data = await api('/repairs', {
+        method: 'POST',
+        body: {
+          vehicleType,
+          vehicle,                           // e.g. "Toyota Hilux 2019"
+          plate: cleanPlate(plate),          // tidy form, e.g. BP-1-A1234
+          service: svc.serviceName,
+          notes: problem.trim(),
+          cost: total,
+          apptDate: date,
+          apptTime: slot,
+        },
+      })
+      navigate('/confirm/' + data.id)          // e.g. /confirm/ACP-9252
+    } catch (err) {
+      setSaving(false)
+      setError(err.message)                    // e.g. "That time slot is full..." from the backend
+      slots.reload()                           // someone else may have just booked it
+    }
+  }
+
+  // Wait until the services have loaded (or show the error)
+  if (!svc) {
+    return (
+      <section className="acp-section">
+        <div className="container">
+          {list.loading ? <Loading /> : <Loading error={list.error || 'No services are available right now.'} onRetry={list.reload} />}
+        </div>
+      </section>
+    )
   }
 
   return (
@@ -86,12 +168,13 @@ export default function Booking() {
             <div className="acp-card p-4 mb-4">
               <div className="d-flex justify-content-between align-items-start mb-2">
                 <span className="badge" style={{ background: 'var(--brand-yellow)', color: '#fff' }}>SELECTED SERVICE</span>
-                <span className="badge bg-light text-dark">Est. Price {nu(svc.price)}</span>
+                <span className="badge bg-light text-dark">Est. Price {nu(price)}</span>
               </div>
               <select className="form-select fw-bold mb-2" value={slug} onChange={(e) => setSlug(e.target.value)} aria-label="Service">
-                {BOOKABLE.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
+                {services.map((b) => <option key={b.slug} value={b.slug}>{b.title}</option>)}
               </select>
-              <p className="text-muted mb-0">{svc.text}</p>
+              <p className="text-muted mb-0">{svc.shortText}</p>
+              {offer && <p className="small fw-bold mt-2 mb-0" style={{ color: 'var(--brand-yellow-dark)' }}><i className="bi bi-tag-fill me-1"></i>{offer.percent}% off this service {offer.endDate ? 'until ' + fmtDate(offer.endDate) : ''}</p>}
             </div>
 
             <div className="acp-card p-4 mb-4">
@@ -99,21 +182,59 @@ export default function Booking() {
               {myVehicles.length > 0 && (
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   {myVehicles.map((v) => (
-                    <button key={v.plate} type="button" className={'btn btn-sm ' + (plate === v.plate ? 'btn-brand-primary' : 'btn-outline-secondary')}
-                      onClick={() => { setVehicle(v.vehicle); setPlate(v.plate) }}>
+                    <button key={v.plate} type="button" className={'btn btn-sm ' + (plate === v.plate ? 'btn-brand-primary' : 'btn-outline-secondary' )}
+                      onClick={() => pickSaved(v)}>
                       <i className="bi bi-car-front me-1"></i>{v.vehicle} · {v.plate}
                     </button>
                   ))}
                 </div>
               )}
               <div className="row g-3">
-                <div className="col-md-7">
-                  <label className="form-label small fw-bold">Make &amp; model</label>
-                  <input className="form-control" placeholder="e.g. Toyota Corolla 2018" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
+                <div className="col-12">
+                  <p className="small text-muted mb-0"><i className="bi bi-info-circle-fill me-1" style={{ color: 'var(--brand-yellow-dark)' }}></i>We service <strong>Toyota</strong> vehicles only.</p>
+                </div>
+                <div className="col-md-4">
+                  <label className="form-label small fw-bold">Vehicle type</label>
+                  <select className={'form-select' + (typeBad ? ' is-invalid' : '')} value={vehicleType}
+                    onChange={(e) => { setVehicleType(e.target.value); setModel('') }}>
+                    <option value="">Choose type…</option>
+                    {vehicleTypes.map((t) => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  {typeBad && <div className="invalid-feedback">Please choose a type</div>}
                 </div>
                 <div className="col-md-5">
+                  <label className="form-label small fw-bold">Toyota model</label>
+                  <select className={'form-select' + (modelBad ? ' is-invalid' : '')} value={model}
+                    onChange={(e) => setModel(e.target.value)} disabled={!vehicleType}>
+                    <option value="">{vehicleType ? 'Choose model…' : 'Choose a type first'}</option>
+                    {modelsOfType.map((m) => <option key={m.model} value={m.model}>Toyota {m.model}</option>)}
+                  </select>
+                  {modelBad && <div className="invalid-feedback">Please choose a model</div>}
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold">Year</label>
+                  <select className={'form-select' + (yearBad ? ' is-invalid' : '')} value={year} onChange={(e) => setYear(e.target.value)}>
+                    <option value="">Year…</option>
+                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  {yearBad && <div className="invalid-feedback">Please choose a year</div>}
+                </div>
+                <div className="col-12">
                   <label className="form-label small fw-bold">Plate number</label>
-                  <input className="form-control" placeholder="e.g. BP-1-A1234" value={plate} onChange={(e) => setPlate(e.target.value)} />
+                  <input className={'form-control' + (plateBad ? ' is-invalid' : plateOk ? ' is-valid' : '')} placeholder="e.g. BP-1-A1234" value={plate}
+                    maxLength={12}
+                    onChange={(e) => setPlate(formatPlate(e.target.value))}   // capital letters + hyphens by themselves
+                    onBlur={() => { setPlateLeft(true); const p = cleanPlate(plate); if (p) setPlate(p) }} />
+                  {plateBad
+                    ? <div className="invalid-feedback">Must look like BP-1-A1234 (BP, BT, BG, RBP or RBG, one digit, then the number)</div>
+                    : plateType(plate)
+                      ? <div className="form-text">
+                          {/* the vehicle type, in the colours of that plate */}
+                          <span className="badge" style={{ color: plateType(plate).color, background: plateType(plate).bg }}>
+                            {cleanPlate(plate).split('-')[0]}
+                          </span>{' '}{plateType(plate).name}
+                        </div>
+                      : <div className="form-text">BP private · BT taxi · BG government · RBP police · RBG bodyguard</div>}
                 </div>
               </div>
             </div>
@@ -138,21 +259,8 @@ export default function Booking() {
             </div>
 
             <div className="acp-card p-4">
-              <h3 className="h6 fw-bold mb-3">Delivery Preference</h3>
-              <div className="row g-3">
-                <div className="col-md-6">
-                  <div className={'acp-time-slot text-start p-3' + (delivery === 'dropoff' ? ' selected' : '')} onClick={() => setDelivery('dropoff')}>
-                    <strong><i className="bi bi-truck me-1"></i> Drop-off</strong>
-                    <p className="mb-0 small text-muted mt-1">Bring your vehicle to the workshop.</p>
-                  </div>
-                </div>
-                <div className="col-md-6">
-                  <div className={'acp-time-slot text-start p-3' + (delivery === 'pickup' ? ' selected' : '')} onClick={() => setDelivery('pickup')}>
-                    <strong><i className="bi bi-house-door me-1"></i> Home Pickup</strong>
-                    <p className="mb-0 small text-muted mt-1">We'll pick up the vehicle. Extra {nu(PICKUP_FEE)}.</p>
-                  </div>
-                </div>
-              </div>
+              <h3 className="h6 fw-bold mb-2"><i className="bi bi-geo-alt-fill me-1" style={{ color: 'var(--brand-yellow-dark)' }}></i>Bring your vehicle to the workshop</h3>
+              <p className="mb-0 small text-muted">Please bring your vehicle to our workshop at the time you chose{settings && settings.address ? <>: <strong>{settings.address}</strong></> : '.'}</p>
             </div>
           </div>
 
@@ -184,9 +292,9 @@ export default function Booking() {
                 })}
               </div>
 
-              <h4 className="h6 fw-bold mb-2">Select a time slot</h4>
+              <h4 className="h6 fw-bold mb-2">Select a time slot {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
               <div className="row g-2 mb-3">
-                {TIME_SLOTS.map((t) => {
+                {slotTimes.map((t) => {
                   const full = taken(t)
                   return (
                     <div className="col-6" key={t}>
@@ -200,14 +308,14 @@ export default function Booking() {
               </div>
 
               <div className="d-flex justify-content-between small mb-1"><span>{svc.title}</span><span>{nu(svc.price)}</span></div>
-              {delivery === 'pickup' && <div className="d-flex justify-content-between small mb-1"><span>Home pickup</span><span>{nu(PICKUP_FEE)}</span></div>}
+              {offer && <div className="d-flex justify-content-between small mb-1 text-success"><span>Offer: {offer.percent}% off</span><span>− {nu(svc.price - price)}</span></div>}
               <div className="d-flex justify-content-between fw-bold border-top pt-2 mb-3"><span>Estimated total</span><span>{nu(total)}</span></div>
               <p className="small text-muted">You pay at the workshop after the job is done.</p>
 
               {error && <div className="alert alert-danger py-2 small">{error}</div>}
 
               <button type="button" className="btn btn-brand-primary w-100 mb-2" onClick={submit} disabled={saving}>
-                Confirm Booking <i className="bi bi-arrow-right"></i>
+                {saving ? <><span className="spinner-border spinner-border-sm"></span> Booking…</> : <>Confirm Booking <i className="bi bi-arrow-right"></i></>}
               </button>
               <Link to="/services" className="d-block text-center small text-muted">
                 <i className="bi bi-arrow-left"></i> Back to Services

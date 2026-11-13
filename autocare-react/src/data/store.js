@@ -1,11 +1,4 @@
-import { createContext, useContext } from 'react'
-
-export const StoreContext = createContext(null)
-
-// const { data, Q, add, update, remove, ... } = useStore()
-export function useStore() {
-  return useContext(StoreContext)
-}
+// Small helpers shared by many pages (money, dates, names) and a few fixed lists
 
 /* ---------- small formatting helpers ---------- */
 const DAY = 86400000
@@ -44,7 +37,7 @@ export function initials(name) {
   return String(name || '?').split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join('')
 }
 
-export const SERVICES = ['Engine Diagnostics', 'Brake Service', 'Oil Change', 'Car Wash & Detailing', 'Wheel Alignment', 'Battery Replacement', 'AC Service', 'General Service', 'Body & Paint']
-export const SPECS = ['Engine & Diagnostics', 'Brake Systems', 'General Repairs', 'Electrical Systems', 'Body & Paint', 'AC & Cooling', 'Tyres & Alignment']
-export const CATEGORIES = ['Auto Parts', 'Cleaning', 'Safety', 'Accessories']
+// (The list of services is now in MySQL: GET /api/content/services-all)
+// (Mechanic specialisations are in MySQL: settings → specializations)
+// (Part categories = the shop pages in MySQL: settings → shopCategories)
 export const PRIORITY = { normal: 'Normal', high: 'High', urgent: 'Urgent' }

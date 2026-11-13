@@ -3,70 +3,73 @@ import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
 import { HOME_FOR } from '../../auth/users.js'
 import usePageTitle from '../../ui/usePageTitle.js'
+import SignupForm from '../../auth/SignupForm.jsx'
+import '../../styles/login.css'
 
-// Your signup.html — now it really creates a customer account
+// The sign-up page (/signup). After the account is made, a pop-up says it was created.
 export default function Signup() {
-  usePageTitle('Sign Up')
-  const { user, signup } = useAuth()
+  usePageTitle('Create Account')
+  const { user } = useAuth()
   const navigate = useNavigate()
-  const [f, setF] = useState({ name: '', email: '', phone: '', address: '', password: '', confirm: '', terms: false })
-  const [error, setError] = useState('')
-  if (user) return <Navigate to={HOME_FOR[user.role]} replace />
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value })
+  const [created, setCreated] = useState(null)    // the new account → show the "created" pop-up
 
-  function submit(e) {
-    e.preventDefault()
-    setError('')
-    if (!f.name || !f.email || !f.phone || !f.address || !f.password) return setError('Please fill in every field.')
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(f.email)) return setError('Please enter a valid email address.')
-    if (f.phone.replace(/\D/g, '').length < 8) return setError('Please enter a valid phone number (8 digits).')
-    if (f.password.length < 6) return setError('Password must be at least 6 characters.')
-    if (f.password !== f.confirm) return setError('The two passwords do not match.')
-    if (!f.terms) return setError('Please agree to the Terms of Service.')
-    const res = signup(f)
-    if (res.error) return setError(res.error)
-    navigate('/my-repairs', { replace: true })
-  }
-
-  const field = (key, label, icon, type = 'text', placeholder = '') => (
-    <div className="mb-3">
-      <label className="form-label small fw-bold" htmlFor={key}>{label}</label>
-      <div className="input-group">
-        <span className="input-group-text"><i className={'bi ' + icon}></i></span>
-        <input id={key} type={type} className="form-control" placeholder={placeholder} value={f[key]} onChange={set(key)} required />
-      </div>
-    </div>
-  )
+  // Already logged in (and not just created now)? Go to your own area.
+  if (user && !created) return <Navigate to={HOME_FOR[user.role]} replace />
 
   return (
-    <div className="acp-auth-bg">
-      <div className="acp-auth-card">
-        <h2 className="text-center">Create Account</h2>
-        <p className="subtitle text-center">Sign up to book services and track your repairs</p>
+    <div className="lg">
+      {/* ===== LEFT: brand panel ===== */}
+      <section className="lg-brand">
+        <div className="lg-logo">
+          <img src="/media/logo.jpg" alt="AutoCare Pro logo" />
+          <div><strong>AutoCare Pro</strong><small>Car care, done right</small></div>
+        </div>
+        <div className="lg-copy">
+          <span className="tag"><i className="bi bi-stars"></i> Free customer account</span>
+          <h1>Join AutoCare Pro <span>in one minute.</span></h1>
+          <p>One account for all your Toyota services, repairs and parts.</p>
+          <ul className="lg-feats">
+            <li><i className="bi bi-calendar-check"></i> Book a service online, no phone calls</li>
+            <li><i className="bi bi-activity"></i> Follow your repair step by step</li>
+            <li><i className="bi bi-clock-history"></i> Keep the history of every visit</li>
+          </ul>
+        </div>
+        <div className="lg-foot">© AutoCare Pro · Bhutan</div>
+      </section>
 
-        {error && <div className="alert alert-danger py-2 small">{error}</div>}
-
-        <form onSubmit={submit} noValidate>
-          {field('name', 'Full Name', 'bi-person', 'text', 'Enter your full name')}
-          {field('email', 'Email', 'bi-envelope', 'email', 'Enter your email')}
-          {field('phone', 'Phone Number', 'bi-telephone', 'tel', 'e.g. 17XXXXXX')}
-          {field('address', 'Home Address', 'bi-house-door', 'text', 'Enter your home address')}
-          {field('password', 'Password', 'bi-lock', 'password', 'At least 6 characters')}
-          {field('confirm', 'Confirm Password', 'bi-lock', 'password', 'Confirm Password')}
-          <div className="form-check mb-3">
-            <input className="form-check-input" type="checkbox" id="terms" checked={f.terms} onChange={set('terms')} />
-            <label className="form-check-label small text-muted" htmlFor="terms">
-              I agree to the Terms of Service and Privacy Policy
-            </label>
+      {/* ===== RIGHT: form ===== */}
+      <section className="lg-form-side">
+        <div className="lg-card lg-card-wide">
+          <div className="lg-mobile-logo">
+            <img src="/media/logo.jpg" alt="" />
+            <strong>AutoCare Pro</strong>
           </div>
-          <button type="submit" className="btn btn-brand-primary w-100">Create Account</button>
-        </form>
+          <h2>Create your account</h2>
+          <p className="lead-txt">It's free and only takes a minute.</p>
+          <SignupForm onDone={(u) => setCreated(u)} />
+          <p className="lg-signup">Already have an account? <Link to="/login" className="lg-link">Sign in</Link></p>
+          <Link to="/" className="lg-back"><i className="bi bi-arrow-left"></i> Back to website</Link>
+        </div>
+      </section>
 
-        <p className="small text-muted text-center mt-4 mb-0">
-          Already have an account? <Link to="/login" className="text-brand-purple fw-bold">Sign in</Link>
-        </p>
-        <p className="small text-center mt-2 mb-0"><Link to="/" className="text-muted"><i className="bi bi-arrow-left"></i> Back to website</Link></p>
-      </div>
+      {/* ===== "Account created" pop-up ===== */}
+      {created && (
+        <div className="am-backdrop am-center">
+          <div className="am-card am-success" role="dialog" aria-modal="true" aria-label="Account created">
+            <span className="am-success-icon"><i className="bi bi-check-lg"></i></span>
+            <h3>Account created successfully!</h3>
+            <p>Welcome to AutoCare Pro, <strong>{created.name.split(' ')[0]}</strong>. Your account is ready and you are signed in.</p>
+            <div className="am-success-btns">
+              <button className="lg-btn" onClick={() => navigate('/booking', { replace: true })}>
+                <i className="bi bi-calendar-plus"></i> Book a service
+              </button>
+              <button className="am-btn-ghost" onClick={() => navigate(created.role === 'customer' ? '/' : HOME_FOR[created.role], { replace: true })}>
+                Go to the website
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

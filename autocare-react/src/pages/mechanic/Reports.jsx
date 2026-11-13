@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, nu, fmtDate, daysAgo } from '../../data/store.js'
+import { nu, fmtDate, daysAgo } from '../../data/store.js'
+import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 import Badge from './Badge.jsx'
@@ -11,8 +11,7 @@ const PERIODS = [['month', 'This month'], ['week', 'This week'], ['all', 'All ti
 
 export default function Reports() {
   usePageTitle('My Reports')
-  const { user } = useAuth()
-  const { data, Q } = useStore()
+  const { data, Q } = useMechanic()
   const { hash } = useLocation()
   const [period, setPeriod] = useState('month')
 
@@ -22,19 +21,20 @@ export default function Reports() {
   }, [hash])
 
   const from = period === 'week' ? daysAgo(7) : period === 'month' ? daysAgo(new Date().getDate() - 1) : '0000'
-  const mine = data.repairs.filter((r) => r.mechanicId === user.id && r.status !== 'cancelled' && (r.completedOn || r.date) >= from)
+  const mine = data.repairs.filter((r) => r.status !== 'cancelled' && (r.completedOn || r.date) >= from)
   const done = mine.filter((r) => r.status === 'complete')
   const parts = mine.flatMap((r) => (r.parts || []).map((p) => ({ ...p, vehicle: r.vehicle, plate: r.plate })))
   const services = mine.reduce((s, r) => s + (r.services || []).length, 0)
-  const avgDays = done.length ? done.reduce((s, r) => s + daysBetween(r.date, r.completedOn || r.due), 0) / done.length : 0
-  const onTime = done.filter((r) => (r.completedOn || r.due) <= r.due).length
+  // (online bookings may have no "due" date, so fall back to the booking date)
+  const avgDays = done.length ? done.reduce((s, r) => s + daysBetween(r.date, r.completedOn || r.due || r.date), 0) / done.length : 0
+  const onTime = done.filter((r) => !r.due || (r.completedOn || r.due) <= r.due).length
   const revenue = done.reduce((s, r) => s + r.cost, 0)
-  const allMine = data.repairs.filter((r) => r.mechanicId === user.id && r.status !== 'cancelled')
+  const allMine = data.repairs.filter((r) => r.status !== 'cancelled')
   const rate = allMine.length ? Math.round(allMine.filter((r) => r.status === 'complete').length / allMine.length * 100) : 0
 
   function exportCsv() {
     const rows = [['Job', 'Vehicle', 'Plate', 'Customer', 'Service', 'Parts cost', 'Amount', 'Status', 'Booked']]
-    mine.forEach((r) => rows.push([r.id, r.vehicle, r.plate, Q.customerName(r.customerId), r.service, Q.partsTotal(r), r.cost, r.status, r.date]))
+    mine.forEach((r) => rows.push([r.id, r.vehicle, r.plate, r.customerName, r.service, Q.partsTotal(r), r.cost, r.status, r.date]))
     const csv = rows.map((row) => row.map((v) => '"' + String(v).replace(/"/g, '""') + '"').join(',')).join('\n')
     const a = document.createElement('a')
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }))
@@ -84,7 +84,7 @@ export default function Reports() {
               {mine.map((r) => (
                 <tr key={r.id}>
                   <td>{r.vehicle} — {r.plate}</td>
-                  <td>{Q.customerName(r.customerId)}</td>
+                  <td>{r.customerName}</td>
                   <td>{r.service}</td>
                   <td>{nu(Q.partsTotal(r))}</td>
                   <td>{nu(r.cost)}</td>

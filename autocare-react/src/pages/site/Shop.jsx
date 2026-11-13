@@ -1,6 +1,7 @@
 // Converted from repairCar/inventory.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ShopGrid from './ShopGrid.jsx'
 
 export default function Shop() {
   usePageTitle("Auto Parts")
@@ -28,56 +29,7 @@ export default function Shop() {
     </div>
 
     {/* AUTO PARTS */}
-    <div className="row g-4">
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/oil/oil2.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Engine Oil</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 1000/-</p>
-          <Link to="/reserve?item=engine-oil" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/brake/brake2.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Brake Pads</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 1800/-</p>
-          <Link to="/reserve?item=brake-pads" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/oil/oil3.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Lubricants</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 1000/-</p>
-          <Link to="/reserve?item=lubricants" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/batteries.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Batteries</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 4500/-</p>
-          <Link to="/reserve?item=battery" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/tire.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Tires</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 3500/-</p>
-          <Link to="/reserve?item=tires" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/spake%20plug.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Spark Plugs</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 350/-</p>
-          <Link to="/reserve?item=spark-plugs" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-    </div>
+    <ShopGrid category="Auto Parts" />
 
     <div className="p-4 rounded-3 mt-5 mb-0 d-flex flex-wrap justify-content-between align-items-center gap-3" style={{ background: "var(--brand-purple)", color: "#fff" }}>
       <div>

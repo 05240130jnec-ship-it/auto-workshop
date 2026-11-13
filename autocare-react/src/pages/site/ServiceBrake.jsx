@@ -1,6 +1,7 @@
 // Converted from repairCar/service-brake.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ServicePrice from './ServicePrice.jsx'
 
 export default function ServiceBrake() {
   usePageTitle("Brake Repair")
@@ -24,7 +25,7 @@ export default function ServiceBrake() {
       <div className="col-lg-6">
         <small className="acp-eyebrow">Our Services</small>
         <h1 className="acp-page-title mt-2 mb-2">Brake Repair</h1>
-        <p className="acp-service-price mb-3">from Nu. 9,189</p>
+        <ServicePrice slug="brake-repair" />
         <p className="acp-lead">Safe, quiet and reliable stopping power, checked and repaired by our technicians.</p>
         <p className="text-muted">We inspect brake pads, discs, calipers and brake fluid to find wear before it becomes dangerous.</p>
         <p className="text-muted">Worn pads and damaged discs are replaced with genuine parts, and every job ends with a road test.</p>

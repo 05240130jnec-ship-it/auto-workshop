@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, relDate, fmtDate, today, daysAgo } from '../../data/store.js'
+import { relDate, fmtDate, today, daysAgo } from '../../data/store.js'
+import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 import Badge from './Badge.jsx'
@@ -12,8 +13,8 @@ const PART_TONE = ['m-icon-blue', 'm-icon-orange', 'm-icon-green', 'm-icon-purpl
 export default function MechanicDashboard() {
   usePageTitle('Mechanic Dashboard')
   const { user } = useAuth()
-  const { data } = useStore()
-  const mine = data.repairs.filter((r) => r.mechanicId === user.id)
+  const { data } = useMechanic()
+  const mine = data.repairs   // the backend only sends jobs assigned to me
   const pending = mine.filter((r) => r.status === 'pending')
   const progress = mine.filter((r) => r.status === 'progress')
   const doneToday = mine.filter((r) => r.status === 'complete' && (r.completedOn || r.due) === today())

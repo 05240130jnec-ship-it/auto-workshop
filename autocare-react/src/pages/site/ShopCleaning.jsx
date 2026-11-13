@@ -1,6 +1,7 @@
 // Converted from repairCar/inventory-cleaning.html — same markup and classes as your HTML page
 import { Link } from 'react-router-dom'
 import usePageTitle from '../../ui/usePageTitle.js'
+import ShopGrid from './ShopGrid.jsx'
 
 export default function ShopCleaning() {
   usePageTitle("Cleaning Products")
@@ -28,48 +29,7 @@ export default function ShopCleaning() {
     </div>
 
     {/* CLEANING */}
-    <div className="row g-4">
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/cleaning/carshampoo.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Car Shampoo</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 350/-</p>
-          <Link to="/reserve?item=car-shampoo" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/wax.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Wax / Polish</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 600/-</p>
-          <Link to="/reserve?item=wax-polish" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/cleaning/tirecleanser.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Tire Cleaner</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 400/-</p>
-          <Link to="/reserve?item=tire-cleaner" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/interior%20Spray.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Interior Spray</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 450/-</p>
-          <Link to="/reserve?item=interior-spray" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-      <div className="col-6 col-md-4 col-lg-3">
-        <div className="acp-card h-100 text-center p-3">
-          <img src="/media/accessories/microfiber.jpg" className="acp-product-img" alt="" />
-          <h3 className="h6 fw-bold mb-1">Microfiber Cloth</h3>
-          <p className="mb-2" style={{ color: "var(--brand-green)", fontWeight: "700" }}>Nu. 150/-</p>
-          <Link to="/reserve?item=microfiber" className="btn btn-brand-primary w-100 btn-sm">Buy Now</Link>
-        </div>
-      </div>
-    </div>
+    <ShopGrid category="Cleaning Products" />
 
     <div className="p-4 rounded-3 mt-5 mb-0 d-flex flex-wrap justify-content-between align-items-center gap-3" style={{ background: "var(--brand-purple)", color: "#fff" }}>
       <div>

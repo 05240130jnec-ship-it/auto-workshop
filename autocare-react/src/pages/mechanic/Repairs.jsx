@@ -1,32 +1,31 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { useAuth } from '../../auth/AuthContext.js'
-import { useStore, relDate, fmtDate } from '../../data/store.js'
+import { relDate, fmtDate } from '../../data/store.js'
+import { api } from '../../api.js'
+import { useMechanic } from './MechanicContext.js'
 import { imageFor } from '../../data/services.js'
-import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 import Badge from './Badge.jsx'
 
 const TABS = [['all', 'All'], ['pending', 'Pending'], ['progress', 'In Progress'], ['complete', 'Complete']]
 
-// Your repair.html list — real jobs assigned to this mechanic
+// My Repairs — the jobs the backend says are assigned to me
 export default function MechanicRepairs() {
   usePageTitle('My Repairs')
-  const { user } = useAuth()
-  const store = useStore()
-  const { toast } = useDialogs()
+  const store = useMechanic()
+  const { act } = store
   const navigate = useNavigate()
   const [tab, setTab] = useState('all')
-  const mine = store.data.repairs.filter((r) => r.mechanicId === user.id && r.status !== 'cancelled')
+  const mine = store.data.repairs.filter((r) => r.status !== 'cancelled')
   const order = { progress: 0, pending: 1, complete: 2 }
   const list = mine.filter((r) => tab === 'all' || r.status === tab)
     .sort((a, b) => order[a.status] - order[b.status] || b.date.localeCompare(a.date))
 
-  function start(r) {
-    store.update('repairs', r.id, { status: 'progress', startedOn: r.startedOn || new Date().toISOString().slice(0, 10) })
-    toast('Started work on ' + r.vehicle)
-    navigate('/mechanic/repairs/' + r.id)
+  async function start(r) {
+    const ok = await act(() => api('/mechanic/repairs/' + r.id, { method: 'PATCH', body: { status: 'progress' } }),
+      'Started work on ' + r.vehicle)
+    if (ok) navigate('/mechanic/repairs/' + r.id)
   }
 
   return (
@@ -44,7 +43,6 @@ export default function MechanicRepairs() {
       {list.length === 0 && <div className="m-panel text-center text-muted">No repairs in this list.</div>}
 
       {list.map((r) => {
-        const c = store.Q.customer(r.customerId) || {}
         return (
           <div className="m-repair-card" key={r.id}>
             <img src={imageFor(r.service)} className="m-repair-img" alt="" />
@@ -52,7 +50,7 @@ export default function MechanicRepairs() {
               <Badge status={r.status} />
               {r.priority !== 'normal' && <span className="m-badge ms-1" style={{ background: 'rgba(220,38,38,.1)', color: '#dc2626' }}>{r.priority}</span>}
               <h6 className="mt-2">{r.vehicle} — {r.plate}</h6>
-              <p>Customer: {c.name || 'Unknown'} · {r.service}</p>
+              <p>Customer: {r.customerName || 'Unknown'} · {r.service}</p>
               <p>
                 {r.status === 'complete'
                   ? <><i className="bi bi-check-circle me-1"></i> Completed {fmtDate(r.completedOn || r.due)}</>

@@ -3,43 +3,42 @@ import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext.js'
 import { HOME_FOR } from '../auth/users.js'
 import usePageTitle from '../ui/usePageTitle.js'
+import LoginForm from '../auth/LoginForm.jsx'
+import SignupModal from '../ui/SignupModal.jsx'
+import useSettings from '../data/useSettings.js'
+import Stars from '../ui/Stars.jsx'
+import { rows } from '../data/content.js'
 import '../styles/login.css'
 
-export default function Login() {
-  usePageTitle('Log in')
-  const { user, login } = useAuth()
+// The login page (/login). The person icon in the navbar opens it.
+// "Create an account" opens the sign-up form as a pop-up on top of this page.
+// /signup shows this same page with the pop-up already open.
+export default function Login({ signup = false }) {
+  usePageTitle(signup ? 'Create Account' : 'Log in')
+  const { user } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [showPw, setShowPw] = useState(false)
-  const [error, setError] = useState('')
-  const [loading, setLoading] = useState(false)
+  const [showSignup, setShowSignup] = useState(signup)   // the "Create an account" pop-up
+  const [created, setCreated] = useState(null)           // the new account → "created" message
+  // All texts come from MySQL (admin → Website Content → Login page)
+  const s = useSettings() || {}
 
-  // Already logged in? Go straight to your own area.
-  if (user) return <Navigate to={HOME_FOR[user.role]} replace />
+  // Already logged in (and not just created now)? Go straight to your own area.
+  if (user && !created) return <Navigate to={HOME_FOR[user.role]} replace />
 
-  function handleSubmit(e) {
-    e.preventDefault()
-    setError('')
-    if (!email || !password) return setError('Please enter your email and password.')
-
-    setLoading(true)
-    setTimeout(() => {
-      const res = login(email, password)
-      setLoading(false)
-      if (res.error) return setError(res.error)
-      const u = res.user
-
-      // Go back to the page they tried to open, if their role is allowed there
-      const from = location.state?.from
-      const allowed = from && (u.role === 'customer'
-        ? !from.startsWith('/admin') && !from.startsWith('/mechanic')
-        : from.startsWith(HOME_FOR[u.role]))
-      navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
-    }, 500)
+  function closeSignup() {
+    setShowSignup(false)
+    if (location.pathname === '/signup') navigate('/login', { replace: true })
   }
 
+  function goOn(u) {
+    // Go back to the page they tried to open, if their role is allowed there
+    const from = location.state?.from
+    const allowed = from && (u.role === 'customer'
+      ? !from.startsWith('/admin') && !from.startsWith('/mechanic')
+      : from.startsWith(HOME_FOR[u.role]))
+    navigate(allowed ? from : HOME_FOR[u.role], { replace: true })
+  }
   return (
     <div className="lg">
       <section className="lg-brand">
@@ -49,13 +48,13 @@ export default function Login() {
         </div>
 
         <div className="lg-copy">
-          <span className="tag"><i className="bi bi-shield-lock-fill"></i> One login for everyone</span>
-          <h1>Your workshop, <span>all in one place.</span></h1>
-          <p>Customers track their repairs, mechanics manage their jobs, and admins run the whole workshop.</p>
+          {s.loginTag && <span className="tag"><i className="bi bi-shield-check"></i> {s.loginTag}</span>}
+          <h1><Stars text={s.loginTitle} /></h1>
+          <p>{s.loginText}</p>
           <ul className="lg-feats">
-            <li><i className="bi bi-person"></i> Customers: book services and follow repair progress</li>
-            <li><i className="bi bi-wrench-adjustable"></i> Mechanics: see assigned jobs and update status</li>
-            <li><i className="bi bi-speedometer2"></i> Admins: manage jobs, staff, stock and orders</li>
+            {rows(s.loginPoints).map(([icon, text], i) => (
+              <li key={i}><i className={'bi ' + (text ? icon : 'bi-check-lg')}></i> {text || icon}</li>
+            ))}
           </ul>
         </div>
 
@@ -69,47 +68,25 @@ export default function Login() {
             <strong>AutoCare Pro</strong>
           </div>
 
-          <h2>Welcome back</h2>
-          <p className="lead-txt">Sign in and we’ll take you to the right place.</p>
+          <h2>{s.loginFormTitle || 'Welcome back'}</h2>
+          <p className="lead-txt">{s.loginFormText}</p>
 
-          {error && <div className="lg-error"><i className="bi bi-exclamation-circle"></i> {error}</div>}
+          <LoginForm onDone={goOn} />
 
-          <form onSubmit={handleSubmit} noValidate>
-            <div className="lg-field">
-              <label htmlFor="email">Email address</label>
-              <div className="lg-input">
-                <input id="email" type="email" placeholder="you@example.com" autoComplete="username"
-                  value={email} onChange={(e) => setEmail(e.target.value)} />
-                <i className="bi bi-envelope"></i>
-              </div>
-            </div>
-
-            <div className="lg-field">
-              <label htmlFor="password">Password</label>
-              <div className="lg-input">
-                <input id="password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
-                  autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <i className="bi bi-lock"></i>
-                <button type="button" className="lg-eye" onClick={() => setShowPw(!showPw)} aria-label="Show password">
-                  <i className={showPw ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
-                </button>
-              </div>
-            </div>
-
-            <div className="lg-row">
-              <label className="lg-check"><input type="checkbox" defaultChecked /> Remember me</label>
-              <Link to="/forgot-password" className="lg-link">Forgot password?</Link>
-            </div>
-
-            <button type="submit" className="lg-btn" disabled={loading}>
-              {loading ? <><span className="spinner-border spinner-border-sm"></span> Signing in…</> : <>Sign in <i className="bi bi-arrow-right"></i></>}
-            </button>
-          </form>
-
-          <p className="lg-signup">New customer? <Link to="/signup" className="lg-link">Create an account</Link></p>
+          <p className="lg-signup">New customer? <button type="button" className="lg-link lg-link-btn" onClick={() => setShowSignup(true)}>Create an account</button></p>
           <Link to="/" className="lg-back"><i className="bi bi-arrow-left"></i> Back to website</Link>
         </div>
       </section>
+
+      <SignupModal
+        open={showSignup || !!created}
+        created={created}
+        texts={s}
+        onCreated={setCreated}
+        onClose={closeSignup}
+        onBook={() => navigate('/booking', { replace: true })}
+        onWebsite={() => navigate('/', { replace: true })}
+      />
     </div>
   )
 }
