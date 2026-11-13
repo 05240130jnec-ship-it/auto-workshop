@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const { requireAuth, requireRole } = require('../middleware/auth');
-const { bookingRules, checkVehicleType } = require('../settings');   // time slots + cars per slot come from MySQL
+const { bookingRules, checkVehicleType, checkToyota } = require('../settings');   // time slots + cars per slot come from MySQL
 const { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } = require('../vehicle-rules');
 
 const router = express.Router();
@@ -65,6 +65,10 @@ router.post('/', async (req, res) => {
   // The vehicle type must be one of the admin's list (Website Content -> Lists)
   const vehicleType = await checkVehicleType(req.body.vehicleType);
   if (!vehicleType) return res.status(400).json({ error: 'Please choose a vehicle type from the list.' });
+  // We service Toyota only: the model must be in the admin's list for that type (Website Content -> Lists)
+  if (!(await checkToyota(vehicleType, vehicle))) {
+    return res.status(400).json({ error: 'Please choose a Toyota model from the list for this vehicle type.' });
+  }
   const { timeSlots, maxPerSlot } = await bookingRules();
   if (!timeSlots.includes(apptTime)) {
     return res.status(400).json({ error: 'Please pick a valid time slot.' });

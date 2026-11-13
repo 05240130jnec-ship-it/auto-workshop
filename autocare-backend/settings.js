@@ -72,8 +72,9 @@ const DEFAULT_SETTINGS = {
 
   // ---------- Lists used in forms ----------
   // vehicle types the customer can pick when booking (one per line)
-  vehicleTypes: 'Light vehicle (car, SUV)\nMedium vehicle (pickup, mini truck)\nHeavy vehicle (truck, bus)\n' +
-    'Taxi\nTwo-wheeler (scooter, motorbike)\nPower tiller\nEarth-moving machine (excavator, JCB)',
+  vehicleTypes: 'Car\nSUV\nPickup\nVan / Bus',
+  // The workshop services Toyota only: type|model, one per line
+  carModels: 'Car|Corolla\nCar|Yaris\nSUV|RAV4\nSUV|Fortuner\nSUV|Land Cruiser Prado\nPickup|Hilux\nVan / Bus|HiAce\nVan / Bus|Coaster',
   specializations: 'Engine & Diagnostics\nBrake Systems\nGeneral Repairs\nElectrical Systems\nBody & Paint\nAC & Cooling\nTyres & Alignment',
 };
 
@@ -110,6 +111,30 @@ async function bookingRules() {
   };
 }
 
+// Toyota models from the admin's list: [{ type, model }]
+function toyotaModels(s) {
+  return toLines(s.carModels).map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0] && p[1])
+    .map(([type, model]) => ({ type, model }));
+}
+
+// Checks "Toyota <model> <year>" against the admin's list for that vehicle type.
+// Returns the tidy text, or null if the model is not in the list for that type.
+async function checkToyota(type, vehicle) {
+  const s = await getSettings();
+  const v = String(vehicle || '').trim().replace(/\s+/g, ' ');
+  const thisYear = new Date().getFullYear();
+  for (const m of toyotaModels(s)) {
+    if (m.type !== type) continue;
+    const start = 'Toyota ' + m.model;
+    if (v === start) return v;
+    if (v.startsWith(start + ' ')) {
+      const year = Number(v.slice(start.length + 1));
+      if (Number.isInteger(year) && year >= 1980 && year <= thisYear + 1) return v;
+    }
+  }
+  return null;
+}
+
 // The vehicle type if it is in the admin's list (Website Content -> Lists), otherwise null
 async function checkVehicleType(type) {
   const s = await getSettings();
@@ -122,6 +147,9 @@ async function checkVehicleType(type) {
 // (no extra command needed). It only ADDS what is missing, it never deletes data.
 async function upgradeDatabase() {
   await setupSettings();                       // adds new settings such as vehicleTypes
+  // The old general list (power tiller, JCB …) -> the Toyota types, only if the admin never changed it
+  await db.query("UPDATE settings SET value = ? WHERE name = 'vehicleTypes' AND value LIKE 'Light vehicle (car, SUV)%Earth-moving machine (excavator, JCB)'",
+    [DEFAULT_SETTINGS.vehicleTypes]);
   const [col] = await db.query(
     `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'repairs' AND COLUMN_NAME = 'vehicleType'`);
@@ -131,4 +159,4 @@ async function upgradeDatabase() {
   }
 }
 
-module.exports = { DEFAULT_SETTINGS, setupSettings, getSettings, bookingRules, checkVehicleType, upgradeDatabase };
+module.exports = { DEFAULT_SETTINGS, setupSettings, getSettings, bookingRules, checkVehicleType, checkToyota, upgradeDatabase };

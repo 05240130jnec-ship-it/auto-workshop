@@ -71,7 +71,9 @@ export const SETTINGS_GROUPS = [
     key: 'lists', label: 'Lists',
     fields: [
       { name: 'vehicleTypes', label: 'Vehicle types', type: 'textarea', required: true, col: 12,
-        help: 'One per line — customers pick one when booking, e.g. Heavy vehicle (truck, bus)' },
+        help: 'One per line — customers pick one when booking, e.g. SUV' },
+      { name: 'carModels', label: 'Toyota models', type: 'textarea', required: true, col: 12,
+        help: 'type|model — one per line, e.g. SUV|Land Cruiser Prado. The type must be one of the vehicle types above.' },
       { name: 'specializations', label: 'Mechanic specialisations', type: 'textarea', required: true, col: 12, help: LINES },
     ],
   },

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { nu, fmtDate } from '../../data/store.js'
 import useSettings from '../../data/useSettings.js'
-import { cleanPlate, cleanVehicle, plateType, plateStartOk, formatPlate, PLATE_ERROR, VEHICLE_ERROR } from '../../data/vehicle.js'
+import { cleanPlate, plateType, plateStartOk, formatPlate, PLATE_ERROR } from '../../data/vehicle.js'
 import { offerFor, salePrice, lines } from '../../data/content.js'
 import Loading from '../../ui/Loading.jsx'
 import usePageTitle from '../../ui/usePageTitle.js'
@@ -36,8 +36,11 @@ export default function Booking() {
     return Object.values(m).map((r) => ({ plate: r.plate, vehicle: r.vehicle, vehicleType: r.vehicleType || '' }))
   }, [history.data])
 
+  // We service Toyota only: type -> model -> year (the lists come from admin → Website Content → Lists)
   const [vehicleType, setVehicleType] = useState('')
-  const [vehicle, setVehicle] = useState('')
+  const [model, setModel] = useState('')
+  const [year, setYear] = useState('')
+  const vehicle = model && year ? `Toyota ${model} ${year}` : ''   // e.g. "Toyota Hilux 2019"
   const [plate, setPlate] = useState('')
   const [problem, setProblem] = useState('')
   const [photos, setPhotos] = useState([])
@@ -50,7 +53,8 @@ export default function Booking() {
   const [pickedSlot, setSlot] = useState('')
   const [error, setError] = useState('')
   const [tried, setTried] = useState(false)   // show red boxes only after Confirm was pressed
-  const vehicleBad = tried && !cleanVehicle(vehicle)
+  const modelBad = tried && !model
+  const yearBad = tried && !year
   const typeBad = tried && !vehicleType
   const [plateLeft, setPlateLeft] = useState(false)   // the customer has left the plate box
   // Plate box turns red:
@@ -73,6 +77,24 @@ export default function Booking() {
   const settings = useSettings()
   // Vehicle types come from MySQL (admin → Website Content → Lists)
   const vehicleTypes = lines(settings && settings.vehicleTypes)
+  // Toyota models: "SUV|Land Cruiser Prado" -> { type: 'SUV', model: 'Land Cruiser Prado' }
+  const toyotaModels = lines(settings && settings.carModels)
+    .map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0] && p[1])
+    .map(([type, name]) => ({ type, model: name }))
+  const modelsOfType = toyotaModels.filter((m) => m.type === vehicleType)
+  const thisYear = new Date().getFullYear()
+  const years = Array.from({ length: thisYear - 1995 + 2 }, (_, i) => thisYear + 1 - i)   // next year … 1995
+
+  // A saved vehicle "Toyota Hilux 2019" -> fill in type, model and year
+  function pickSaved(v) {
+    setPlate(v.plate)
+    const m = toyotaModels.find((x) => v.vehicle === 'Toyota ' + x.model || v.vehicle.startsWith('Toyota ' + x.model + ' '))
+    if (!m) return
+    setVehicleType(m.type)
+    setModel(m.model)
+    const y = v.vehicle.slice(('Toyota ' + m.model).length).trim()
+    setYear(/^\d{4}$/.test(y) ? y : '')
+  }
 
   const firstDay = month.getDay()
   const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate()
@@ -88,8 +110,9 @@ export default function Booking() {
     setError('')
     setTried(true)
     if (!vehicleType) return setError('Please choose your vehicle type.')
-    if (!vehicle.trim() || !plate.trim()) return setError('Please enter your vehicle and plate number.')
-    if (!cleanVehicle(vehicle)) return setError(VEHICLE_ERROR)
+    if (!model) return setError('Please choose your Toyota model.')
+    if (!year) return setError('Please choose the year of your vehicle.')
+    if (!plate.trim()) return setError('Please enter your plate number.')
     if (!cleanPlate(plate)) return setError(PLATE_ERROR)
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
     if (!slot || taken(slot)) return setError('That time slot is full. Please choose another one.')
@@ -100,7 +123,7 @@ export default function Booking() {
         method: 'POST',
         body: {
           vehicleType,
-          vehicle: cleanVehicle(vehicle),
+          vehicle,                           // e.g. "Toyota Hilux 2019"
           plate: cleanPlate(plate),          // tidy form, e.g. BP-1-A1234
           service: svc.serviceName,
           notes: problem.trim(),
@@ -160,7 +183,7 @@ export default function Booking() {
                 <div className="d-flex flex-wrap gap-2 mb-3">
                   {myVehicles.map((v) => (
                     <button key={v.plate} type="button" className={'btn btn-sm ' + (plate === v.plate ? 'btn-brand-primary' : 'btn-outline-secondary' )}
-                      onClick={() => { setVehicle(v.vehicle); setPlate(v.plate); if (vehicleTypes.includes(v.vehicleType)) setVehicleType(v.vehicleType) }}>
+                      onClick={() => pickSaved(v)}>
                       <i className="bi bi-car-front me-1"></i>{v.vehicle} · {v.plate}
                     </button>
                   ))}
@@ -168,19 +191,35 @@ export default function Booking() {
               )}
               <div className="row g-3">
                 <div className="col-12">
+                  <p className="small text-muted mb-0"><i className="bi bi-info-circle-fill me-1" style={{ color: 'var(--brand-yellow-dark)' }}></i>We service <strong>Toyota</strong> vehicles only.</p>
+                </div>
+                <div className="col-md-4">
                   <label className="form-label small fw-bold">Vehicle type</label>
-                  <select className={'form-select' + (typeBad ? ' is-invalid' : '')} value={vehicleType} onChange={(e) => setVehicleType(e.target.value)}>
-                    <option value="">Choose your vehicle type…</option>
+                  <select className={'form-select' + (typeBad ? ' is-invalid' : '')} value={vehicleType}
+                    onChange={(e) => { setVehicleType(e.target.value); setModel('') }}>
+                    <option value="">Choose type…</option>
                     {vehicleTypes.map((t) => <option key={t} value={t}>{t}</option>)}
                   </select>
-                  {typeBad && <div className="invalid-feedback">Please choose your vehicle type</div>}
-                </div>
-                <div className="col-md-7">
-                  <label className="form-label small fw-bold">Make &amp; model</label>
-                  <input className={'form-control' + (vehicleBad ? ' is-invalid' : '')} placeholder="e.g. Toyota Corolla 2018" value={vehicle} onChange={(e) => setVehicle(e.target.value)} />
-                  {vehicleBad && <div className="invalid-feedback">Letters and numbers only, e.g. Toyota Corolla 2018</div>}
+                  {typeBad && <div className="invalid-feedback">Please choose a type</div>}
                 </div>
                 <div className="col-md-5">
+                  <label className="form-label small fw-bold">Toyota model</label>
+                  <select className={'form-select' + (modelBad ? ' is-invalid' : '')} value={model}
+                    onChange={(e) => setModel(e.target.value)} disabled={!vehicleType}>
+                    <option value="">{vehicleType ? 'Choose model…' : 'Choose a type first'}</option>
+                    {modelsOfType.map((m) => <option key={m.model} value={m.model}>Toyota {m.model}</option>)}
+                  </select>
+                  {modelBad && <div className="invalid-feedback">Please choose a model</div>}
+                </div>
+                <div className="col-md-3">
+                  <label className="form-label small fw-bold">Year</label>
+                  <select className={'form-select' + (yearBad ? ' is-invalid' : '')} value={year} onChange={(e) => setYear(e.target.value)}>
+                    <option value="">Year…</option>
+                    {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                  </select>
+                  {yearBad && <div className="invalid-feedback">Please choose a year</div>}
+                </div>
+                <div className="col-12">
                   <label className="form-label small fw-bold">Plate number</label>
                   <input className={'form-control' + (plateBad ? ' is-invalid' : plateOk ? ' is-valid' : '')} placeholder="e.g. BP-1-A1234" value={plate}
                     maxLength={12}
