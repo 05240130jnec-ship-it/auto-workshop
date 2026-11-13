@@ -49,22 +49,30 @@ export default function AdminCustomers() {
     act(() => api('/admin/customers', { method: 'POST', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } }),
       <><b>{v.name}</b> added as a customer</>)
   }
-  async function edit(c) {
-    const v = await form({ title: 'Edit customer', fields, values: c, submitText: 'Save changes', validate: check(c.id) })
-    if (!v) return
-    act(() => api('/admin/customers/' + c.id, { method: 'PATCH', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } }),
-      'Customer details saved')
+  // The admin can only block / unblock a customer. The details are changed by the customer
+  // (website → My profile), so the admin cannot take over someone's account.
+  async function toggleBlock(c) {
+    const block = c.status === 'active'
+    const ok = await confirm(block
+      ? <><b>{c.name}</b> will not be able to log in or book until you unblock the account.</>
+      : <><b>{c.name}</b> will be able to log in and book again.</>,
+    { title: block ? 'Block customer?' : 'Unblock customer?', okText: block ? 'Block' : 'Unblock', danger: block })
+    if (ok) act(() => api('/admin/customers/' + c.id, { method: 'PATCH', body: { status: block ? 'inactive' : 'active' } }),
+      block ? c.name + ' is blocked' : c.name + ' is active again', 'info')
   }
+  // Profile photo (uploaded by the customer) or the round initials
+  const face = (c, size) => <Avatar name={c.name} photo={c.photo} size={size} />
   function show(c) {
     const jobs = jobsOf(c.id).sort((a, b) => b.date.localeCompare(a.date))
     const veh = vehiclesOf(c.id)
     view('Customer details', (
       <>
         <div className="d-flex align-items-center gap-3 mb-4">
-          <Avatar name={c.name} size={56} />
+          {face(c, 56)}
           <div><h5 className="a-modal-title">{c.name}</h5><small className="text-muted">Customer #{c.id} · since {fmtDate(c.joined)}</small></div>
           <div className="ms-auto"><Badge status={c.status} /></div>
         </div>
+        <p className="small text-muted mb-3"><i className="bi bi-lock-fill me-1"></i>Only the customer can change these details (My profile). You can block or unblock the account.</p>
         <div className="a-detail-grid">
           <div><span>Phone</span><strong>{c.phone ? <a href={'tel:' + c.phone.replace(/\s/g, '')}>{c.phone}</a> : '—'}</strong></div>
           <div><span>Email</span><strong>{c.email ? <a href={'mailto:' + c.email}>{c.email}</a> : '—'}</strong></div>
@@ -113,7 +121,7 @@ export default function AdminCustomers() {
           return (
             <tr key={c.id}>
               <td><span className="a-id">#{c.id}</span></td>
-              <td><div className="a-person"><Avatar name={c.name} /><div><strong>{c.name}</strong><small>Since {fmtDate(c.joined)}</small></div></div></td>
+              <td><div className="a-person">{face(c)}<div><strong>{c.name}</strong><small>Since {fmtDate(c.joined)}</small></div></div></td>
               <td>{c.phone}<small>{c.email}</small></td>
               <td>{veh.length}{veh.length > 0 && <small>{veh.slice(0, 2).map((v) => v.plate).join(', ')}{veh.length > 2 ? '…' : ''}</small>}</td>
               <td>{jobs.length}{open > 0 && <small style={{ color: 'var(--a-blue)' }}>{open} open</small>}</td>
@@ -121,7 +129,9 @@ export default function AdminCustomers() {
               <td><Badge status={c.status} /></td>
               <td><div className="a-actions">
                 <IconBtn icon="bi-eye" title="View" onClick={() => show(c)} />
-                <IconBtn icon="bi-pencil" title="Edit" onClick={() => edit(c)} />
+                {c.status === 'active'
+                  ? <IconBtn icon="bi-slash-circle" title="Block" onClick={() => toggleBlock(c)} />
+                  : <IconBtn icon="bi-check-circle" title="Unblock" onClick={() => toggleBlock(c)} />}
                 <IconBtn icon="bi-trash3" title="Delete" tone="danger" onClick={() => del(c)} />
               </div></td>
             </tr>

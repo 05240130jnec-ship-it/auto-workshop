@@ -8,7 +8,8 @@ import '../styles/login.css'
 //   onCreated   called with the new account
 //   onClose     close the pop-up (✕, Esc, or a click outside)
 //   onBook / onWebsite  the two buttons after the account is made
-export default function SignupModal({ open, created, onCreated, onClose, onBook, onWebsite }) {
+//   texts       the settings from MySQL (admin → Website Content → Login page)
+export default function SignupModal({ open, created, texts = {}, onCreated, onClose, onBook, onWebsite }) {
   const card = useRef(null)
 
   // Esc closes it (not after the account is made); the page behind does not scroll
@@ -29,8 +30,8 @@ export default function SignupModal({ open, created, onCreated, onClose, onBook,
       <div className="am-backdrop am-center">
         <div className="am-card am-success" role="dialog" aria-modal="true" aria-label="Account created">
           <span className="am-success-icon"><i className="bi bi-check-lg"></i></span>
-          <h3>Account created successfully!</h3>
-          <p>Welcome to AutoCare Pro, <strong>{created.name.split(' ')[0]}</strong>. Your account is ready and you are signed in.</p>
+          <h3>{texts.signupDoneTitle || 'Account created successfully!'}</h3>
+          <p>{fillName(texts.signupDoneText || 'Welcome to AutoCare Pro, {name}.', created.name.split(' ')[0])}</p>
           <div className="am-success-btns">
             <button className="lg-btn" onClick={onBook}><i className="bi bi-calendar-plus"></i> Book a service</button>
             <button className="am-btn-ghost" onClick={onWebsite}>Go to the website</button>
@@ -48,8 +49,8 @@ export default function SignupModal({ open, created, onCreated, onClose, onBook,
         <div className="am-head">
           <img src="/media/logo.jpg" alt="" />
           <div>
-            <strong>Create your account</strong>
-            <small>It's free and only takes a minute</small>
+            <strong>{texts.signupTitle || 'Create your account'}</strong>
+            <small>{texts.signupText}</small>
           </div>
         </div>
         <div className="su-form">
@@ -59,4 +60,9 @@ export default function SignupModal({ open, created, onCreated, onClose, onBook,
       </div>
     </div>
   )
+}
+
+// "Welcome, {name}." → "Welcome, <b>Dechen</b>."
+function fillName(text, name) {
+  return String(text).split('{name}').map((part, i) => (i ? [<strong key={i}>{name}</strong>, part] : part))
 }

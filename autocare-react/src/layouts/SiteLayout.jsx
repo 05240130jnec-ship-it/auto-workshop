@@ -137,6 +137,14 @@ export default function SiteLayout() {
   const isCustomer = user && user.role === 'customer'
   const repairs = useApi(isCustomer ? '/repairs' : null)
   const reservations = useApi(isCustomer ? '/shop/reservations' : null)
+  // My profile photo for the round button (from MySQL); reloads after the profile page changes it
+  const profile = useApi(isCustomer ? '/profile' : null)
+  useEffect(() => {
+    const again = () => profile.reload()
+    window.addEventListener('profile-changed', again)
+    return () => window.removeEventListener('profile-changed', again)
+  }, [profile])
+  const myPhoto = isCustomer && profile.data ? profile.data.photo : null
   // Services in the menu come from MySQL (admin → Website Content → Services)
   const menuServices = useApi('/content/services').data || []
   // Shop pages and footer text come from MySQL (admin → Website Content)
@@ -200,13 +208,14 @@ export default function SiteLayout() {
               {user ? (
                 <div className="dropdown">
                   <a href="#" className="acp-user-chip acp-user-chip--in" data-bs-toggle="dropdown" aria-expanded="false" title={user.name}>
-                    <span className="acp-initials">{initials(user.name)}</span>
+                    {myPhoto ? <img src={myPhoto} alt="" /> : <span className="acp-initials">{initials(user.name)}</span>}
                   </a>
                   <ul className="dropdown-menu dropdown-menu-end">
                     <li><span className="dropdown-item-text small text-muted">Signed in as<br /><strong className="text-dark">{user.name}</strong></span></li>
                     <li><hr className="dropdown-divider" /></li>
                     {isCustomer ? (
                       <>
+                        <li><Link className="dropdown-item" to="/profile"><i className="bi bi-person-circle me-2"></i>My profile</Link></li>
                         <li><Link className="dropdown-item" to="/my-repairs"><i className="bi bi-wrench-adjustable me-2"></i>My repairs</Link></li>
                         <li><Link className="dropdown-item" to="/booking"><i className="bi bi-calendar-plus me-2"></i>Book a service</Link></li>
                       </>
