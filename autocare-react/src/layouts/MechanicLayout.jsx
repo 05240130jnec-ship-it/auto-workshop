@@ -41,7 +41,7 @@ function MechanicShell() {
         <div className="m-brand">
           <div className="m-brand-logo"><img src="/media/logo.jpg" alt="logo" /></div>
           <div className="m-brand-text">
-            <strong>AutoPro Care</strong>
+            <strong>AutoCare Pro</strong>
             <small>Mechanic portal</small>
           </div>
         </div>
@@ -67,7 +67,6 @@ function MechanicShell() {
           <span className="m-nav-label">ACCOUNT</span>
           <ul className="m-nav">
             <li><NavLink to="/mechanic/profile" onClick={go}><i className="bi bi-person-fill"></i> My Profile</NavLink></li>
-            <li><a href="/login" onClick={doLogout}><i className="bi bi-box-arrow-right"></i> Logout</a></li>
           </ul>
         </div>
 
