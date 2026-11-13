@@ -201,7 +201,7 @@ export default function SiteLayout() {
             </ul>
 
             <div className="d-flex align-items-center gap-3 ms-lg-4 mt-3 mt-lg-0">
-                            {/* The bell is only for logged-in customers (visitors have no notifications) */}
+              {/* The bell is only for logged-in customers (visitors have no notifications) */}
               {isCustomer && (
                 <NotificationBell user={user} repairs={repairs.data} reservations={reservations.data} />
               )}
@@ -226,7 +226,7 @@ export default function SiteLayout() {
                   </ul>
                 </div>
               ) : (
-                   <Link to="/login" className="acp-login-btn">
+                <Link to="/login" className="acp-login-btn">
                   <i className="bi bi-person-circle"></i> {(settings && settings.loginButton) || 'Log in'}
                 </Link>
               )}

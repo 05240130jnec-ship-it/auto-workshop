@@ -424,6 +424,17 @@ CREATE TABLE IF NOT EXISTS `login_attempts` (
   PRIMARY KEY (`email`)
 );
 
+-- "Forgot password" codes (the code is saved as a bcrypt hash, it works for 10 minutes)
+-- (routes/auth.js also creates this table by itself the first time it is needed.)
+CREATE TABLE IF NOT EXISTS `password_resets` (
+  `email` varchar(120) NOT NULL,
+  `codeHash` varchar(255) NOT NULL,
+  `tries` int NOT NULL DEFAULT 0,
+  `expiresAt` datetime NOT NULL,
+  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`email`)
+);
+
 -- Messages from the contact form (Contact page). The admin reads them on admin → Messages.
 -- (settings.js also creates this table by itself when the backend starts.)
 CREATE TABLE IF NOT EXISTS `contact_messages` (

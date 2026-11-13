@@ -8,7 +8,6 @@ import NotFound from './pages/NotFound.jsx'
 
 // Customer website (from your repairCar folder)
 import SiteLayout from './layouts/SiteLayout.jsx'
-import AuthLayout from './layouts/AuthLayout.jsx'
 import Home from './pages/site/Home.jsx'
 import About from './pages/site/About.jsx'
 import Services from './pages/site/Services.jsx'
@@ -52,9 +51,7 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Login signup />} />
       <Route path="/no-access" element={<NoAccess />} />
-      <Route element={<AuthLayout />}>
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-      </Route>
+      <Route path="/forgot-password" element={<ForgotPassword />} />
 
       {/* Customer website — anyone can browse; booking/buying needs a customer login */}
       <Route element={<SiteLayout />}>
