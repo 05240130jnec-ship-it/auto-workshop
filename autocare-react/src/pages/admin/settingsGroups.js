@@ -50,6 +50,7 @@ export const SETTINGS_GROUPS = [
       { name: 'hours', label: 'Opening hours', type: 'textarea', col: 12, help: 'day|time — e.g. Sunday|Closed' },
       { name: 'hoursNote', label: 'Note under the hours', col: 12 },
       { name: 'contactIntro', label: 'Contact page intro', type: 'textarea', col: 12 },
+      { name: 'contactSubjects', label: 'Contact form subjects', type: 'textarea', required: true, col: 12, help: LINES },
       { name: 'footerText', label: 'Footer text', col: 12 },
     ],
   },
