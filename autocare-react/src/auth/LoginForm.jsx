@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from './AuthContext.js'
 import GoogleButton from '../ui/GoogleButton.jsx'
 
-// The sign-in form. Used on the /login page AND in the pop-up (AuthModal).
+// The sign-in form on the /login page (no placeholders or icons inside the boxes, like the sign-up form).
 //   onDone(user)  → what to do after a good login (the page or pop-up decides)
 //   onLink()      → called when a link inside is clicked (the pop-up closes itself)
 export default function LoginForm({ onDone, onLink }) {
@@ -57,26 +57,23 @@ export default function LoginForm({ onDone, onLink }) {
         <div className="lg-field">
           <label htmlFor="email">Email address</label>
           <div className="lg-input">
-            <input id="email" type="email" placeholder="you@example.com" autoComplete="username"
+            <input id="email" type="email" autoComplete="username"
               value={email} onChange={(e) => setEmail(e.target.value)} />
-            <i className="bi bi-envelope"></i>
           </div>
         </div>
 
         <div className="lg-field">
           <label htmlFor="password">Password</label>
           <div className="lg-input">
-            <input id="password" type={showPw ? 'text' : 'password'} placeholder="Enter your password"
+            <input id="password" type={showPw ? 'text' : 'password'}
               autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
-            <i className="bi bi-lock"></i>
             <button type="button" className="lg-eye" onClick={() => setShowPw(!showPw)} aria-label="Show password">
               <i className={showPw ? 'bi bi-eye-slash' : 'bi bi-eye'}></i>
             </button>
           </div>
         </div>
 
-        <div className="lg-row">
-          <label className="lg-check"><input type="checkbox" defaultChecked /> Remember me</label>
+        <div className="lg-row lg-row-end">
           <Link to="/forgot-password" className="lg-link" onClick={onLink}>Forgot password?</Link>
         </div>
 

@@ -40,6 +40,19 @@ export const SETTINGS_GROUPS = [
     ],
   },
   {
+    key: 'login', label: 'Login & profile',
+    fields: [
+      { name: 'loginFormTitle', label: 'Login page: title', placeholder: 'Welcome back' },
+      { name: 'loginFormText', label: 'Login page: text under the title' },
+      { name: 'signupTitle', label: 'Create account pop-up: title' },
+      { name: 'signupText', label: 'Create account pop-up: text under the title' },
+      { name: 'signupDoneTitle', label: 'After sign-up: title' },
+      { name: 'signupDoneText', label: 'After sign-up: message', type: 'textarea', col: 12, help: '{name} is replaced by the customer’s first name' },
+      { name: 'profileTitle', label: 'My profile page: title', help: STARS },
+      { name: 'profileText', label: 'My profile page: text under the title', type: 'textarea', col: 12 },
+    ],
+  },
+  {
     key: 'contact', label: 'Contact & footer',
     fields: [
       { name: 'email', label: 'Email', type: 'email', required: true, help: 'The Email Us buttons open Gmail to this address' },
