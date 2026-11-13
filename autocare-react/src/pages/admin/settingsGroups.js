@@ -40,6 +40,21 @@ export const SETTINGS_GROUPS = [
     ],
   },
   {
+    key: 'login', label: 'Login page',
+    fields: [
+      { name: 'loginTag', label: 'Left side: small label' },
+      { name: 'loginTitle', label: 'Left side: title', help: STARS },
+      { name: 'loginText', label: 'Left side: text', type: 'textarea', col: 12 },
+      { name: 'loginPoints', label: 'Left side: points', type: 'textarea', col: 12, help: 'icon|text — one per line, e.g. bi-activity|See your repair status live' },
+      { name: 'loginFormTitle', label: 'Form: title', placeholder: 'Welcome back' },
+      { name: 'loginFormText', label: 'Form: text under the title' },
+      { name: 'signupTitle', label: 'Create account pop-up: title' },
+      { name: 'signupText', label: 'Create account pop-up: text under the title' },
+      { name: 'signupDoneTitle', label: 'After sign-up: title' },
+      { name: 'signupDoneText', label: 'After sign-up: message', type: 'textarea', col: 12, help: '{name} is replaced by the customer’s first name' },
+    ],
+  },
+  {
     key: 'contact', label: 'Contact & footer',
     fields: [
       { name: 'email', label: 'Email', type: 'email', required: true, help: 'The Email Us buttons open Gmail to this address' },

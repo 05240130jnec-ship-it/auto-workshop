@@ -20,7 +20,6 @@ import Confirm from './pages/site/Confirm.jsx'
 import MyRepairs from './pages/site/MyRepairs.jsx'
 import SellPart from './pages/site/SellPart.jsx'
 import Reserve from './pages/site/Reserve.jsx'
-import Signup from './pages/site/Signup.jsx'
 import ForgotPassword from './pages/site/ForgotPassword.jsx'
 
 // Mechanic portal (from your machanic folder)
@@ -50,9 +49,9 @@ export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Login signup />} />
       <Route path="/no-access" element={<NoAccess />} />
       <Route element={<AuthLayout />}>
-        <Route path="/signup" element={<Signup />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
       </Route>
 

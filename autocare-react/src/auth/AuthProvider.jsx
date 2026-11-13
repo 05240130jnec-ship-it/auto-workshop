@@ -53,9 +53,11 @@ export default function AuthProvider({ children }) {
   }
 
   // "Continue with Google": Google gives us a credential, the backend checks it (POST /api/auth/google)
-  async function loginWithGoogle(credential) {
+  // (google = { accessToken } from our Google button, or a credential text from Google's own button)
+  async function loginWithGoogle(google) {
     try {
-      const data = await api('/auth/google', { method: 'POST', body: { credential } })
+      const body = typeof google === 'string' ? { credential: google } : google
+      const data = await api('/auth/google', { method: 'POST', body })
       return { user: start(data.token, data.user) }
     } catch (err) {
       return { error: err.message }
