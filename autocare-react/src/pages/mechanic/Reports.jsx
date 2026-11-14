@@ -59,11 +59,11 @@ export default function Reports() {
         </div>
         <div className="m-stat">
           <div className="m-stat-icon m-icon-green"><i className="bi bi-tools"></i></div>
-          <div><h6>Services recorded</h6><div className="m-stat-value">{services}</div><p className="m-stat-foot green">Labour lines</p></div>
+          <div><h6>Work done</h6><div className="m-stat-value">{services}</div><p className="m-stat-foot green">Service items added</p></div>
         </div>
         <div className="m-stat">
           <div className="m-stat-icon m-icon-orange"><i className="bi bi-clock-history"></i></div>
-          <div><h6>Avg. repair time</h6><div className="m-stat-value">{avgDays < 1 ? 'Same day' : avgDays.toFixed(1) + 'd'}</div><p className="m-stat-foot orange">Per job</p></div>
+          <div><h6>Avg. repair time</h6><div className="m-stat-value">{done.length === 0 ? '—' : avgDays < 1 ? 'Same day' : avgDays.toFixed(1) + ' days'}</div><p className="m-stat-foot orange">{done.length === 0 ? 'No finished jobs yet' : 'From booking to finished'}</p></div>
         </div>
       </section>
 
