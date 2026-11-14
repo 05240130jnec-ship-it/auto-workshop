@@ -16,11 +16,13 @@ const LISTS = {
   listings: '/admin/shop/listings',
   reservations: '/admin/shop/reservations',
   services: '/content/services-all',   // every service (website + workshop-only), for the job form
+  profile: '/admin/profile',           // me (the admin who is logged in): name, phone, photo
 }
 
 // MySQL sends DECIMAL numbers as text ("1500.00"), so turn them into real numbers.
 // Also give a few fields the names the pages already use.
 function clean(name, rows) {
+  if (!Array.isArray(rows)) return rows        // e.g. my profile is one object, not a list
   return rows.map((row) => {
     const x = { ...row }
     if ('cost' in x) x.cost = Number(x.cost) || 0

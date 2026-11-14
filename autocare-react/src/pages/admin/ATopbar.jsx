@@ -1,19 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
 import { useAdmin } from './AdminContext.js'
 import Avatar from './Avatar.jsx'
 
-// Title row + search + notifications bell + user chip (top of every admin page)
+// Title row + search + notifications bell + my avatar (drop-down: My profile, Log out)
 export default function ATopbar({ title, sub, search, onSearch, onEnter, placeholder, children }) {
-  const { user } = useAuth()
-  const { Q } = useAdmin()
+  const { user, logout } = useAuth()
+  const { Q, data } = useAdmin()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
+  const [me, setMe] = useState(false)           // the avatar menu
   const box = useRef(null)
+  const meBox = useRef(null)
+  const profile = data.profile || {}
   const input = useRef(null)
 
   useEffect(() => {
-    const close = (e) => { if (box.current && !box.current.contains(e.target)) setOpen(false) }
+    const close = (e) => {
+      if (box.current && !box.current.contains(e.target)) setOpen(false)
+      if (meBox.current && !meBox.current.contains(e.target)) setMe(false)
+    }
     const slash = (e) => {
       if (e.key === '/' && input.current && !['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement.tagName)) { e.preventDefault(); input.current.focus() }
     }
@@ -59,7 +66,24 @@ export default function ATopbar({ title, sub, search, onSearch, onEnter, placeho
             ))}
           </div>
         </div>
-        <div className="a-user-chip"><span>{user.name}</span><Avatar name={user.name} /></div>
+        {/* My avatar: profile + log out */}
+        <div className="a-me" ref={meBox}>
+          <button type="button" className="a-me-btn" onClick={() => setMe(!me)} aria-label="My account" aria-expanded={me} title={user.name}>
+            <Avatar name={profile.name || user.name} photo={profile.photo} />
+          </button>
+          {me && (
+            <div className="a-me-menu">
+              <div className="a-me-top">
+                <Avatar name={profile.name || user.name} photo={profile.photo} />
+                <div><strong>{profile.name || user.name}</strong><small>{user.email}</small></div>
+              </div>
+              <Link to="/admin/profile" className="a-me-item" onClick={() => setMe(false)}><i className="bi bi-person"></i> My profile</Link>
+              <button type="button" className="a-me-item a-me-danger" onClick={() => { logout(); navigate('/staff-login') }}>
+                <i className="bi bi-box-arrow-right"></i> Log out
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </header>
   )

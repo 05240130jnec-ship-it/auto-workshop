@@ -37,7 +37,6 @@ app.use('/api/shop', require('./routes/shop'));
 app.use('/api/admin', require('./routes/admin'));
 app.use('/api/mechanic', require('./routes/mechanic'));
 app.use('/api/content', require('./routes/content'));   // services, offers, shop products
-app.use('/api/contact', require('./routes/contact'));   // contact form messages
 app.use('/api/profile', require('./routes/profile'));   // customer: my profile + photo
 // Wrong URL -> JSON 404 instead of "Cannot GET ..."
 app.use((req, res) => {

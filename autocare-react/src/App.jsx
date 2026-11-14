@@ -43,7 +43,7 @@ import AdminInventory from './pages/admin/Inventory.jsx'
 import AdminSuppliers from './pages/admin/Suppliers.jsx'
 import AdminContent from './pages/admin/Content.jsx'
 import AdminMechanicPortal from './pages/admin/MechanicPortal.jsx'
-import AdminMessages from './pages/admin/Messages.jsx'
+import AdminProfile from './pages/admin/Profile.jsx'
 
 const customer = (page) => <RequireRole roles={['customer']}>{page}</RequireRole>
 
@@ -95,7 +95,7 @@ export default function App() {
         <Route path="suppliers" element={<AdminSuppliers />} />
         <Route path="content" element={<AdminContent />} />
         <Route path="mechanic-portal" element={<AdminMechanicPortal />} />
-        <Route path="messages" element={<AdminMessages />} />
+        <Route path="profile" element={<AdminProfile />} />
       </Route>
 
       <Route path="*" element={<NotFound />} />
