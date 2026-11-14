@@ -28,6 +28,7 @@ import MechanicDashboard from './pages/mechanic/Dashboard.jsx'
 import MechanicRepairs from './pages/mechanic/Repairs.jsx'
 import RepairDetail from './pages/mechanic/RepairDetail.jsx'
 import Reports from './pages/mechanic/Reports.jsx'
+import PartsUsed from './pages/mechanic/PartsUsed.jsx'
 import Profile from './pages/mechanic/Profile.jsx'
 
 // Admin panel (from your admin interface folder)
@@ -75,6 +76,7 @@ export default function App() {
         <Route index element={<MechanicDashboard />} />
         <Route path="repairs" element={<MechanicRepairs />} />
         <Route path="repairs/:id" element={<RepairDetail />} />
+        <Route path="parts" element={<PartsUsed />} />
         <Route path="reports" element={<Reports />} />
         <Route path="profile" element={<Profile />} />
       </Route>

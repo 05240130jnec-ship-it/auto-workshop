@@ -18,7 +18,7 @@ export default function MechanicLayout() {
 
 function MechanicShell() {
   const { data, reload } = useMechanic()
-  const { hash, pathname } = useLocation()
+  const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
 
   // Fresh data each time another page opens (the admin may have assigned new jobs)
@@ -58,12 +58,12 @@ function MechanicShell() {
             <i className="bi bi-wrench-adjustable"></i><span>My Repairs</span>
             {active.length > 0 && <em className="ms-badge">{active.length}</em>}
           </NavLink>
-          <Link to="/mechanic/reports#parts" onClick={go} className={cls(pathname === '/mechanic/reports' && hash === '#parts')}>
+          <NavLink to="/mechanic/parts" onClick={go} className={({ isActive }) => cls(isActive)}>
             <i className="bi bi-tools"></i><span>Parts Used</span>
-          </Link>
-          <Link to="/mechanic/reports" onClick={go} className={cls(pathname === '/mechanic/reports' && hash !== '#parts')}>
+          </NavLink>
+          <NavLink to="/mechanic/reports" onClick={go} className={({ isActive }) => cls(isActive)}>
             <i className="bi bi-file-earmark-bar-graph-fill"></i><span>My Reports</span>
-          </Link>
+          </NavLink>
         </nav>
 
         {/* Today card */}
