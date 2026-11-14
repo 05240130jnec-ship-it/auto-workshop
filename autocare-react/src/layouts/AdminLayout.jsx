@@ -100,7 +100,7 @@ function AdminShell() {
             <Avatar name={user.name} />
             <div className="a-user-text"><strong>{user.name}</strong><small>{user.email}</small></div>
           </div>
-          <a href="/login" className="a-logout" onClick={(e) => { e.preventDefault(); logout(); navigate('/login') }}>
+          <a href="/staff-login" className="a-logout" onClick={(e) => { e.preventDefault(); logout(); navigate('/staff-login') }}>
             <i className="bi bi-box-arrow-right"></i> Log out
           </a>
         </div>

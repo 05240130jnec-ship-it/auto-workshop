@@ -51,7 +51,7 @@ export default function MTopbar({ title, sub, back, children }) {
 
   function doLogout() {
     logout()
-    navigate('/login')
+    navigate('/staff-login')
   }
 
   return (

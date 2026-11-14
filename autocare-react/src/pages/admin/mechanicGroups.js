@@ -2,6 +2,14 @@
 // Each field = one row in the MySQL table `settings`.
 export const MECHANIC_GROUPS = [
   {
+    key: 'staff', label: 'Staff login page', icon: 'bi-shield-lock',
+    fields: [
+      { name: 'staffLoginTitle', label: 'Title', required: true, help: 'The page at /staff-login (mechanics and admin)' },
+      { name: 'staffLoginText', label: 'Text under the title', col: 12 },
+      { name: 'staffLoginNote', label: 'Note under the Sign in button', col: 12 },
+    ],
+  },
+  {
     key: 'pages', label: 'Page titles', icon: 'bi-layout-text-window',
     fields: [
       { name: 'mPortalLabel', label: 'Sidebar: small text under the logo', required: true },
