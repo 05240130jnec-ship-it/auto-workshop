@@ -4,6 +4,8 @@ import { relDate, fmtDate, today, daysAgo } from '../../data/store.js'
 import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 import Badge from './Badge.jsx'
 import { STATUS_ICON } from './helpers.js'
 
@@ -14,6 +16,7 @@ export default function MechanicDashboard() {
   usePageTitle('Mechanic Dashboard')
   const { user } = useAuth()
   const { data } = useMechanic()
+  const s = useSettings()
   const mine = data.repairs   // the backend only sends jobs assigned to me
   const pending = mine.filter((r) => r.status === 'pending')
   const progress = mine.filter((r) => r.status === 'progress')
@@ -29,7 +32,7 @@ export default function MechanicDashboard() {
 
   return (
     <>
-      <MTopbar title="Dashboard" sub={`Welcome back, ${user.name} 👋 Here's your workload today.`} />
+      <MTopbar title={mt(s, 'mDashTitle')} sub={mt(s, 'mDashText', { name: user.name })} />
 
       <section className="m-stats">
         <div className="m-stat">

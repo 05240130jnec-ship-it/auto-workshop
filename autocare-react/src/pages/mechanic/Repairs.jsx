@@ -6,6 +6,8 @@ import { useMechanic } from './MechanicContext.js'
 import { imageFor } from '../../data/services.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 import Badge from './Badge.jsx'
 
 const TABS = [['all', 'All'], ['pending', 'Pending'], ['progress', 'In Progress'], ['complete', 'Complete']]
@@ -14,6 +16,7 @@ const TABS = [['all', 'All'], ['pending', 'Pending'], ['progress', 'In Progress'
 export default function MechanicRepairs() {
   usePageTitle('My Repairs')
   const store = useMechanic()
+  const s = useSettings()
   const { act } = store
   const navigate = useNavigate()
   const [tab, setTab] = useState('all')
@@ -30,7 +33,7 @@ export default function MechanicRepairs() {
 
   return (
     <>
-      <MTopbar title="My Repairs" sub="All repair orders assigned to you" />
+      <MTopbar title={mt(s, 'mRepairsTitle')} sub={mt(s, 'mRepairsText')} />
 
       <div className="m-tabs">
         {TABS.map(([k, label]) => (

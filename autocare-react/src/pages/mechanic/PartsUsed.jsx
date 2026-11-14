@@ -4,6 +4,8 @@ import { nu, fmtDate, daysAgo } from '../../data/store.js'
 import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 
 // Parts Used (/mechanic/parts): every spare part I logged on my jobs.
 // The parts come from MySQL (repair_parts), sent by the backend with my jobs.
@@ -12,6 +14,7 @@ const PERIODS = [['week', 'This week'], ['month', 'This month'], ['all', 'All ti
 export default function PartsUsed() {
   usePageTitle('Parts Used')
   const { data } = useMechanic()
+  const s = useSettings()
   const [period, setPeriod] = useState('month')
   const [search, setSearch] = useState('')
 
@@ -34,7 +37,7 @@ export default function PartsUsed() {
 
   return (
     <>
-      <MTopbar title="Parts Used" sub="Every spare part you logged on your jobs" />
+      <MTopbar title={mt(s, 'mPartsTitle')} sub={mt(s, 'mPartsText')} />
 
       <div className="m-tabs">
         {PERIODS.map(([k, label]) => <button key={k} className={period === k ? 'active' : ''} onClick={() => setPeriod(k)}>{label}</button>)}

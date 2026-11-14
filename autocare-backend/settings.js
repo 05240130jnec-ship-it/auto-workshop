@@ -61,6 +61,29 @@ const DEFAULT_SETTINGS = {
   profileTitle: 'My *profile*',
   profileText: 'Keep your details up to date so the workshop can reach you about your repairs.',
 
+  // ---------- Mechanic portal (admin → Mechanic Portal, NOT the customer website) ----------
+  mPortalLabel: 'Mechanic portal',
+  mDashTitle: 'Dashboard',
+  mDashText: "Welcome back, {name} 👋 Here's your workload today.",
+  mRepairsTitle: 'My Repairs',
+  mRepairsText: 'All repair orders assigned to you',
+  mPartsTitle: 'Parts Used',
+  mPartsText: 'Every spare part you logged on your jobs',
+  mReportsTitle: 'My Reports',
+  mReportsText: 'Summary of your repair activities',
+  mProfileTitle: 'My Profile',
+  mProfileText: 'Manage your mechanic profile and availability',
+  mMenuProfile: 'My profile',
+  mMenuLogout: 'Log out',
+  mNoteNew: 'New job assigned to you',
+  mNoteToday: 'Car arrives today at {time}',
+  mNoteLate: 'Job is overdue',
+  mNoteEmpty: "No notifications. You're all caught up.",
+  mTodayWaiting: '{count} job(s) waiting to start',
+  mTodayDone: 'No jobs waiting. Great work!',
+  mTodayStart: 'Start next job',
+  mTodayContinue: 'Continue job',
+
   // ---------- About page ----------
   // Login page + "Create an account" pop-up
   loginTag: 'Trusted Toyota service',

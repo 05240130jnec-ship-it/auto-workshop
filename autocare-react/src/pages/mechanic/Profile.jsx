@@ -7,6 +7,7 @@ import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import { mt } from './texts.js'
 
 // My profile — saved through PATCH /api/mechanic/profile and /api/mechanic/profile/password
 // (name and login email are managed by the admin)
@@ -51,7 +52,7 @@ export default function Profile() {
 
   return (
     <>
-      <MTopbar title="My Profile" sub="Manage your mechanic profile and availability" />
+      <MTopbar title={mt(settings, 'mProfileTitle')} sub={mt(settings, 'mProfileText')} />
 
       <div className="row g-4">
         <div className="col-lg-4">

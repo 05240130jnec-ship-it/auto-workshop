@@ -4,6 +4,8 @@ import { nu, daysAgo } from '../../data/store.js'
 import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 import Badge from './Badge.jsx'
 import { daysBetween } from './helpers.js'
 
@@ -13,6 +15,7 @@ const PERIODS = [['month', 'This month'], ['week', 'This week'], ['all', 'All ti
 export default function Reports() {
   usePageTitle('My Reports')
   const { data, Q } = useMechanic()
+  const s = useSettings()
   const [period, setPeriod] = useState('month')
 
   const from = period === 'week' ? daysAgo(7) : period === 'month' ? daysAgo(new Date().getDate() - 1) : '0000'
@@ -40,7 +43,7 @@ export default function Reports() {
 
   return (
     <>
-      <MTopbar title="My Reports" sub="Summary of your repair activities">
+      <MTopbar title={mt(s, 'mReportsTitle')} sub={mt(s, 'mReportsText')}>
         <button className="m-btn m-btn-outline" onClick={exportCsv}><i className="bi bi-download"></i> Export</button>
       </MTopbar>
 

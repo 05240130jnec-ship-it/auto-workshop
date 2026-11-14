@@ -3,20 +3,24 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
 import { initials, today, fmtDate } from '../../data/store.js'
 import { useMechanic } from './MechanicContext.js'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 import '../../styles/mechanic-menu.css'
 
 // The header row at the top of each mechanic page:
 //   left  = page title
 //   right = 🔔 notifications (drop-down) + my avatar (drop-down: My profile, Log out)
+// All words come from MySQL (admin → Mechanic Portal).
 export default function MTopbar({ title, sub, back, children }) {
   const { user, logout } = useAuth()
   const { data } = useMechanic()
+  const s = useSettings()
   const navigate = useNavigate()
   const [open, setOpen] = useState(null)        // which drop-down is open: 'bell' | 'me' | null
   const box = useRef(null)
 
   // ---------- Notifications, made from my jobs ----------
-  const notes = makeNotes(data.repairs)
+  const notes = makeNotes(data.repairs, s)
 
   // Which notifications I have already seen (kept in this browser, per mechanic)
   const seenKey = 'acp_mech_seen_' + user.id
@@ -74,7 +78,7 @@ export default function MTopbar({ title, sub, back, children }) {
                 <strong>Notifications</strong>
                 {unread > 0 && <button type="button" className="mm-link" onClick={markAllRead}>Mark all as read</button>}
               </div>
-              {notes.length === 0 && <p className="mm-empty"><i className="bi bi-bell-slash"></i> No notifications. You're all caught up.</p>}
+              {notes.length === 0 && <p className="mm-empty"><i className="bi bi-bell-slash"></i> {mt(s, 'mNoteEmpty')}</p>}
               <div className="mm-list">
                 {notes.map((n) => (
                   <Link key={n.key} to={'/mechanic/repairs/' + n.repairId} className={'mm-note' + (seen.includes(n.key) ? '' : ' is-new')}
@@ -108,10 +112,10 @@ export default function MTopbar({ title, sub, back, children }) {
                 </div>
               </div>
               <Link to="/mechanic/profile" className="mm-item" onClick={() => setOpen(null)}>
-                <i className="bi bi-person-gear"></i> Edit my profile
+                <i className="bi bi-person"></i> {mt(s, 'mMenuProfile')}
               </Link>
               <button type="button" className="mm-item mm-danger" onClick={doLogout}>
-                <i className="bi bi-box-arrow-right"></i> Log out
+                <i className="bi bi-box-arrow-right"></i> {mt(s, 'mMenuLogout')}
               </button>
             </div>
           )}
@@ -133,22 +137,22 @@ export default function MTopbar({ title, sub, back, children }) {
 //   - a job the admin gave me that I have not started yet
 //   - a car that comes to the workshop today
 //   - a job in progress that is past its due date
-function makeNotes(repairs) {
+function makeNotes(repairs, s) {
   const now = today()
   const notes = []
   for (const r of repairs) {
     const car = r.vehicle + (r.plate ? ' · ' + r.plate : '')
     if (r.status === 'pending') {
       notes.push({ key: 'new-' + r.id, repairId: r.id, date: r.date || '', icon: 'bi-wrench-adjustable', tone: 'm-icon-orange',
-        title: 'New job assigned to you', text: car + ' — ' + r.service })
+        title: mt(s, 'mNoteNew'), text: car + ' — ' + r.service })
     }
     if ((r.status === 'pending' || r.status === 'progress') && r.appointment && r.appointment.date === now) {
       notes.push({ key: 'today-' + r.id + '-' + now, repairId: r.id, date: now, icon: 'bi-calendar-check', tone: 'm-icon-blue',
-        title: 'Car arrives today' + (r.appointment.time ? ' at ' + r.appointment.time : ''), text: car })
+        title: mt(s, 'mNoteToday', { time: r.appointment.time || '' }), text: car })
     }
     if (r.status === 'progress' && r.due && r.due < now) {
       notes.push({ key: 'late-' + r.id + '-' + r.due, repairId: r.id, date: r.due, icon: 'bi-exclamation-triangle-fill', tone: 'm-icon-red',
-        title: 'Job is overdue', text: car + ' — was due ' + fmtDate(r.due) })
+        title: mt(s, 'mNoteLate'), text: car + ' — was due ' + fmtDate(r.due) })
     }
   }
   return notes.sort((a, b) => b.date.localeCompare(a.date))
