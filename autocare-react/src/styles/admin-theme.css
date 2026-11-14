@@ -91,3 +91,29 @@
 :root.theme-admin .ap-remove:hover { text-decoration: underline; }
 :root.theme-admin .ap-name { font-size: 1.2rem; font-weight: 800; color: #0f2a44; margin: 4px 0 2px; }
 :root.theme-admin .ap-show { background: none; border: none; padding: 0; color: #f57c00; font-size: .85rem; font-weight: 600; cursor: pointer; }
+
+/* ----- 🔔 Notifications drop-down (ATopbar.jsx) ----- */
+:root.theme-admin .an-wrap { position: relative; }
+:root.theme-admin .an-wrap .a-icon-btn { cursor: pointer; position: relative; }
+:root.theme-admin .an-menu {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 1050; width: 350px;
+  background: #fff; border: 1px solid var(--a-border); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .16); overflow: hidden; animation: a-me-pop .15s ease-out;
+}
+:root.theme-admin .an-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--a-border); }
+:root.theme-admin .an-head strong { font-size: .92rem; color: #0f2a44; display: flex; align-items: center; gap: 8px; }
+:root.theme-admin .an-head strong span { background: #f57c00; color: #fff; border-radius: 10px; padding: 0 8px; font-size: .72rem; line-height: 20px; }
+:root.theme-admin .an-head button { background: none; border: none; padding: 0; color: #f57c00; font-size: .8rem; font-weight: 600; cursor: pointer; }
+:root.theme-admin .an-head button:hover { text-decoration: underline; }
+:root.theme-admin .an-list { max-height: 360px; overflow-y: auto; }
+:root.theme-admin .an-item { display: flex; gap: 12px; padding: 11px 16px; text-decoration: none; color: var(--a-text); font-size: .84rem; border-bottom: 1px solid #f1f3f7; }
+:root.theme-admin .an-item:hover { background: #f7f9fc; color: var(--a-text); }
+:root.theme-admin .an-item.is-new { background: #fff7ed; }
+:root.theme-admin .an-item.is-new > div:last-child > div::after {
+  content: ''; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: #f57c00; margin-left: 6px; vertical-align: middle;
+}
+:root.theme-admin .an-item small { color: var(--a-text-muted); font-size: .75rem; }
+:root.theme-admin .an-item .a-item-icon { width: 34px; height: 34px; flex: 0 0 34px; border-radius: 10px; font-size: .9rem; }
+:root.theme-admin .an-empty { margin: 0; padding: 22px 16px; text-align: center; color: var(--a-text-muted); font-size: .85rem; }
+:root.theme-admin .a-icon-green { background: rgba(22, 163, 74, .12); color: #16a34a; }
+@media (max-width: 480px) { :root.theme-admin .an-menu { width: calc(100vw - 32px); right: -60px; } }

@@ -142,18 +142,18 @@ export default function Profile() {
 
         <div className="col-lg-8">
           <div className="m-panel mb-4">
-            <div className="m-panel-head"><h3>Personal Information</h3></div>
+            <div className="m-panel-head"><h3>{mt(settings, 'mProfInfo')}</h3></div>
             <div className="row g-3">
               <div className="col-md-6"><label className="m-form-label">Full Name</label><input type="text" className="m-form-control" value={m.name} disabled /></div>
               <div className="col-md-6"><label className="m-form-label">Email (used to log in)</label><input type="email" className="m-form-control" value={m.email} disabled /></div>
               <div className="col-md-6"><label className="m-form-label">Phone</label><input type="tel" className="m-form-control" maxLength={16} value={phone} onChange={(e) => setPhone(e.target.value)} /></div>
             </div>
-            <p className="small text-muted mt-2 mb-0"><i className="bi bi-info-circle me-1"></i>To change your name or login email, ask the admin.</p>
+            <p className="small text-muted mt-2 mb-0"><i className="bi bi-info-circle me-1"></i>{mt(settings, 'mProfNameNote')}</p>
             <button className="m-btn m-btn-primary mt-3" onClick={saveInfo}><i className="bi bi-check2"></i> Save Changes</button>
           </div>
 
           <div className="m-panel mb-4">
-            <div className="m-panel-head"><h3>Professional Details</h3></div>
+            <div className="m-panel-head"><h3>{mt(settings, 'mProfPro')}</h3></div>
             <div className="row g-3">
               <div className="col-md-6">
                 <label className="m-form-label">Specialization</label>
@@ -167,7 +167,7 @@ export default function Profile() {
           </div>
 
           <div className="m-panel">
-            <div className="m-panel-head"><h3>Change Password</h3></div>
+            <div className="m-panel-head"><h3>{mt(settings, 'mProfPassword')}</h3></div>
             <div className="row g-3">
               <div className="col-md-6"><label className="m-form-label">Current Password</label><input type="password" className="m-form-control" placeholder="••••••••" value={pw.current} onChange={setW('current')} /></div>
               <div className="col-md-6"></div>

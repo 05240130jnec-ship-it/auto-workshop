@@ -56,7 +56,7 @@ export default function MechanicDashboard() {
       <section className="m-grid">
         <div className="m-panel">
           <div className="m-panel-head">
-            <h3>My repair orders</h3>
+            <h3>{mt(s, 'mDashJobs')}</h3>
             <Link to="/mechanic/repairs">View all →</Link>
           </div>
           <div className="m-panel-list">
@@ -76,7 +76,7 @@ export default function MechanicDashboard() {
 
         <div className="m-panel">
           <div className="m-panel-head">
-            <h3>Parts used recently</h3>
+            <h3>{mt(s, 'mDashParts')}</h3>
             <Link to="/mechanic/reports#parts">View all →</Link>
           </div>
           <div className="m-panel-list">
