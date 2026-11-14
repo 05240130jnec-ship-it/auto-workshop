@@ -106,7 +106,7 @@ CREATE TABLE `mechanics` (
   `specialization` varchar(100) DEFAULT NULL,
   `experience` int(11) DEFAULT 0,
   `status` enum('active','busy','leave') DEFAULT 'active',
-  `photo` varchar(200) DEFAULT NULL,
+  `photo` mediumtext DEFAULT NULL,
   `joined` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
