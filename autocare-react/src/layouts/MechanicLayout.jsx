@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react'
 import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import useTheme from '../ui/useTheme.js'
 import { today } from '../data/store.js'
+import useSettings from '../data/useSettings.js'
+import { mt } from '../pages/mechanic/texts.js'
 import MechanicDataProvider from '../pages/mechanic/MechanicDataProvider.jsx'
 import { useMechanic } from '../pages/mechanic/MechanicContext.js'
 
 // Mechanic portal: loads my jobs from the backend first, then shows the sidebar + page.
 // "My profile" and "Log out" are in the avatar menu at the top right (MTopbar.jsx).
+// All words come from MySQL (admin → Mechanic Portal).
 export default function MechanicLayout() {
   useTheme('mechanic')
   return (
@@ -18,6 +21,7 @@ export default function MechanicLayout() {
 
 function MechanicShell() {
   const { data, reload } = useMechanic()
+  const s = useSettings()
   const { pathname } = useLocation()
   const [open, setOpen] = useState(false)
 
@@ -44,7 +48,7 @@ function MechanicShell() {
           <img src="/media/logo.jpg" alt="AutoCare Pro logo" />
           <div>
             <strong>AutoCare Pro</strong>
-            <small><span className="ms-dot"></span> Mechanic portal</small>
+            <small><span className="ms-dot"></span> {mt(s, 'mPortalLabel')}</small>
           </div>
         </div>
 
@@ -52,17 +56,17 @@ function MechanicShell() {
         <span className="ms-label">Menu</span>
         <nav className="ms-nav">
           <NavLink to="/mechanic" end onClick={go} className={({ isActive }) => cls(isActive)}>
-            <i className="bi bi-grid-1x2-fill"></i><span>Dashboard</span>
+            <i className="bi bi-grid-1x2-fill"></i><span>{mt(s, 'mDashTitle')}</span>
           </NavLink>
           <NavLink to="/mechanic/repairs" onClick={go} className={({ isActive }) => cls(isActive)}>
-            <i className="bi bi-wrench-adjustable"></i><span>My Repairs</span>
+            <i className="bi bi-wrench-adjustable"></i><span>{mt(s, 'mRepairsTitle')}</span>
             {active.length > 0 && <em className="ms-badge">{active.length}</em>}
           </NavLink>
           <NavLink to="/mechanic/parts" onClick={go} className={({ isActive }) => cls(isActive)}>
-            <i className="bi bi-tools"></i><span>Parts Used</span>
+            <i className="bi bi-tools"></i><span>{mt(s, 'mPartsTitle')}</span>
           </NavLink>
           <NavLink to="/mechanic/reports" onClick={go} className={({ isActive }) => cls(isActive)}>
-            <i className="bi bi-file-earmark-bar-graph-fill"></i><span>My Reports</span>
+            <i className="bi bi-file-earmark-bar-graph-fill"></i><span>{mt(s, 'mReportsTitle')}</span>
           </NavLink>
         </nav>
 
@@ -73,10 +77,10 @@ function MechanicShell() {
             <strong>{doneToday}/{totalToday}</strong>
           </div>
           <div className="ms-bar"><div style={{ width: percent + '%' }}></div></div>
-          <p>{waiting.length === 0 ? 'No jobs waiting. Great work!' : `${waiting.length} job${waiting.length > 1 ? 's' : ''} waiting to start`}</p>
+          <p>{waiting.length === 0 ? mt(s, 'mTodayDone') : mt(s, 'mTodayWaiting', { count: waiting.length })}</p>
           {next && (
             <Link to={'/mechanic/repairs/' + next.id} className="ms-today-btn" onClick={go}>
-              {next.status === 'progress' ? 'Continue job' : 'Start next job'} <i className="bi bi-arrow-right"></i>
+              {next.status === 'progress' ? mt(s, 'mTodayContinue') : mt(s, 'mTodayStart')} <i className="bi bi-arrow-right"></i>
             </Link>
           )}
         </div>
