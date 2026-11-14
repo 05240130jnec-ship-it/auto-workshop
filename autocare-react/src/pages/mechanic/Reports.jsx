@@ -1,24 +1,19 @@
-import { useEffect, useState } from 'react'
-import { useLocation } from 'react-router-dom'
-import { nu, fmtDate, daysAgo } from '../../data/store.js'
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { nu, daysAgo } from '../../data/store.js'
 import { useMechanic } from './MechanicContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
 import Badge from './Badge.jsx'
 import { daysBetween } from './helpers.js'
 
+// My Reports (/mechanic/reports): a summary of my work. The parts list has its own page (Parts Used).
 const PERIODS = [['month', 'This month'], ['week', 'This week'], ['all', 'All time']]
 
 export default function Reports() {
   usePageTitle('My Reports')
   const { data, Q } = useMechanic()
-  const { hash } = useLocation()
   const [period, setPeriod] = useState('month')
-
-  // Scroll to #parts / #performance when coming from the sidebar
-  useEffect(() => {
-    if (hash) document.getElementById(hash.slice(1))?.scrollIntoView({ behavior: 'smooth' })
-  }, [hash])
 
   const from = period === 'week' ? daysAgo(7) : period === 'month' ? daysAgo(new Date().getDate() - 1) : '0000'
   const mine = data.repairs.filter((r) => r.status !== 'cancelled' && (r.completedOn || r.date) >= from)
@@ -60,15 +55,15 @@ export default function Reports() {
         </div>
         <div className="m-stat">
           <div className="m-stat-icon m-icon-blue"><i className="bi bi-box-seam"></i></div>
-          <div><h6>Parts logged</h6><div className="m-stat-value">{parts.reduce((s, p) => s + p.qty, 0)}</div><p className="m-stat-foot blue">{nu(parts.reduce((s, p) => s + p.qty * p.price, 0))}</p></div>
+          <div><h6>Parts logged</h6><div className="m-stat-value">{parts.reduce((s, p) => s + p.qty, 0)}</div><p className="m-stat-foot blue"><Link to="/mechanic/parts">{nu(parts.reduce((s, p) => s + p.qty * p.price, 0))} · see list</Link></p></div>
         </div>
         <div className="m-stat">
           <div className="m-stat-icon m-icon-green"><i className="bi bi-tools"></i></div>
-          <div><h6>Services recorded</h6><div className="m-stat-value">{services}</div><p className="m-stat-foot green">Labour lines</p></div>
+          <div><h6>Work done</h6><div className="m-stat-value">{services}</div><p className="m-stat-foot green">Service items added</p></div>
         </div>
         <div className="m-stat">
           <div className="m-stat-icon m-icon-orange"><i className="bi bi-clock-history"></i></div>
-          <div><h6>Avg. repair time</h6><div className="m-stat-value">{avgDays < 1 ? 'Same day' : avgDays.toFixed(1) + 'd'}</div><p className="m-stat-foot orange">Per job</p></div>
+          <div><h6>Avg. repair time</h6><div className="m-stat-value">{done.length === 0 ? '—' : avgDays < 1 ? 'Same day' : avgDays.toFixed(1) + ' days'}</div><p className="m-stat-foot orange">{done.length === 0 ? 'No finished jobs yet' : 'From booking to finished'}</p></div>
         </div>
       </section>
 
@@ -96,42 +91,22 @@ export default function Reports() {
         </div>
       </div>
 
-      <div className="row g-4">
-        <div className="col-lg-7">
-          <div className="m-panel h-100" id="parts">
-            <div className="m-panel-head"><h3>Parts Used</h3></div>
-            <div style={{ overflowX: 'auto' }}>
-              <table className="m-table">
-                <thead><tr><th>Part</th><th>Qty</th><th>Vehicle</th><th>Date</th><th>Cost</th></tr></thead>
-                <tbody>
-                  {parts.length === 0 && <tr><td colSpan={5} className="text-center text-muted py-4">No parts logged in this period.</td></tr>}
-                  {parts.map((p, i) => (
-                    <tr key={i}><td>{p.name}</td><td>{p.qty}</td><td>{p.vehicle}</td><td>{fmtDate(p.date)}</td><td>{nu(p.qty * p.price)}</td></tr>
-                  ))}
-                </tbody>
-              </table>
+      <div className="m-panel" id="performance">
+        <div className="m-panel-head"><h3>Performance</h3></div>
+        {[
+          ['Completion rate (all time)', rate + '%', rate],
+          ['Finished on time', done.length ? Math.round(onTime / done.length * 100) + '%' : '—', done.length ? onTime / done.length * 100 : 0],
+        ].map(([label, value, pct]) => (
+          <div className="mb-3" key={label}>
+            <div className="d-flex justify-content-between small mb-1"><span>{label}</span><strong>{value}</strong></div>
+            <div style={{ height: 8, background: '#eef0f4', borderRadius: 6 }}>
+              <div style={{ width: pct + '%', height: '100%', borderRadius: 6, background: 'var(--m-purple)' }}></div>
             </div>
           </div>
-        </div>
-        <div className="col-lg-5">
-          <div className="m-panel h-100" id="performance">
-            <div className="m-panel-head"><h3>Performance</h3></div>
-            {[
-              ['Completion rate (all time)', rate + '%', rate],
-              ['Finished on time', done.length ? Math.round(onTime / done.length * 100) + '%' : '—', done.length ? onTime / done.length * 100 : 0],
-            ].map(([label, value, pct]) => (
-              <div className="mb-3" key={label}>
-                <div className="d-flex justify-content-between small mb-1"><span>{label}</span><strong>{value}</strong></div>
-                <div style={{ height: 8, background: '#eef0f4', borderRadius: 6 }}>
-                  <div style={{ width: pct + '%', height: '100%', borderRadius: 6, background: 'var(--m-purple)' }}></div>
-                </div>
-              </div>
-            ))}
-            <div className="d-flex justify-content-between small py-2 border-top"><span>Revenue from your jobs</span><strong>{nu(revenue)}</strong></div>
-            <div className="d-flex justify-content-between small py-2 border-top"><span>Jobs waiting to start</span><strong>{allMine.filter((r) => r.status === 'pending').length}</strong></div>
-            <div className="d-flex justify-content-between small py-2 border-top"><span>Jobs in progress</span><strong>{allMine.filter((r) => r.status === 'progress').length}</strong></div>
-          </div>
-        </div>
+        ))}
+        <div className="d-flex justify-content-between small py-2 border-top"><span>Revenue from your jobs</span><strong>{nu(revenue)}</strong></div>
+        <div className="d-flex justify-content-between small py-2 border-top"><span>Jobs waiting to start</span><strong>{allMine.filter((r) => r.status === 'pending').length}</strong></div>
+        <div className="d-flex justify-content-between small py-2 border-top"><span>Jobs in progress</span><strong>{allMine.filter((r) => r.status === 'progress').length}</strong></div>
       </div>
     </>
   )
