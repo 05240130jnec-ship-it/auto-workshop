@@ -102,7 +102,11 @@ router.get('/parts', async (req, res) => {
 // POST /api/mechanic/repairs/ACP-9247/parts  -> log a part used (stock goes down)
 router.post('/repairs/:id/parts', async (req, res) => {
   const { partId, qty } = req.body || {};
-  const amount = Number(qty) || 1;
+  const amount = Number(qty);
+  // Whole numbers from 1 to 100 only (a minus number would ADD stock and lower the bill)
+  if (!Number.isInteger(amount) || amount < 1 || amount > 100) {
+    return res.status(400).json({ error: 'Quantity must be a whole number from 1 to 100.' });
+  }
 
   const repair = await findMyRepair(req.params.id, req.user.id);
   if (!repair) return res.status(404).json({ error: 'Job not found or not assigned to you.' });
@@ -150,8 +154,12 @@ router.delete('/repairs/:id/parts/:rowId', async (req, res) => {
 
 // POST /api/mechanic/repairs/ACP-9247/services  -> record labour, e.g. "Wheel alignment"
 router.post('/repairs/:id/services', async (req, res) => {
-  const { name, qty, cost } = req.body || {};
-  if (!name || cost === undefined) return res.status(400).json({ error: 'Service name and cost are required.' });
+  const name = String((req.body || {}).name || '').trim();
+  const qty = Number((req.body || {}).qty ?? 1);
+  const cost = Number((req.body || {}).cost);
+  if (!name || name.length > 100) return res.status(400).json({ error: 'Please choose the service you did.' });
+  if (!Number.isInteger(qty) || qty < 1 || qty > 100) return res.status(400).json({ error: 'Quantity must be a whole number from 1 to 100.' });
+  if (!Number.isFinite(cost) || cost < 0 || cost > 1000000) return res.status(400).json({ error: 'Cost must be a number from 0 to 1,000,000.' });
 
   const repair = await findMyRepair(req.params.id, req.user.id);
   if (!repair) return res.status(404).json({ error: 'Job not found or not assigned to you.' });
@@ -161,9 +169,9 @@ router.post('/repairs/:id/services', async (req, res) => {
 
   const [insert] = await db.query(
     'INSERT INTO repair_services (repairId, name, qty, cost) VALUES (?, ?, ?, ?)',
-    [repair.id, name, Number(qty) || 1, cost]
+    [repair.id, name, qty, cost]
   );
-  res.status(201).json({ id: insert.insertId, name, qty: Number(qty) || 1, cost });
+  res.status(201).json({ id: insert.insertId, name, qty, cost });
 });
 
 // DELETE /api/mechanic/repairs/ACP-9247/services/2  -> remove a wrong service line
@@ -224,9 +232,38 @@ router.get('/profile', async (req, res) => {
 // PATCH /api/mechanic/profile  -> mechanic can change phone, specialization, experience,
 // photo and availability (name and email are controlled by the admin)
 router.patch('/profile', async (req, res) => {
-  const body = req.body || {};
+  const body = { ...(req.body || {}) };
   if (body.status && !['active', 'busy', 'leave'].includes(body.status)) {
     return res.status(400).json({ error: 'Status must be active, busy or leave.' });
+  }
+  // On leave? Only when no open jobs are left (otherwise the jobs would be stuck with me)
+  if (body.status === 'leave') {
+    const [[open]] = await db.query(
+      "SELECT COUNT(*) AS n FROM repairs WHERE mechanicId = ? AND status IN ('pending', 'progress')", [req.user.id]);
+    if (Number(open.n) > 0) {
+      return res.status(400).json({ error: `You still have ${open.n} open job${open.n > 1 ? 's' : ''}. Finish them or ask the admin to give them to another mechanic first.` });
+    }
+  }
+  // Bhutan phone, e.g. 17123456 or +975 17123456
+  if (body.phone !== undefined) {
+    body.phone = String(body.phone).replace(/[\s-]/g, '');
+    if (!/^(\+?975)?[1-8]\d{7}$/.test(body.phone)) return res.status(400).json({ error: 'Please enter a valid Bhutan phone number, e.g. 17123456.' });
+  }
+  if (body.experience !== undefined) {
+    body.experience = Number(body.experience);
+    if (!Number.isInteger(body.experience) || body.experience < 0 || body.experience > 60) {
+      return res.status(400).json({ error: 'Years of experience must be a whole number from 0 to 60.' });
+    }
+  }
+  if (body.specialization !== undefined && !String(body.specialization).trim()) {
+    return res.status(400).json({ error: 'Please choose a specialization.' });
+  }
+  // Profile photo: a small picture (data:image/…) made by the website, or null to remove it
+  if (body.photo !== undefined && body.photo !== null) {
+    if (typeof body.photo !== 'string' || !/^data:image\/(jpeg|png|webp);base64,/.test(body.photo)) {
+      return res.status(400).json({ error: 'Please choose a JPG, PNG or WEBP picture.' });
+    }
+    if (body.photo.length > 400 * 1024) return res.status(400).json({ error: 'This picture is too big.' });
   }
   const allowed = ['phone', 'specialization', 'experience', 'photo', 'status'];
   const fields = allowed.filter(f => body[f] !== undefined);
@@ -245,8 +282,9 @@ router.patch('/profile/password', async (req, res) => {
   if (!currentPassword || !newPassword) {
     return res.status(400).json({ error: 'Enter your current and new password.' });
   }
-  if (newPassword.length < 6) {
-    return res.status(400).json({ error: 'New password must be at least 6 characters.' });
+  // Same rule as customers: at least 8 characters, with a letter and a number
+  if (String(newPassword).length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    return res.status(400).json({ error: 'New password needs at least 8 characters, with a letter and a number.' });
   }
 
   const [rows] = await db.query('SELECT password FROM mechanics WHERE id = ?', [req.user.id]);

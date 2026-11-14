@@ -14,6 +14,7 @@ import '../../styles/mechanic-menu.css'
 export default function MTopbar({ title, sub, back, children }) {
   const { user, logout } = useAuth()
   const { data } = useMechanic()
+  const photo = data.profile && data.profile.photo   // my profile photo (from MySQL), or initials
   const s = useSettings()
   const navigate = useNavigate()
   const [open, setOpen] = useState(null)        // which drop-down is open: 'bell' | 'me' | null
@@ -99,13 +100,13 @@ export default function MTopbar({ title, sub, back, children }) {
         {/* ===== My avatar: profile + log out ===== */}
         <div className="mm-wrap">
           <button type="button" className="m-avatar mm-avatar-btn" onClick={() => toggle('me')} title={user.name} aria-label="My account" aria-expanded={open === 'me'}>
-            {initials(user.name)}
+            {photo ? <img src={photo} alt="" /> : initials(user.name)}
           </button>
 
           {open === 'me' && (
             <div className="mm-menu mm-me">
               <div className="mm-me-top">
-                <div className="m-avatar">{initials(user.name)}</div>
+                <div className="m-avatar">{photo ? <img src={photo} alt="" /> : initials(user.name)}</div>
                 <div>
                   <strong>{user.name}</strong>
                   <small>{user.email}</small>

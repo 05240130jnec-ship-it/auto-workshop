@@ -230,6 +230,14 @@ async function upgradeDatabase() {
     await db.query('ALTER TABLE customers ADD COLUMN photo MEDIUMTEXT NULL');
     console.log('Database: added the column customers.photo');
   }
+  // Mechanic profile photo: a picture saved as text needs MEDIUMTEXT (it was varchar(200))
+  const [mp] = await db.query(
+    `SELECT DATA_TYPE AS t FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mechanics' AND COLUMN_NAME = 'photo'`);
+  if (mp.length && String(mp[0].t).toLowerCase() !== 'mediumtext') {
+    await db.query('ALTER TABLE mechanics MODIFY photo MEDIUMTEXT NULL');
+    console.log('Database: mechanics.photo can now hold a profile picture');
+  }
   // Messages from the contact form (Contact page -> admin → Messages)
   await db.query(`CREATE TABLE IF NOT EXISTS contact_messages (
       id int NOT NULL AUTO_INCREMENT,
