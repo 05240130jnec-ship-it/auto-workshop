@@ -26,6 +26,37 @@ export const MECHANIC_GROUPS = [
     ],
   },
   {
+    key: 'job', label: 'Repair job page', icon: 'bi-wrench-adjustable',
+    fields: [
+      { name: 'mJobVehicle', label: 'Box: vehicle and customer', required: true },
+      { name: 'mJobProblem', label: 'Box: problem description', required: true },
+      { name: 'mJobNoProblem', label: 'When the customer wrote no problem', required: true },
+      { name: 'mJobNotes', label: 'Box: work notes', required: true },
+      { name: 'mJobStatus', label: 'Box: update status', required: true },
+      { name: 'mJobAddNote', label: 'Note box label', required: true },
+      { name: 'mJobSaveNote', label: 'Button: save note', required: true },
+      { name: 'mJobParts', label: 'Box: parts used', required: true },
+      { name: 'mJobAddPart', label: 'Button: add part', required: true },
+      { name: 'mJobNoParts', label: 'When no parts are logged', required: true },
+      { name: 'mJobServices', label: 'Box: services', required: true },
+      { name: 'mJobAddService', label: 'Button: add service', required: true },
+      { name: 'mJobGrand', label: 'Grand total label', required: true },
+      { name: 'mJobComplete', label: 'Button: complete repair', required: true },
+      { name: 'mJobReady', label: 'Message when the job is completed', required: true, col: 12, help: '{vehicle} = the car' },
+    ],
+  },
+  {
+    key: 'boxes', label: 'Dashboard & profile boxes', icon: 'bi-grid-1x2',
+    fields: [
+      { name: 'mDashJobs', label: 'Dashboard: jobs box', required: true },
+      { name: 'mDashParts', label: 'Dashboard: parts box', required: true },
+      { name: 'mProfInfo', label: 'My Profile: personal box', required: true },
+      { name: 'mProfPro', label: 'My Profile: professional box', required: true },
+      { name: 'mProfPassword', label: 'My Profile: password box', required: true },
+      { name: 'mProfNameNote', label: 'My Profile: note under the email', required: true, col: 12 },
+    ],
+  },
+  {
     key: 'notes', label: 'Notifications (🔔 bell)', icon: 'bi-bell',
     fields: [
       { name: 'mNoteNew', label: 'New job given to the mechanic', required: true },

@@ -7,6 +7,8 @@ import { useMechanic } from './MechanicContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import MTopbar from './MTopbar.jsx'
+import useSettings from '../../data/useSettings.js'
+import { mt } from './texts.js'
 
 // Repair detail: update status, write notes, log parts and services.
 // Every button calls the backend; parts taken here come out of the inventory in MySQL.
@@ -15,6 +17,7 @@ export default function RepairDetail() {
   usePageTitle('Repair ' + id)
   const store = useMechanic()
   const { Q, act } = store
+  const s = useSettings()           // the words come from MySQL (admin → Mechanic Portal)
   const { toast, confirm } = useDialogs()
   const navigate = useNavigate()
   const r = store.get('repairs', id)   // only jobs assigned to me are loaded
@@ -59,7 +62,7 @@ export default function RepairDetail() {
     const ok = await confirm(`Mark this job complete? The customer will be charged ${nu(final)}${grand > 0 ? ' (parts + services)' : ' (the estimate)'}.`, { title: 'Complete repair', okText: 'Mark complete' })
     if (!ok) return
     // The backend sets the bill to parts + services when the job is completed
-    const done = await act(() => api(url, { method: 'PATCH', body: { status: 'complete' } }), r.vehicle + ' is ready for pickup 🎉')
+    const done = await act(() => api(url, { method: 'PATCH', body: { status: 'complete' } }), mt(s, 'mJobReady', { vehicle: r.vehicle }))
     if (done) navigate('/mechanic/repairs')
   }
 
@@ -111,7 +114,7 @@ export default function RepairDetail() {
         {/* LEFT: Repair info */}
         <div className="col-lg-5">
           <div className="m-panel mb-4">
-            <div className="m-panel-head"><h3>Vehicle &amp; Customer</h3></div>
+            <div className="m-panel-head"><h3>{mt(s, 'mJobVehicle')}</h3></div>
             <p className="mb-2"><strong>{r.vehicle}</strong>{r.vehicleType && <span className="text-muted small"> · {r.vehicleType}</span>}</p>
             <p className="text-muted small mb-3">Plate: {r.plate} · {r.service}{r.priority !== 'normal' ? ' · ' + r.priority.toUpperCase() : ''}</p>
             <hr />
@@ -121,13 +124,13 @@ export default function RepairDetail() {
           </div>
 
           <div className="m-panel mb-4">
-            <div className="m-panel-head"><h3>Problem Description</h3></div>
-            <p className="text-muted small mb-0">{r.notes ? `"${r.notes}"` : 'No description given.'}</p>
+            <div className="m-panel-head"><h3>{mt(s, 'mJobProblem')}</h3></div>
+            <p className="text-muted small mb-0">{r.notes ? `"${r.notes}"` : mt(s, 'mJobNoProblem')}</p>
           </div>
 
           {(r.workNotes || []).length > 0 && (
             <div className="m-panel">
-              <div className="m-panel-head"><h3>Work Notes</h3></div>
+              <div className="m-panel-head"><h3>{mt(s, 'mJobNotes')}</h3></div>
               {r.workNotes.map((n, i) => <p key={i} className="small mb-2">{n}</p>)}
             </div>
           )}
@@ -136,7 +139,7 @@ export default function RepairDetail() {
         {/* MIDDLE: Status */}
         <div className="col-lg-3">
           <div className="m-panel">
-            <div className="m-panel-head"><h3>Update Status</h3></div>
+            <div className="m-panel-head"><h3>{mt(s, 'mJobStatus')}</h3></div>
             <button className={'m-btn w-100 mb-2 ' + (r.status === 'pending' ? 'm-btn-yellow' : 'm-btn-outline')} disabled={locked} onClick={() => setStatus('pending')}>
               <span className="m-dot m-dot-yellow"></span> Pending
             </button>
@@ -146,16 +149,16 @@ export default function RepairDetail() {
             <button className={'m-btn w-100 mb-3 ' + (r.status === 'complete' ? 'm-btn-success' : 'm-btn-outline')} disabled={locked} onClick={complete}>
               <span className="m-dot m-dot-green"></span> Mark Complete
             </button>
-            <label className="m-form-label">Add Note</label>
+            <label className="m-form-label">{mt(s, 'mJobAddNote')}</label>
             <textarea className="m-form-control" rows={4} placeholder="Progress notes..." value={note} onChange={(e) => setNote(e.target.value)} />
-            <button className="m-btn m-btn-outline m-btn-sm w-100 mt-2" onClick={addNote} disabled={!note.trim()}><i className="bi bi-journal-plus"></i> Save note</button>
+            <button className="m-btn m-btn-outline m-btn-sm w-100 mt-2" onClick={addNote} disabled={!note.trim()}><i className="bi bi-journal-plus"></i> {mt(s, 'mJobSaveNote')}</button>
           </div>
         </div>
 
         {/* RIGHT: Log Parts + Services */}
         <div className="col-lg-4">
           <div className="m-panel mb-4">
-            <div className="m-panel-head"><h3>Log Parts Used</h3></div>
+            <div className="m-panel-head"><h3>{mt(s, 'mJobParts')}</h3></div>
             {!locked && (
               <>
                 <label className="m-form-label">Select Part</label>
@@ -168,11 +171,11 @@ export default function RepairDetail() {
                 </select>
                 <label className="m-form-label">Quantity</label>
                 <input type="number" className="m-form-control mb-3" min={1} value={partQty} onChange={(e) => setPartQty(e.target.value)} />
-                <button className="m-btn m-btn-primary w-100 mb-3" onClick={addPart}><i className="bi bi-plus-circle"></i> Add Part</button>
+                <button className="m-btn m-btn-primary w-100 mb-3" onClick={addPart}><i className="bi bi-plus-circle"></i> {mt(s, 'mJobAddPart')}</button>
                 <hr />
               </>
             )}
-            {(r.parts || []).length === 0 && <p className="small text-muted">No parts logged yet.</p>}
+            {(r.parts || []).length === 0 && <p className="small text-muted">{mt(s, 'mJobNoParts')}</p>}
             {(r.parts || []).map((p) => (
               <div key={p.id} className="d-flex justify-content-between align-items-center mb-2 small">
                 <span>{p.name} × {p.qty}</span>
@@ -187,7 +190,7 @@ export default function RepairDetail() {
           </div>
 
           <div className="m-panel">
-            <div className="m-panel-head"><h3>Log Services</h3></div>
+            <div className="m-panel-head"><h3>{mt(s, 'mJobServices')}</h3></div>
             {!locked && (
               <>
                 <label className="m-form-label">Service Type</label>
@@ -198,7 +201,7 @@ export default function RepairDetail() {
                 <input type="number" className="m-form-control mb-3" min={1} value={svcQty} onChange={(e) => setSvcQty(e.target.value)} />
                 <label className="m-form-label">Service Cost (Nu.)</label>
                 <input type="number" className="m-form-control mb-3" min={0} step={50} value={svcCost} onChange={(e) => setSvcCost(e.target.value)} />
-                <button className="m-btn m-btn-primary w-100 mb-3" onClick={addService}><i className="bi bi-plus-circle"></i> Add Service</button>
+                <button className="m-btn m-btn-primary w-100 mb-3" onClick={addService}><i className="bi bi-plus-circle"></i> {mt(s, 'mJobAddService')}</button>
               </>
             )}
             {(r.services || []).map((s) => (
@@ -218,13 +221,13 @@ export default function RepairDetail() {
 
       <div className="m-panel mt-4 d-flex justify-content-between align-items-center" style={{ flexWrap: 'wrap', gap: 12 }}>
         <div>
-          <strong style={{ fontSize: '1.1rem' }}>Grand Total: </strong>
+          <strong style={{ fontSize: '1.1rem' }}>{mt(s, 'mJobGrand')}: </strong>
           <strong style={{ color: 'var(--m-purple)', fontSize: '1.2rem' }}>{nu(grand)}</strong>
           <span className="text-muted small ms-2">Estimate given to customer: {nu(r.cost)}</span>
         </div>
         <div>
           <Link to="/mechanic/repairs" className="m-btn m-btn-outline me-2">Back</Link>
-          {!locked && <button className="m-btn m-btn-success" onClick={complete}><i className="bi bi-check2-circle"></i> Complete Repair</button>}
+          {!locked && <button className="m-btn m-btn-success" onClick={complete}><i className="bi bi-check2-circle"></i> {mt(s, 'mJobComplete')}</button>}
         </div>
       </div>
     </>
