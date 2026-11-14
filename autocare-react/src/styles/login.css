@@ -248,3 +248,8 @@
 .su-form .lg-input input.fp-code { font-size: 1.35rem; font-weight: 700; letter-spacing: .5em; text-align: center; padding-left: 14px; }
 .su-link:disabled { color: #9ca3af; cursor: default; text-decoration: none; }
 .su-form .lg-hint:not(.is-bad) { color: #6b7280; }
+
+/* Customer login: small link to the staff login page */
+.lg-staff-link { margin-top: -6px; font-size: .82rem; }
+.lg-staff-link .su-link { color: #6b7280; font-weight: 500; }
+.lg-staff-link .su-link:hover { color: #f57c00; }

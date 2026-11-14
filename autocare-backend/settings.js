@@ -83,6 +83,10 @@ const DEFAULT_SETTINGS = {
   mTodayDone: 'No jobs waiting. Great work!',
   mTodayStart: 'Start next job',
   mTodayContinue: 'Continue job',
+  // Staff login page (/staff-login): mechanics and the admin, no sign-up
+  staffLoginTitle: 'Staff login',
+  staffLoginText: 'For AutoCare Pro mechanics and the workshop admin.',
+  staffLoginNote: 'No account? Ask the workshop admin to add you.',
 
   // ---------- About page ----------
   // Login page + "Create an account" pop-up

@@ -6,7 +6,8 @@ import GoogleButton from '../ui/GoogleButton.jsx'
 // The sign-in form on the /login page (no placeholders or icons inside the boxes, like the sign-up form).
 //   onDone(user)  → what to do after a good login (the page or pop-up decides)
 //   onLink()      → called when a link inside is clicked (the pop-up closes itself)
-export default function LoginForm({ onDone, onLink }) {
+//   google={false} → no "Continue with Google" (the staff login page)
+export default function LoginForm({ onDone, onLink, google = true }) {
   const { login, loginWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -84,7 +85,7 @@ export default function LoginForm({ onDone, onLink }) {
         </button>
       </form>
 
-      <GoogleButton onCredential={handleGoogle} />
+      {google && <GoogleButton onCredential={handleGoogle} />}
     </>
   )
 }
