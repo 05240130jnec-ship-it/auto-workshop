@@ -582,4 +582,55 @@ router.patch('/shop/reservations/:id', async (req, res) => {
   res.json({ id: reservation.id, status });
 });
 
+// ---------- MY PROFILE (the admin who is logged in) ----------
+//   GET   /api/admin/profile            -> my details
+//   PATCH /api/admin/profile            { name, phone, photo }   (photo: data:image/… or null)
+//   PATCH /api/admin/profile/password   { currentPassword, newPassword }
+// The login email is not changed here.
+const ADMIN_FIELDS = 'id, name, email, phone, photo';
+
+router.get('/profile', async (req, res) => {
+  const [rows] = await db.query(`SELECT ${ADMIN_FIELDS} FROM admins WHERE id = ?`, [req.user.id]);
+  if (!rows.length) return res.status(404).json({ error: 'Admin not found.' });
+  res.json(rows[0]);
+});
+
+router.patch('/profile', async (req, res) => {
+  const body = { ...(req.body || {}) };
+  if (body.name !== undefined) {
+    body.name = String(body.name).trim().replace(/\s+/g, ' ');
+    if (!/^[A-Za-z][A-Za-z .'-]{1,59}$/.test(body.name)) return res.status(400).json({ error: 'Please enter your full name (letters and spaces only).' });
+  }
+  if (body.phone !== undefined && body.phone !== null && body.phone !== '') {
+    body.phone = String(body.phone).replace(/[\s-]/g, '');
+    if (!/^(\+?975)?[1-8]\d{7}$/.test(body.phone)) return res.status(400).json({ error: 'Please enter a valid Bhutan phone number, e.g. 17123456.' });
+  }
+  if (body.phone === '') body.phone = null;
+  if (body.photo !== undefined && body.photo !== null) {
+    if (typeof body.photo !== 'string' || !/^data:image\/(jpeg|png|webp);base64,/.test(body.photo)) {
+      return res.status(400).json({ error: 'Please choose a JPG, PNG or WEBP picture.' });
+    }
+    if (body.photo.length > 400 * 1024) return res.status(400).json({ error: 'This picture is too big.' });
+  }
+  const fields = ['name', 'phone', 'photo'].filter((f) => body[f] !== undefined);
+  if (fields.length === 0) return res.status(400).json({ error: 'Nothing to update.' });
+  await db.query('UPDATE admins SET ' + fields.map((f) => f + ' = ?').join(', ') + ' WHERE id = ?', [...fields.map((f) => body[f]), req.user.id]);
+  const [rows] = await db.query(`SELECT ${ADMIN_FIELDS} FROM admins WHERE id = ?`, [req.user.id]);
+  res.json(rows[0]);
+});
+
+router.patch('/profile/password', async (req, res) => {
+  const { currentPassword, newPassword } = req.body || {};
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Enter your current and new password.' });
+  if (String(newPassword).length < 8 || !/[A-Za-z]/.test(newPassword) || !/\d/.test(newPassword)) {
+    return res.status(400).json({ error: 'New password needs at least 8 characters, with a letter and a number.' });
+  }
+  const [rows] = await db.query('SELECT password FROM admins WHERE id = ?', [req.user.id]);
+  if (!rows.length || !(await bcrypt.compare(currentPassword, rows[0].password))) {
+    return res.status(401).json({ error: 'Current password is wrong.' });
+  }
+  await db.query('UPDATE admins SET password = ? WHERE id = ?', [await bcrypt.hash(newPassword, 10), req.user.id]);
+  res.json({ message: 'Password changed.' });
+});
+
 module.exports = router;

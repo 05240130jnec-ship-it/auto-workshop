@@ -23,8 +23,6 @@ const DEFAULT_SETTINGS = {
   hoursNote: 'We aim to respond within 24 hours on business days. For urgent matters, reach us on WhatsApp.',
   contactIntro: 'We are here to help with any questions about our services, repairs, or parts. Reach out and we will respond promptly.',
   footerText: '© 2026 AutoCarePro. All rights reserved.',
-  // Subjects in the contact form (one per line)
-  contactSubjects: 'Booking question\nRepair status\nPrice / quote\nShop order\nFeedback\nOther',
 
   // ---------- Home page ----------
   homeTag: 'Auto workshop · Sarpang, Bhutan',
@@ -238,18 +236,16 @@ async function upgradeDatabase() {
     await db.query('ALTER TABLE mechanics MODIFY photo MEDIUMTEXT NULL');
     console.log('Database: mechanics.photo can now hold a profile picture');
   }
-  // Messages from the contact form (Contact page -> admin → Messages)
-  await db.query(`CREATE TABLE IF NOT EXISTS contact_messages (
-      id int NOT NULL AUTO_INCREMENT,
-      name varchar(80) NOT NULL,
-      email varchar(120) NOT NULL,
-      phone varchar(20) DEFAULT NULL,
-      subject varchar(80) NOT NULL,
-      message text NOT NULL,
-      status varchar(10) NOT NULL DEFAULT 'new',
-      createdAt datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (id)
-    )`);
+  // Admin profile: phone + photo (Admin → My profile)
+  for (const [col, type] of [['phone', 'varchar(20) DEFAULT NULL'], ['photo', 'MEDIUMTEXT NULL']]) {
+    const [found] = await db.query(
+      `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admins' AND COLUMN_NAME = ?`, [col]);
+    if (Number(found[0].n) === 0) {
+      await db.query(`ALTER TABLE admins ADD COLUMN ${col} ${type}`);
+      console.log('Database: added the column admins.' + col);
+    }
+  }
 }
 
 module.exports = { DEFAULT_SETTINGS, setupSettings, getSettings, bookingRules, checkVehicleType, checkToyota, upgradeDatabase };

@@ -1,0 +1,93 @@
+/* ===== Admin panel colours: the same navy + orange as the customer website and the mechanic portal ===== */
+/* ":root.theme-admin" is a little stronger than "html.theme-admin" in admin.css, so these rules win.
+   Status colours (pending = amber, in progress = blue, complete = green, red = problem) stay the same. */
+:root.theme-admin {
+  --a-purple: #f57c00;          /* main colour: buttons, links, active tab, avatar */
+  --a-navy: #0f2a44;            /* the website navy */
+}
+:root.theme-admin .a-topbar h1,
+:root.theme-admin .a-panel-head h3 { color: #0f2a44; }
+:root.theme-admin .a-quick-primary:hover,
+:root.theme-admin .a-btn-primary:hover { background: #e06900; border-color: #e06900; }
+:root.theme-admin .a-form-control:focus { border-color: #f57c00; box-shadow: 0 0 0 3px rgba(245, 124, 0, .18); }
+:root.theme-admin .a-tabs button.active .a-tab-count,
+:root.theme-admin .a-confirm-icon { background: rgba(245, 124, 0, .12); color: #f57c00; }
+:root.theme-admin .a-icon-purple { background: rgba(245, 124, 0, .12); color: #f57c00; }
+
+/* ----- Sidebar: website navy, orange active item, icon boxes (like the mechanic portal) ----- */
+:root.theme-admin .a-sidebar {
+  background:
+    radial-gradient(circle at 110% 105%, rgba(245, 124, 0, .22) 0%, transparent 40%),
+    linear-gradient(180deg, #0f2a44 0%, #0b1f33 100%);
+  border-right: 3px solid #f57c00;
+  box-shadow: 4px 0 18px rgba(15, 42, 68, .25);
+}
+:root.theme-admin .a-brand { border-color: rgba(255, 255, 255, .08); }
+:root.theme-admin .a-brand-logo { border-radius: 14px; }
+:root.theme-admin .a-brand-text small { display: flex; align-items: center; gap: 6px; color: #f9a84d; font-weight: 600; }
+:root.theme-admin .a-dot { width: 7px; height: 7px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, .25); }
+:root.theme-admin .a-nav-label { color: rgba(255, 255, 255, .45); letter-spacing: 1.5px; }
+:root.theme-admin .a-nav { display: flex; flex-direction: column; gap: 3px; }
+:root.theme-admin .a-nav li a {
+  position: relative; padding: 8px 12px; border-radius: 12px;
+  color: rgba(255, 255, 255, .78); font-weight: 500;
+}
+:root.theme-admin .a-nav li a i {
+  width: 32px; height: 32px; flex: 0 0 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center; font-size: .95rem;
+  background: rgba(255, 255, 255, .06); color: #f9a84d;
+}
+:root.theme-admin .a-nav li a:hover { background: rgba(255, 255, 255, .07); color: #fff; }
+:root.theme-admin .a-nav li a:hover i { color: #fff; }
+:root.theme-admin .a-nav li a.active { background: rgba(255, 255, 255, .12); color: #fff; font-weight: 700; box-shadow: none; }
+:root.theme-admin .a-nav li a.active::before {
+  content: ''; position: absolute; left: -14px; top: 9px; bottom: 9px; width: 4px;
+  border-radius: 0 4px 4px 0; background: #f57c00;
+}
+:root.theme-admin .a-nav li a.active i { background: #f57c00; color: #fff; box-shadow: 0 6px 14px rgba(245, 124, 0, .45); }
+:root.theme-admin .a-nav-count { margin-left: auto; background: #f57c00; color: #fff; }
+:root.theme-admin .a-nav-count.red { background: #dc2626; color: #fff; }
+:root.theme-admin .a-nav li a.active .a-nav-count { background: #f57c00; color: #fff; }
+:root.theme-admin .a-nav li a.active .a-nav-count.red { background: #dc2626; color: #fff; }
+:root.theme-admin .a-nav-other { margin-top: auto; padding-top: 12px; border-top: 1px solid rgba(255, 255, 255, .08); }
+
+/* ----- Top right: my avatar + its menu (ATopbar.jsx) ----- */
+:root.theme-admin .a-me { position: relative; }
+:root.theme-admin .a-me-btn { border: none; background: none; padding: 0; border-radius: 50%; cursor: pointer; }
+:root.theme-admin .a-me-btn:hover { box-shadow: 0 0 0 3px rgba(245, 124, 0, .25); }
+:root.theme-admin .a-me .a-avatar:not(.a-avatar-img) { background: #f57c00 !important; }
+:root.theme-admin .a-me-menu {
+  position: absolute; top: calc(100% + 10px); right: 0; z-index: 1050; width: 250px; padding: 6px;
+  background: #fff; border: 1px solid var(--a-border); border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(15, 23, 42, .16); animation: a-me-pop .15s ease-out;
+}
+@keyframes a-me-pop { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+:root.theme-admin .a-me-top { display: flex; gap: 10px; align-items: center; padding: 10px 10px 12px; border-bottom: 1px solid var(--a-border); margin-bottom: 6px; }
+:root.theme-admin .a-me-top strong { display: block; font-size: .88rem; color: #0f2a44; }
+:root.theme-admin .a-me-top small { display: block; font-size: .75rem; color: var(--a-text-muted); word-break: break-all; }
+:root.theme-admin .a-me-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 10px; border: none; background: none;
+  border-radius: 8px; font-size: .88rem; font-weight: 500; color: var(--a-text); text-decoration: none; cursor: pointer; text-align: left;
+}
+:root.theme-admin .a-me-item:hover { background: #f3f5f9; color: var(--a-text); }
+:root.theme-admin .a-me-item i { font-size: 1rem; color: var(--a-text-muted); }
+:root.theme-admin .a-me-danger, :root.theme-admin .a-me-danger i { color: var(--a-red); }
+:root.theme-admin .a-me-danger:hover { background: #fef2f2; color: var(--a-red); }
+
+/* ----- Admin → My profile (pages/admin/Profile.jsx) ----- */
+:root.theme-admin .ap-photo { position: relative; width: 120px; height: 120px; margin: 4px auto 10px; }
+:root.theme-admin .ap-photo .a-avatar { font-size: 2.4rem; box-shadow: 0 0 0 5px #fff3e6; }
+:root.theme-admin .ap-photo .a-avatar:not(.a-avatar-img) { background: #f57c00 !important; }
+:root.theme-admin .ap-busy {
+  position: absolute; inset: 0; border-radius: 50%; background: rgba(255, 255, 255, .7);
+  display: flex; align-items: center; justify-content: center; color: #f57c00;
+}
+:root.theme-admin .ap-cam {
+  position: absolute; right: 0; bottom: 0; width: 36px; height: 36px; border-radius: 50%; border: 3px solid #fff;
+  background: #0f2a44; color: #fff; font-size: .9rem; display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+:root.theme-admin .ap-cam:hover { background: #f57c00; }
+:root.theme-admin .ap-remove { display: block; margin: 0 auto 10px; background: none; border: none; padding: 0; color: var(--a-red); font-size: .82rem; font-weight: 600; cursor: pointer; }
+:root.theme-admin .ap-remove:hover { text-decoration: underline; }
+:root.theme-admin .ap-name { font-size: 1.2rem; font-weight: 800; color: #0f2a44; margin: 4px 0 2px; }
+:root.theme-admin .ap-show { background: none; border: none; padding: 0; color: #f57c00; font-size: .85rem; font-weight: 600; cursor: pointer; }

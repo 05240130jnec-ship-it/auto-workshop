@@ -32,7 +32,9 @@ CREATE TABLE `admins` (
   `id` varchar(20) NOT NULL,
   `name` varchar(100) NOT NULL,
   `email` varchar(100) NOT NULL,
-  `password` varchar(255) NOT NULL
+  `password` varchar(255) NOT NULL,
+  `phone` varchar(20) DEFAULT NULL,
+  `photo` mediumtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -434,20 +436,6 @@ CREATE TABLE IF NOT EXISTS `password_resets` (
   `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`email`)
 );
-
--- Messages from the contact form (Contact page). The admin reads them on admin → Messages.
--- (settings.js also creates this table by itself when the backend starts.)
-CREATE TABLE IF NOT EXISTS `contact_messages` (
-  `id` int NOT NULL AUTO_INCREMENT,
-  `name` varchar(80) NOT NULL,
-  `email` varchar(120) NOT NULL,
-  `phone` varchar(20) DEFAULT NULL,
-  `subject` varchar(80) NOT NULL,
-  `message` text NOT NULL,
-  `status` varchar(10) NOT NULL DEFAULT 'new',
-  `createdAt` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 COMMIT;
 
