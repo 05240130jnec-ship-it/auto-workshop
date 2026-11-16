@@ -216,7 +216,6 @@ export default function SiteLayout() {
                     {isCustomer ? (
                       <>
                         <li><Link className="dropdown-item" to="/profile"><i className="bi bi-person-circle me-2"></i>My profile</Link></li>
-                        <li><Link className="dropdown-item" to="/my-repairs"><i className="bi bi-wrench-adjustable me-2"></i>My repairs</Link></li>
                         <li><Link className="dropdown-item" to="/booking"><i className="bi bi-calendar-plus me-2"></i>Book a service</Link></li>
                       </>
                     ) : (
