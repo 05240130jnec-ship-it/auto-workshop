@@ -50,10 +50,13 @@ export default function Profile() {
   const [me, setMe] = useState(null)          // my details from MySQL
   const [error, setError] = useState('')
   const [f, setF] = useState({ name: '', phone: '', address: '' })
-  const [saving, setSaving] = useState('')    // what is saving: 'all' | 'photo'
+  const [saving, setSaving] = useState('')    // 'all' while saving
   const [pw, setPw] = useState({ current: '', next: '', confirm: '' })
   const [show, setShow] = useState({ current: false, next: false, confirm: false })
   const [tried, setTried] = useState(false)    // show red boxes only after Save
+  // A new photo is only shown here first; it is saved when 'Save changes' is pressed.
+  //   undefined = no change, 'data:image/…' = new photo, null = remove the photo
+  const [newPhoto, setNewPhoto] = useState(undefined)
 
   // Load my details — GET /api/profile
   useEffect(() => {
@@ -74,21 +77,26 @@ export default function Profile() {
   // ----- Details + password: ONE form, ONE Save button -----
   const bad = {
     name: !NAME.test(f.name.trim()) ? 'Please enter your full name (letters and spaces only)' : '',
-    phone: !PHONE.test(f.phone.replace(/[\s-]/g, '')) ? 'Bhutan number, 8 digits, e.g. 17123456' : '',
+    // The phone may stay empty (e.g. after Google sign-up); if it is typed it must be a Bhutan number
+    phone: f.phone.trim() && !PHONE.test(f.phone.replace(/[\s-]/g, '')) ? 'Bhutan number, 8 digits, e.g. 17123456' : '',
   }
-  const changingPw = !!(pw.current || pw.next || pw.confirm)   // the password boxes are only checked when used
+  // The password is only changed when a NEW password is typed. (The browser sometimes fills in the
+  // current password by itself; that alone must not force a password change.)
+  const changingPw = !!(pw.next || pw.confirm)
   const pwBad = {
     current: changingPw && !pw.current ? 'Please enter your current password' : '',
     next: changingPw && (pw.next.length < 8 || !/[A-Za-z]/.test(pw.next) || !/\d/.test(pw.next)) ? 'At least 8 characters, with a letter and a number' : '',
     confirm: changingPw && pw.confirm !== pw.next ? 'The passwords do not match' : '',
   }
   const dirty = f.name !== (me.name || '') || f.phone !== (me.phone || '') || f.address !== (me.address || '')
+  const photoChanged = newPhoto !== undefined
+  const shownPhoto = photoChanged ? newPhoto : me.photo     // what the round picture shows now
 
   async function saveAll(e) {
     e.preventDefault()
     setTried(true)
     if (bad.name || bad.phone || pwBad.current || pwBad.next || pwBad.confirm) return
-    if (!dirty && !changingPw) return toast('Nothing to save', 'info')
+    if (!dirty && !changingPw && !photoChanged) return toast('Nothing to save', 'info')
     setSaving('all')
     try {
       if (dirty) {
@@ -96,45 +104,42 @@ export default function Profile() {
         changed(d)
         setF({ name: d.name || '', phone: d.phone || '', address: d.address || '' })
       }
+      if (photoChanged) {
+        changed(newPhoto
+          ? await api('/profile/photo', { method: 'PUT', body: { photo: newPhoto } })
+          : await api('/profile/photo', { method: 'DELETE' }))
+        setNewPhoto(undefined)
+      }
       if (changingPw) {
         await api('/profile/password', { method: 'PATCH', body: { current: pw.current, next: pw.next } })
         setPw({ current: '', next: '', confirm: '' })
       }
       setTried(false)
-      toast(changingPw && dirty ? 'Details and password saved' : changingPw ? 'Your password is changed' : 'Your details are saved')
+      toast('Your changes are saved')
     } catch (err) { toast(err.message, 'error') }
     setSaving('')
   }
 
-  // ----- Photo -----
+  // ----- Photo: chosen here, saved with "Save changes" -----
   async function pickPhoto(e) {
     const file = e.target.files[0]
     e.target.value = ''                       // so the same file can be chosen again
     if (!file) return
     if (!file.type.startsWith('image/')) return toast('Please choose a picture (JPG or PNG).', 'error')
     if (file.size > 10 * 1024 * 1024) return toast('This picture is too big (10 MB at most).', 'error')
-    setSaving('photo')
     try {
-      const photo = await shrinkPhoto(file)
-      changed(await api('/profile/photo', { method: 'PUT', body: { photo } }))
-      toast('Profile photo updated')
+      setNewPhoto(await shrinkPhoto(file))
     } catch (err) { toast(err.message, 'error') }
-    setSaving('')
   }
-  async function removePhoto() {
-    setSaving('photo')
-    try {
-      changed(await api('/profile/photo', { method: 'DELETE' }))
-      toast('Profile photo removed', 'info')
-    } catch (err) { toast(err.message, 'error') }
-    setSaving('')
+  function removePhoto() {
+    setNewPhoto(null)
   }
 
   const pwBox = (k, label) => (
     <div className="mb-3">
       <label className="form-label small fw-bold" htmlFor={'pw-' + k}>{label}</label>
       <div className="acp-pf-pw">
-        <input id={'pw-' + k} type={show[k] ? 'text' : 'password'} autoComplete={k === 'current' ? 'current-password' : 'new-password'}
+        <input id={'pw-' + k} type={show[k] ? 'text' : 'password'} autoComplete="new-password"
           className={'form-control' + (tried && pwBad[k] ? ' is-invalid' : '')}
           value={pw[k]} onChange={(e) => setPw({ ...pw, [k]: e.target.value })} />
         <button type="button" onClick={() => setShow({ ...show, [k]: !show[k] })} aria-label={show[k] ? 'Hide password' : 'Show password'}>
@@ -160,10 +165,9 @@ export default function Profile() {
             {/* Photo + name on top */}
             <div className="acp-pf-top">
               <div className="acp-pf-photo">
-                {me.photo ? <img src={me.photo} alt="Profile" /> : <span>{initials(me.name)}</span>}
-                {saving === 'photo' && <div className="acp-pf-busy"><span className="spinner-border"></span></div>}
-                <button type="button" className="acp-pf-cam" onClick={() => fileBox.current.click()} disabled={saving === 'photo'}
-                  title={me.photo ? 'Change photo' : 'Add photo'} aria-label={me.photo ? 'Change photo' : 'Add photo'}>
+                {shownPhoto ? <img src={shownPhoto} alt="Profile" /> : <span>{initials(me.name)}</span>}
+                                <button type="button" className="acp-pf-cam" onClick={() => fileBox.current.click()} disabled={saving === 'all'}
+                  title={shownPhoto ? 'Change photo' : 'Add photo'} aria-label={shownPhoto ? 'Change photo' : 'Add photo'}>
                   <i className="bi bi-camera-fill"></i>
                 </button>
               </div>
@@ -171,7 +175,8 @@ export default function Profile() {
               <h2 className="acp-pf-name">{me.name}</h2>
               <p className="acp-pf-email">{me.email}</p>
               {me.joined && <p className="acp-pf-since">Customer since {fmtDate(String(me.joined).slice(0, 10))}</p>}
-              {me.photo && <button type="button" className="acp-pf-link" onClick={removePhoto} disabled={saving === 'photo'}>Remove photo</button>}
+              {shownPhoto && <button type="button" className="acp-pf-link" onClick={removePhoto} disabled={saving === 'all'}>Remove photo</button>}
+              {photoChanged && <p className="small text-muted mb-0 mt-1">Press <b>Save changes</b> to keep this photo.</p>}
             </div>
 
             {/* Details */}
@@ -195,7 +200,7 @@ export default function Profile() {
               </div>
               <div className="col-md-6">
                 <label className="form-label small fw-bold" htmlFor="pf-address">Address</label>
-                <input id="pf-address" className="form-control" maxLength={200}
+                <input id="pf-address" className="form-control" maxLength={200} autoComplete="street-address"
                   value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
               </div>
             </div>
