@@ -10,7 +10,7 @@ export const SETTINGS_GROUPS = [
   {
     key: 'home', label: 'Home page',
     fields: [
-      { name: 'homeTag', label: 'Small label above the title' },
+      { name: 'homeTag', label: 'Small label above the title', help: 'Write {address} and the address from Contact & footer is shown there' },
       { name: 'homeTitle', label: 'Welcome title', help: STARS },
       { name: 'homeText', label: 'Welcome text', type: 'textarea', col: 12 },
       { name: 'homeImage', label: 'Welcome picture', help: IMG },
