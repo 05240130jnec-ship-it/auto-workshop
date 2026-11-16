@@ -39,7 +39,7 @@ export default function Home() {
       <div className="container">
         <div className="row align-items-center g-5">
           <div className="col-lg-6">
-            <span className="acp-hero2-tag"><i className="bi bi-geo-alt-fill"></i>{' '}{s.homeTag}</span>
+            <span className="acp-hero2-tag"><i className="bi bi-geo-alt-fill"></i>{' '}{(s.homeTag || '').replace('{address}', s.address || '')}</span>
             <h1 className="acp-hero2-title"><Stars text={s.homeTitle} /></h1>
             <p className="acp-hero2-text">{s.homeText}</p>
             <div className="d-flex flex-wrap gap-3">

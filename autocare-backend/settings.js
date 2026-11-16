@@ -25,7 +25,7 @@ const DEFAULT_SETTINGS = {
   footerText: '© 2026 AutoCarePro. All rights reserved.',
 
   // ---------- Home page ----------
-  homeTag: 'Auto workshop · Sarpang, Bhutan',
+  homeTag: 'Auto workshop · {address}',            // {address} = the address from Contact & footer
   homeTitle: 'Your Trusted *Auto Care* Partner',
   homeText: 'Expert service, genuine parts, and a commitment to get you back on the road safely.',
   homeImage: '/media/engine/engine1.jpg',
@@ -234,6 +234,9 @@ async function upgradeDatabase() {
   // The old general list (power tiller, JCB …) -> the Toyota types, only if the admin never changed it
   await db.query("UPDATE settings SET value = ? WHERE name = 'vehicleTypes' AND value LIKE 'Light vehicle (car, SUV)%Earth-moving machine (excavator, JCB)'",
     [DEFAULT_SETTINGS.vehicleTypes]);
+  // The home page label follows the workshop address (only if the admin never changed the label)
+  await db.query("UPDATE settings SET value = ? WHERE name = 'homeTag' AND value = 'Auto workshop · Sarpang, Bhutan'",
+    [DEFAULT_SETTINGS.homeTag]);
   const [col] = await db.query(
     `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'repairs' AND COLUMN_NAME = 'vehicleType'`);
