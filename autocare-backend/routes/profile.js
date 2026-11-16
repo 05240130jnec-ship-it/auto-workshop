@@ -39,9 +39,9 @@ router.patch('/', async (req, res) => {
   const phone = String(req.body.phone || '').replace(/[\s-]/g, '');
   const address = String(req.body.address || '').trim();
   if (!NAME.test(name)) return res.status(400).json({ error: 'Please enter your full name (letters and spaces only).' });
-  if (!PHONE.test(phone)) return res.status(400).json({ error: 'Please enter a valid Bhutan phone number, e.g. 17123456.' });
+  if (phone && !PHONE.test(phone)) return res.status(400).json({ error: 'Please enter a valid Bhutan phone number, e.g. 17123456.' });
   if (address.length > 200) return res.status(400).json({ error: 'The address is too long.' });
-  await db.query('UPDATE customers SET name = ?, phone = ?, address = ? WHERE id = ?', [name, phone, address || null, req.user.id]);
+  await db.query('UPDATE customers SET name = ?, phone = ?, address = ? WHERE id = ?', [name, phone || null, address || null, req.user.id]);
   res.json(await me(req.user.id));
 });
 
