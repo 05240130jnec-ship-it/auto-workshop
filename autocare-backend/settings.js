@@ -244,6 +244,13 @@ async function upgradeDatabase() {
   if (Number(pic[0].n) > 0) {
     await db.query('ALTER TABLE services MODIFY image MEDIUMTEXT NULL, MODIFY gallery MEDIUMTEXT NULL');
   }
+  // Inventory (shop) pictures can be uploaded too
+  const [invPic] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory' AND COLUMN_NAME = 'image' AND DATA_TYPE <> 'mediumtext'`);
+  if (Number(invPic[0].n) > 0) {
+    await db.query('ALTER TABLE inventory MODIFY image MEDIUMTEXT NULL');
+  }
   const [col] = await db.query(
     `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'repairs' AND COLUMN_NAME = 'vehicleType'`);

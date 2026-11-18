@@ -33,7 +33,7 @@ export default function AdminInventory() {
 
   const fields = () => [
     { name: 'name', label: 'Part name', required: true, col: 8 },
-    { name: 'sku', label: 'SKU / code', required: true, col: 4, placeholder: 'e.g. BRK-FR-01' },
+    { name: 'sku', label: 'SKU / code', col: 4, placeholder: 'Made from the name if empty', help: 'Optional' },
     { name: 'category', label: 'Category', type: 'select', options: cats, required: true },
     { name: 'supplierId', label: 'Supplier', type: 'select', empty: 'No supplier yet', options: store.all('suppliers').map((s) => ({ value: s.id, label: s.name })), help: store.all('suppliers').length ? null : 'Add suppliers on the Suppliers page first' },
     { name: 'stock', label: 'Quantity in stock', type: 'number', min: 0, required: true, col: 4 },
@@ -42,20 +42,18 @@ export default function AdminInventory() {
     // Shop: products with "Show in shop" = Yes appear on the website shop pages (their category = the shop page)
     { name: 'inShop', label: 'Show in shop?', type: 'select', required: true, col: 4, default: '0',
       options: [{ value: '1', label: 'Yes — on the website' }, { value: '0', label: 'No — workshop only' }] },
-    { name: 'image', label: 'Shop picture', col: 8, placeholder: '/media/oil/oil2.jpg',
-      help: (v) => v.image
-        ? <span className="d-flex align-items-center gap-2"><img src={v.image} alt="" style={{ width: 56, height: 42, objectFit: 'cover', borderRadius: 6 }} /> Preview · a file in autocare-react/public/media</span>
-        : 'A file in autocare-react/public/media, e.g. /media/oil/oil2.jpg' },
+    { name: 'image', label: 'Picture', type: 'image', col: 8, help: 'Shown on the shop page when "Show in shop" is Yes. JPG or PNG.' },
   ]
   // Turn the "Show in shop?" answer into 1 / 0 for MySQL
   const forSave = (v) => ({ ...v, inShop: Number(v.inShop) ? 1 : 0, image: v.image || null, supplierId: v.supplierId || null })
   const forForm = (p) => ({ ...p, inShop: p.inShop ? '1' : '0' })
-  const skuCheck = (id) => (v) => store.all('inventory').some((p) => p.id !== id && p.sku.toLowerCase() === v.sku.toLowerCase()) ? 'Another part already uses SKU ' + v.sku : null
+  // An empty SKU is fine: the backend makes one from the part name
+  const skuCheck = (id) => (v) => v.sku && store.all('inventory').some((p) => p.id !== id && p.sku.toLowerCase() === v.sku.toLowerCase()) ? 'Another part already uses SKU ' + v.sku : null
 
   async function add() {
     const v = await form({ title: 'Add part', fields: fields(), submitText: 'Add part', validate: skuCheck() })
     if (!v) return
-    act(() => api('/admin/inventory', { method: 'POST', body: forSave({ ...v, sku: v.inShop === '1' ? v.sku : v.sku.toUpperCase() }) }),
+    act(() => api('/admin/inventory', { method: 'POST', body: forSave({ ...v, sku: v.inShop === '1' ? v.sku.toLowerCase() : v.sku.toUpperCase() }) }),
       <><b>{v.name}</b> added to inventory</>)
   }
   async function edit(p) {
@@ -153,4 +151,4 @@ export default function AdminInventory() {
       </TableCard>
     </>
   )
-}
+}

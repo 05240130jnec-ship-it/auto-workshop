@@ -331,12 +331,33 @@ router.get('/inventory', async (req, res) => {
   res.json(rows);
 });
 
-// POST /api/admin/inventory  -> add a part
+// Part pictures: an uploaded picture ("data:image/…", made small in the browser) or an old path ("/media/…")
+function badPartPicture(src) {
+  if (!src) return false;
+  if (String(src).startsWith('/')) return src.length > 200;
+  return !/^data:image\/(jpeg|png|webp);base64,/.test(src) || src.length > 600 * 1024;
+}
+// "Brake Pad Front" -> "BRAKE-PAD-FRONT" (shop products use lowercase: "brake-pad-front"),
+// with -2, -3 … added when that code is already used
+async function freeSku(name, lower) {
+  let base = String(name).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || 'PART';
+  base = lower ? base.toLowerCase() : base.toUpperCase();
+  const [rows] = await db.query('SELECT sku FROM inventory WHERE sku = ? OR sku LIKE ?', [base, base + '-%']);
+  const used = new Set(rows.map((r) => r.sku.toLowerCase()));
+  if (!used.has(base.toLowerCase())) return base;
+  let n = 2;
+  while (used.has((base + '-' + n).toLowerCase())) n++;
+  return base + '-' + n;
+}
+
+// POST /api/admin/inventory  -> add a part (the SKU is made from the name when it is empty)
 router.post('/inventory', async (req, res) => {
-  const { sku, name, category, stock, reorder, price, supplierId, image, inShop } = req.body || {};
-  if (!sku || !name || price === undefined) {
-    return res.status(400).json({ error: 'SKU, name and price are required.' });
+  const { name, category, stock, reorder, price, supplierId, image, inShop } = req.body || {};
+  if (!name || price === undefined || price === '') {
+    return res.status(400).json({ error: 'Name and price are required.' });
   }
+  if (badPartPicture(image)) return res.status(400).json({ error: 'The picture is not valid or is too big. Please choose another one.' });
+  const sku = String(req.body.sku || '').trim() || await freeSku(name, Number(inShop) === 1);
 
   const [last] = await db.query('SELECT MAX(CAST(SUBSTRING(id, 3) AS UNSIGNED)) AS last FROM inventory');
   const id = 'P-' + ((last[0].last || 100) + 1);   // P-222
@@ -358,9 +379,16 @@ router.post('/inventory', async (req, res) => {
 
 // PATCH /api/admin/inventory/P-101  -> edit price, stock, reorder level...
 router.patch('/inventory/:id', async (req, res) => {
+  const body = req.body || {};
+  if (badPartPicture(body.image)) return res.status(400).json({ error: 'The picture is not valid or is too big. Please choose another one.' });
+  if ('sku' in body && !String(body.sku || '').trim()) {          // SKU emptied -> make a new one from the name
+    const [[old]] = await db.query('SELECT name, inShop FROM inventory WHERE id = ?', [req.params.id]);
+    if (!old) return res.status(404).json({ error: 'Part not found.' });
+    body.sku = await freeSku(body.name || old.name, Number(body.inShop ?? old.inShop) === 1);
+  }
   let ok;
   try {
-    ok = await updateRow('inventory', req.params.id, req.body || {},
+    ok = await updateRow('inventory', req.params.id, body,
       ['sku', 'name', 'category', 'stock', 'reorder', 'price', 'supplierId', 'image', 'inShop']);
   } catch (err) {
     if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another part already uses this SKU.' });
@@ -633,4 +661,4 @@ router.patch('/profile/password', async (req, res) => {
   res.json({ message: 'Password changed.' });
 });
 
-module.exports = router;
+module.exports = router;
