@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { DialogContext } from './DialogContext.js'
+import ImagePicker from './ImagePicker.jsx'
 
 /* Toasts, confirm boxes, form pop-ups and detail pop-ups for the whole app.
    They return Promises so pages can write:
@@ -44,6 +45,9 @@ function FormModal({ opts, onDone }) {
 
   function submit(e) {
     e.preventDefault()
+    // Picture fields are not normal inputs, so check "required" for them here
+    const noPic = opts.fields.find((f) => (f.type === 'image' || f.type === 'images') && f.required && !vals[f.name])
+    if (noPic) return opts.toast('Please upload a picture (' + noPic.label + ').', 'error')
     if (!formRef.current.checkValidity()) {
       setTried(true)
       const bad = formRef.current.querySelector(':invalid')
@@ -90,6 +94,9 @@ function FormModal({ opts, onDone }) {
                     })}
                   </select>
                 )
+              } else if (f.type === 'image' || f.type === 'images') {
+                input = <ImagePicker value={vals[f.name]} multiple={f.type === 'images'} max={f.max || 3}
+                  onChange={(v) => set(f.name, v)} onError={(m) => opts.toast(m, 'error')} />
               } else if (f.type === 'textarea') {
                 input = <textarea rows={3} placeholder={f.placeholder} {...common} />
               } else {

@@ -85,29 +85,25 @@ export default function AdminContent() {
   }
 
   /* ---------- services ---------- */
-  const serviceFields = (editing) => [
+  // The service form: only what the admin really needs.
+  // The short code for links (e.g. "wheel-alignment") is made from the title by the backend,
+  // and the name on repair jobs is the title — so they are not asked here.
+  const serviceFields = () => [
     { name: 'title', label: 'Service title', required: true, col: 8, placeholder: 'e.g. Wheel Alignment' },
     { name: 'price', label: 'Price from (Nu.)', type: 'number', min: 0, step: 10, required: true, col: 4 },
-    { name: 'slug', label: 'Short code (for links)', required: true, pattern: '[a-z0-9-]+', placeholder: 'wheel-alignment',
-      help: editing ? 'Changing it breaks old links to this service.' : 'Lowercase letters, numbers and dashes only.' },
-    { name: 'serviceName', label: 'Name on repair jobs', placeholder: 'Same as the title if empty' },
-    { name: 'image', label: 'Picture', placeholder: '/media/engine/engine3.jpg', help: 'A file in autocare-react/public/media' },
-    { name: 'page', label: 'Page address (optional)', placeholder: '/services/brake', help: 'Leave empty to use /services/<short code>.' },
-    { name: 'shortText', label: 'Short description (cards)', type: 'textarea', col: 12 },
-    // ----- details page -----
-    { name: 'intro', label: 'Details page: first sentence', col: 12, placeholder: 'Safe, quiet and reliable stopping power…' },
-    { name: 'description', label: 'Details page: text (one paragraph per line)', type: 'textarea', col: 12 },
-    { name: 'points', label: 'Details page: ✓ points (one per line)', type: 'textarea', col: 12, placeholder: 'Free inspection with every booking' },
-    { name: 'gallery', label: 'Details page: pictures (one path per line, max 3)', type: 'textarea', col: 12, placeholder: '/media/brake/brake1.png\n/media/brake/brake2.jpg' },
-    { name: 'sortOrder', label: 'Order on the page', type: 'number', min: 0, col: 4, default: 10 },
-    { name: 'active', label: 'Show on website?', type: 'select', options: YES_NO, required: true, default: 'yes', col: 8 },
+    { name: 'image', label: 'Picture', type: 'image', required: true, col: 12, help: 'Shown on the service card. JPG or PNG.' },
+    { name: 'shortText', label: 'Short description', type: 'textarea', col: 12, placeholder: 'One or two sentences for the service card' },
+    { name: 'description', label: 'Details (one paragraph per line)', type: 'textarea', col: 12, placeholder: 'What we do in this service…' },
+    { name: 'points', label: '✓ Points (one per line)', type: 'textarea', col: 12, placeholder: 'Free inspection with every booking' },
+    { name: 'gallery', label: 'More pictures for the details page (optional, up to 3)', type: 'images', max: 3, col: 12 },
+    { name: 'active', label: 'Show on website?', type: 'select', options: YES_NO, required: true, default: 'yes', col: 6 },
   ]
   async function addService() {
-    const v = await form({ title: 'Add service', fields: serviceFields(false), submitText: 'Add service' })
+    const v = await form({ title: 'Add service', fields: serviceFields(), submitText: 'Add service' })
     if (v) save(() => api('/content/admin/services', { method: 'POST', body: v }), <><b>{v.title}</b> added</>, services)
   }
   async function editService(s) {
-    const v = await form({ title: 'Edit service', fields: serviceFields(true), values: toForm(s), submitText: 'Save changes' })
+    const v = await form({ title: 'Edit service', fields: serviceFields(), values: toForm(s), submitText: 'Save changes' })
     if (v) save(() => api('/content/admin/services/' + s.id, { method: 'PATCH', body: v }), 'Service updated', services)
   }
   async function delService(s) {
@@ -165,14 +161,16 @@ export default function AdminContent() {
           })}
         </TableCard>
       ) : (
-        <TableCard head={['Service', 'Price from', 'Details page', 'Order', 'Status', '']} foot={`${services.data.length} service${services.data.length === 1 ? '' : 's'}`}>
-          {services.data.length === 0 && <EmptyRow cols={6} text="No services yet" />}
+        <TableCard head={['Service', 'Price from', 'Details page', 'Status', '']} foot={`${services.data.length} service${services.data.length === 1 ? '' : 's'}`}>
+          {services.data.length === 0 && <EmptyRow cols={5} text="No services yet" />}
           {services.data.map((s) => (
             <tr key={s.id}>
-              <td><strong>{s.title}</strong><small>{s.slug}{s.serviceName !== s.title ? ' · ' + s.serviceName : ''}</small></td>
+              <td><div className="d-flex align-items-center gap-2">
+                {s.image && <img src={s.image} alt="" style={{ width: 56, height: 40, objectFit: 'cover', borderRadius: 6 }} />}
+                <strong>{s.title}</strong>
+              </div></td>
               <td>{nu(s.price)}</td>
               <td>{s.active ? <a href={s.page || '/services/' + s.slug} target="_blank" rel="noreferrer">{s.page || '/services/' + s.slug}</a> : '—'}</td>
-              <td>{s.sortOrder}</td>
               <td><span className={'a-badge a-badge-' + (s.active ? 'complete' : 'muted')}>{s.active ? 'On website' : 'Hidden'}</span></td>
               <td><div className="a-actions">
                 <IconBtn icon="bi-pencil" title="Edit" onClick={() => editService(s)} />

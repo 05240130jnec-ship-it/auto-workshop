@@ -9,7 +9,7 @@ const db = require('./db');          // our MySQL connection
 // 2. Create the app
 const app = express();
 app.use(cors());                     // allow the React site to call us
-app.use(express.json({ limit: '1mb' }));   // understand JSON sent by the frontend (1 MB: room for a profile photo)
+app.use(express.json({ limit: '4mb' }));   // understand JSON sent by the frontend (4 MB: room for photos and service pictures)
 
 // 3. Home page
 app.get('/', (req, res) => {
