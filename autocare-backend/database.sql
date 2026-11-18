@@ -70,7 +70,7 @@ CREATE TABLE `inventory` (
   `reorder` int(11) DEFAULT 0,
   `price` decimal(10,2) DEFAULT 0.00,
   `supplierId` varchar(20) DEFAULT NULL,
-  `image` varchar(200) DEFAULT NULL,
+  `image` mediumtext DEFAULT NULL,
   `inShop` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
