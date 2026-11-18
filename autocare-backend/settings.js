@@ -237,6 +237,13 @@ async function upgradeDatabase() {
   // The home page label follows the workshop address (only if the admin never changed the label)
   await db.query("UPDATE settings SET value = ? WHERE name = 'homeTag' AND value = 'Auto workshop · Sarpang, Bhutan'",
     [DEFAULT_SETTINGS.homeTag]);
+  // Service pictures can now be uploaded (saved as text), so the columns must be bigger
+  const [pic] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'services' AND COLUMN_NAME = 'image' AND DATA_TYPE <> 'mediumtext'`);
+  if (Number(pic[0].n) > 0) {
+    await db.query('ALTER TABLE services MODIFY image MEDIUMTEXT NULL, MODIFY gallery MEDIUMTEXT NULL');
+  }
   const [col] = await db.query(
     `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'repairs' AND COLUMN_NAME = 'vehicleType'`);

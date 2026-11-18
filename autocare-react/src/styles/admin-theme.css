@@ -117,3 +117,20 @@
 :root.theme-admin .an-empty { margin: 0; padding: 22px 16px; text-align: center; color: var(--a-text-muted); font-size: .85rem; }
 :root.theme-admin .a-icon-green { background: rgba(22, 163, 74, .12); color: #16a34a; }
 @media (max-width: 480px) { :root.theme-admin .an-menu { width: calc(100vw - 32px); right: -60px; } }
+
+/* ===== Picture upload in admin forms (ui/ImagePicker.jsx) ===== */
+.a-img-list { display: flex; flex-wrap: wrap; gap: 10px; }
+.a-img-thumb { position: relative; width: 120px; height: 90px; border-radius: 10px; overflow: hidden; border: 1px solid #e3e8ef; }
+.a-img-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.a-img-remove {
+  position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border: 0; border-radius: 50%;
+  background: rgba(15, 42, 68, .8); color: #fff; font-size: 11px; display: grid; place-items: center; cursor: pointer;
+}
+.a-img-remove:hover { background: #dc2626; }
+.a-img-add {
+  width: 120px; height: 90px; border-radius: 10px; border: 2px dashed #f5a54a; background: #fff8f0; color: #f57c00;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-size: 0.78rem; font-weight: 600; cursor: pointer;
+}
+.a-img-add i { font-size: 1.4rem; }
+.a-img-add:hover { background: #ffefdc; }

@@ -108,27 +108,77 @@ router.get('/admin/services', ...adminOnly, async (req, res) => {
   res.json(rows.map(cleanService));
 });
 
+// "Wheel Alignment & Balancing" -> "wheel-alignment-balancing" (the short code used in links)
+function makeSlug(title) {
+  return String(title).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 50) || 'service';
+}
+// The first free short code: wheel-alignment, wheel-alignment-2, wheel-alignment-3 …
+async function freeSlug(title) {
+  const base = makeSlug(title);
+  const [rows] = await db.query('SELECT slug FROM services WHERE slug = ? OR slug LIKE ?', [base, base + '-%']);
+  const used = new Set(rows.map((r) => r.slug));
+  if (!used.has(base)) return base;
+  let n = 2;
+  while (used.has(base + '-' + n)) n++;
+  return base + '-' + n;
+}
+
+// Pictures: an uploaded picture ("data:image/…", made small in the browser) or an old path ("/media/…")
+const MAX_PICTURE = 600 * 1024;     // about 600 KB of text for one picture
+function badPicture(src) {
+  if (!src) return false;
+  if (src.startsWith('/')) return src.length > 200;
+  return !/^data:image\/(jpeg|png|webp);base64,/.test(src) || src.length > MAX_PICTURE;
+}
+function checkServicePictures(v) {
+  if ('image' in v && badPicture(v.image)) return 'The picture is not valid or is too big. Please choose another one.';
+  if ('gallery' in v && v.gallery) {
+    const pics = String(v.gallery).split('\n').map((x) => x.trim()).filter(Boolean);
+    if (pics.length > 3) return 'You can add 3 more pictures at most.';
+    if (pics.some(badPicture)) return 'One of the extra pictures is not valid or is too big.';
+    v.gallery = pics.join('\n');
+  }
+  return '';
+}
+
 router.post('/admin/services', ...adminOnly, async (req, res) => {
   const v = pick(req.body || {}, SERVICE_FIELDS);
-  if (!v.slug || !v.title || v.price === undefined) {
-    return res.status(400).json({ error: 'Slug, title and price are required.' });
+  v.title = String(v.title || '').trim();
+  if (!v.title || v.price === undefined || v.price === '') {
+    return res.status(400).json({ error: 'Title and price are required.' });
   }
-  if (!v.serviceName) v.serviceName = v.title;
+  if (!(Number(v.price) >= 0)) return res.status(400).json({ error: 'Please enter a valid price.' });
+  const bad = checkServicePictures(v);
+  if (bad) return res.status(400).json({ error: bad });
+  if (!v.slug) v.slug = await freeSlug(v.title);          // made from the title
+  if (!v.serviceName) v.serviceName = v.title;            // the name used on repair jobs
+  if (v.sortOrder === undefined) {                       // new services go to the end of the list
+    const [[m]] = await db.query('SELECT COALESCE(MAX(sortOrder), 0) + 10 AS next FROM services');
+    v.sortOrder = m.next;
+  }
   try {
     const id = await insertRow('services', v);
     res.status(201).json({ id });
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another service already uses this slug.' });
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another service already uses this name.' });
     throw err;
   }
 });
 
 router.patch('/admin/services/:id', ...adminOnly, async (req, res) => {
+  const v = pick(req.body || {}, SERVICE_FIELDS);
+  if ('title' in v) {
+    v.title = String(v.title || '').trim();
+    if (!v.title) return res.status(400).json({ error: 'The title cannot be empty.' });
+    v.serviceName = v.title;             // new repair jobs use the new name (old jobs keep theirs)
+  }
+  const bad = checkServicePictures(v);
+  if (bad) return res.status(400).json({ error: bad });
   let ok;
   try {
-    ok = await updateRow('services', req.params.id, pick(req.body || {}, SERVICE_FIELDS));
+    ok = await updateRow('services', req.params.id, v);
   } catch (err) {
-    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another service already uses this slug.' });
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Another service already uses this name.' });
     throw err;
   }
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });

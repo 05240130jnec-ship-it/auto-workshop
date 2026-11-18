@@ -227,7 +227,7 @@ CREATE TABLE `services` (
   `title` varchar(100) NOT NULL,
   `serviceName` varchar(100) NOT NULL,
   `price` decimal(10,2) DEFAULT 0.00,
-  `image` varchar(200) DEFAULT NULL,
+  `image` mediumtext DEFAULT NULL,
   `shortText` varchar(255) DEFAULT NULL,
   `page` varchar(100) DEFAULT NULL,
   `sortOrder` int(11) DEFAULT 0,
@@ -235,7 +235,7 @@ CREATE TABLE `services` (
   `intro` varchar(255) DEFAULT NULL,
   `description` text DEFAULT NULL,
   `points` text DEFAULT NULL,
-  `gallery` text DEFAULT NULL
+  `gallery` mediumtext DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -442,4 +442,4 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
-ALTER TABLE repairs ADD COLUMN workNotes TEXT NULL;
+ALTER TABLE repairs ADD COLUMN workNotes TEXT NULL;
