@@ -153,7 +153,9 @@ CREATE TABLE `repairs` (
   `notes` text DEFAULT NULL,
   `apptDate` date DEFAULT NULL,
   `apptTime` varchar(20) DEFAULT NULL,
-  `delivery` enum('dropoff','pickup') DEFAULT 'dropoff'
+  `delivery` enum('dropoff','pickup') DEFAULT 'dropoff',
+  `paid` tinyint(1) DEFAULT 0,
+  `paidAt` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -201,7 +203,9 @@ CREATE TABLE `reservations` (
   `qty` int(11) DEFAULT 1,
   `pickup` date DEFAULT NULL,
   `status` enum('ready','collected','cancelled') DEFAULT 'ready',
-  `date` date DEFAULT NULL
+  `date` date DEFAULT NULL,
+  `paid` tinyint(1) DEFAULT 0,
+  `paidAt` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------

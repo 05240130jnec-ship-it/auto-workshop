@@ -54,4 +54,9 @@ async function setStatus(id, status) {
   await db.query('UPDATE reservations SET status = ? WHERE id = ?', [status, id]);
 }
 
-module.exports = { findByCustomer, findOneOfCustomer, findById, findAll, nextId, create, setStatus };
+// Payment received (the customer paid through WhatsApp, the admin checked it)
+async function setPaid(id, paid) {
+  await db.query('UPDATE reservations SET paid = ?, paidAt = ? WHERE id = ?', [paid ? 1 : 0, paid ? new Date() : null, id]);
+}
+
+module.exports = { findByCustomer, findOneOfCustomer, findById, findAll, nextId, create, setStatus, setPaid };

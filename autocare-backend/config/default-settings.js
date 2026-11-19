@@ -22,6 +22,10 @@ const DEFAULT_SETTINGS = {
   contactIntro: 'We are here to help with any questions about our services, repairs, or parts. Reach out and we will respond promptly.',
   footerText: '© 2026 AutoCarePro. All rights reserved.',
 
+  // ---------- Payment (through WhatsApp) ----------
+  payText: 'Pay with mBoB or mPay to the workshop account, then send the payment screenshot to us on WhatsApp. We will mark it as paid.',
+  payMessage: 'Hello AutoCare Pro, I want to pay {amount} for {what}. I will send the payment screenshot here.',
+
   // ---------- Home page ----------
   homeTag: 'Auto workshop · {address}',            // {address} = the address from Contact & footer
   homeTitle: 'Your Trusted *Auto Care* Partner',

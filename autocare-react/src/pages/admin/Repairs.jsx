@@ -186,6 +186,13 @@ export default function AdminRepairs() {
     ))
   }
 
+  // The customer paid through WhatsApp (screenshot checked) -> mark the finished job as paid
+  async function markPaid(r) {
+    const ok = await confirm(<>Mark job <b>#{r.id}</b> as paid? <b>{nu(r.cost)}</b> received from {(Q.customer(r.customerId) || {}).name || 'the customer'}.</>,
+      { title: 'Payment received?', okText: 'Mark as paid' })
+    if (ok) act(() => patchRepair(r.id, { paid: true }), `#${r.id} marked as paid`)
+  }
+
   useOnce(() => {
     if (params.get('new')) addJob()
     if (params.get('open')) viewJob(params.get('open'))
@@ -229,11 +236,16 @@ export default function AdminRepairs() {
                   <div className="a-person"><Avatar name={Q.mechanicName(r.mechanicId)} photo={(Q.mechanic(r.mechanicId) || {}).photo} /><span>{Q.mechanicName(r.mechanicId)}</span></div>
                 ) : <span className="text-muted">—</span>}
               </td>
-              <td><Badge status={r.status} /></td>
+              <td><Badge status={r.status} />
+                {r.status === 'complete' && (r.paid
+                  ? <small style={{ color: 'var(--a-green)', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Paid</small>
+                  : <small style={{ color: 'var(--a-red)', fontWeight: 600 }}>Not paid yet</small>)}
+              </td>
               <td>{r.cost ? nu(r.cost) : '—'}</td>
               <td>
                 <div className="a-actions">
                   {r.status === 'progress' && <IconBtn icon="bi-check2-circle" title="Mark complete" tone="success" onClick={() => completeJob(r)} />}
+                  {r.status === 'complete' && !r.paid && <IconBtn icon="bi-cash-coin" title="Mark as paid" tone="success" onClick={() => markPaid(r)} />}
                   <IconBtn icon="bi-eye" title="View details" onClick={() => viewJob(r.id)} />
                   <IconBtn icon="bi-pencil" title="Edit" onClick={() => editJob(r)} />
                   <IconBtn icon="bi-trash3" title="Delete" tone="danger" onClick={() => deleteJob(r)} />
@@ -245,4 +257,4 @@ export default function AdminRepairs() {
       </TableCard>
     </>
   )
-}
+}

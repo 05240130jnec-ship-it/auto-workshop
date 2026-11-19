@@ -55,7 +55,7 @@ export default function Reserve() {
         method: 'POST',
         body: { partId: item.sku, qty: amount, pickup },
       })
-      toast(`Order #${data.id} placed — collect it on ${fmtDate(pickup)}`)
+      toast(`Order #${data.id} placed — collect it on ${fmtDate(pickup)}. You can pay now via WhatsApp below.`)
       navigate('/my-repairs')
     } catch (err) {
       setSaving(false)

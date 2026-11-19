@@ -73,6 +73,18 @@ async function upgradeDatabase() {
   if (Number(lpid[0].n) === 0) {
     await db.query('ALTER TABLE listings ADD COLUMN partId varchar(20) DEFAULT NULL AFTER status');
   }
+  // Payment through WhatsApp: the admin marks a repair or a part order as paid
+  for (const table of ['repairs', 'reservations']) {
+    for (const [col, type] of [['paid', 'tinyint(1) DEFAULT 0'], ['paidAt', 'date DEFAULT NULL']]) {
+      const [found] = await db.query(
+        `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?`, [table, col]);
+      if (Number(found[0].n) === 0) {
+        await db.query(`ALTER TABLE ${table} ADD COLUMN ${col} ${type}`);
+        console.log(`Database: added the column ${table}.${col}`);
+      }
+    }
+  }
   // Admin profile: phone + photo (Admin → My profile)
   for (const [col, type] of [['phone', 'varchar(20) DEFAULT NULL'], ['photo', 'MEDIUMTEXT NULL']]) {
     const [found] = await db.query(

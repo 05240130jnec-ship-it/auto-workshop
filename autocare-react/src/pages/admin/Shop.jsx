@@ -24,6 +24,11 @@ export default function AdminShop() {
     act(() => api('/admin/shop/reservations/' + x.id, { method: 'PATCH', body: { status: 'collected' } }),
       `Order #${x.id} collected · ${nu(x.qty * x.price)} paid`)
   }
+  // The customer paid through WhatsApp (screenshot checked); the part is still waiting for pickup
+  async function markPaid(x) {
+    const ok = await confirm(<>Mark order <b>#{x.id}</b> as paid? <b>{nu(x.qty * x.price)}</b> received.</>, { title: 'Payment received?', okText: 'Mark as paid' })
+    if (ok) act(() => api('/admin/shop/reservations/' + x.id, { method: 'PATCH', body: { paid: true } }), `Order #${x.id} marked as paid`)
+  }
   async function cancel(x) {
     const ok = await confirm(<>Cancel order <b>#{x.id}</b>? The {x.qty} × {x.name} go back into stock.</>, { title: 'Cancel order?', okText: 'Cancel order', danger: true })
     if (ok) act(() => api('/admin/shop/reservations/' + x.id, { method: 'PATCH', body: { status: 'cancelled' } }), `Order #${x.id} cancelled`, 'info')
@@ -98,9 +103,14 @@ export default function AdminShop() {
               <td>{x.qty}</td>
               <td><strong>{nu(x.qty * x.price)}</strong></td>
               <td>{fmtDate(x.pickup)}</td>
-              <td><Badge status={x.status} /></td>
+              <td><Badge status={x.status} />
+                {x.status !== 'cancelled' && (x.paid
+                  ? <small style={{ color: 'var(--a-green)', fontWeight: 600 }}><i className="bi bi-check-circle-fill"></i> Paid</small>
+                  : <small style={{ color: 'var(--a-red)', fontWeight: 600 }}>Not paid yet</small>)}
+              </td>
               <td>{x.status === 'ready' && <div className="a-actions">
-                <button className="a-btn a-btn-success a-btn-sm" onClick={() => collected(x)}><i className="bi bi-bag-check"></i> Collected &amp; paid</button>
+                {!x.paid && <button className="a-btn a-btn-outline a-btn-sm" onClick={() => markPaid(x)}><i className="bi bi-cash-coin"></i> Mark as paid</button>}
+                <button className="a-btn a-btn-success a-btn-sm" onClick={() => collected(x)}><i className="bi bi-bag-check"></i> {x.paid ? 'Collected' : 'Collected & paid'}</button>
                 <button className="a-btn a-btn-outline a-btn-sm" onClick={() => cancel(x)}>Cancel</button>
               </div>}</td>
             </tr>

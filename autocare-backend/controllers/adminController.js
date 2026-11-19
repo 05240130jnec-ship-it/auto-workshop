@@ -83,10 +83,22 @@ async function updateRepair(req, res) {
     if (!body.vehicleType) return res.status(400).json({ error: 'Please choose a vehicle type from the list.' });
   }
   if (body.vehicleType === '') body.vehicleType = null;
+  // Payment (through WhatsApp): only a completed job can be marked as paid
+  if (body.paid !== undefined) {
+    body.paid = body.paid ? 1 : 0;
+    if (body.paid) {
+      const current = await Repair.findOneForAdmin(req.params.id);
+      if (!current) return res.status(404).json({ error: 'Repair not found.' });
+      if ((body.status || current.status) !== 'complete') {
+        return res.status(400).json({ error: 'Only a completed job can be marked as paid.' });
+      }
+    }
+    body.paidAt = body.paid ? today() : null;
+  }
 
   // Only these fields can be changed
   const ok = await Repair.update(req.params.id, onlyFields(body, ['customerId', 'vehicleType', 'vehicle', 'plate',
-    'service', 'mechanicId', 'status', 'priority', 'date', 'due', 'cost', 'notes']));
+    'service', 'mechanicId', 'status', 'priority', 'date', 'due', 'cost', 'notes', 'paid', 'paidAt']));
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Repair not found.' });
 
@@ -470,7 +482,15 @@ async function listReservations(req, res) {
 
 // PATCH /api/admin/shop/reservations/R-1002  -> collected, or cancelled (stock goes back)
 async function updateReservation(req, res) {
-  const { status } = req.body || {};
+  const { status, paid } = req.body || {};
+  // { paid: true } -> the customer paid through WhatsApp (the order is still waiting for pickup)
+  if (paid !== undefined && status === undefined) {
+    const r = await Reservation.findById(req.params.id);
+    if (!r) return res.status(404).json({ error: 'Reservation not found.' });
+    if (r.status === 'cancelled') return res.status(400).json({ error: 'This order was cancelled.' });
+    await Reservation.setPaid(r.id, !!paid);
+    return res.json({ id: r.id, paid: paid ? 1 : 0 });
+  }
   if (!['collected', 'cancelled'].includes(status)) {
     return res.status(400).json({ error: 'Status must be collected or cancelled.' });
   }
@@ -481,6 +501,7 @@ async function updateReservation(req, res) {
   }
 
   await Reservation.setStatus(reservation.id, status);
+  if (status === 'collected' && !reservation.paid) await Reservation.setPaid(reservation.id, true);   // paid at the counter
   if (status === 'cancelled') await Inventory.addStockBySku(reservation.slug, reservation.qty);
   res.json({ id: reservation.id, status });
 }

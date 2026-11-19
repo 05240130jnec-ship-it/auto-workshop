@@ -6,6 +6,7 @@ import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
 import Loading from '../../ui/Loading.jsx'
+import PayWhatsApp, { PayInfo } from '../../ui/PayWhatsApp.jsx'
 
 const BADGE = {
   pending: ['review', 'IN REVIEW'],
@@ -25,6 +26,8 @@ const SOLD_BADGE = {
   rejected: ['review', 'Not accepted', 'Sorry, the workshop cannot buy this part.'],
   bought: ['completed', 'Bought', 'Bought by the workshop — thank you!'],
 }
+// Payment: a finished repair or a part order is paid through WhatsApp, then the admin marks it paid
+const PAID = <span className="acp-badge completed"><i className="bi bi-check-circle-fill"></i> Paid</span>
 const DOT = ['text-danger', 'text-warning', 'text-primary', 'text-success', 'text-info']
 
 // The backend stores the appointment as apptDate + apptTime
@@ -48,6 +51,8 @@ export default function MyRepairs() {
   const past = mine.filter((r) => r.status === 'complete' || r.status === 'cancelled')
   const reservations = res.data || []
   const listings = sold.data || []
+  const unpaidRepairs = past.filter((r) => r.status === 'complete' && !r.paid)
+  const unpaidOrders = reservations.filter((x) => x.status !== 'cancelled' && !x.paid)
 
   const specialist = (r, i) => (
     r.mechanicName
@@ -178,14 +183,15 @@ export default function MyRepairs() {
         })}
 
         <h3 className="h5 fw-bold mb-3 mt-4"><i className="bi bi-clock-history"></i> Past Repairs</h3>
+        {unpaidRepairs.length > 0 && <PayInfo />}
         <div className="acp-card p-0 overflow-hidden mb-4">
           <div className="table-responsive">
             <table className="table acp-table mb-0">
               <thead>
-                <tr><th>Vehicle &amp; ID</th><th>Specialist</th><th>Date</th><th>Amount</th><th>Status</th><th>Action</th></tr>
+                <tr><th>Vehicle &amp; ID</th><th>Specialist</th><th>Date</th><th>Amount</th><th>Status</th><th>Payment</th><th>Action</th></tr>
               </thead>
               <tbody>
-                {past.length === 0 && <tr><td colSpan={6} className="text-center text-muted py-4">No past repairs yet.</td></tr>}
+                {past.length === 0 && <tr><td colSpan={7} className="text-center text-muted py-4">No past repairs yet.</td></tr>}
                 {past.map((r, i) => (
                   <tr key={r.id}>
                     <td>{r.vehicle}<br /><small className="text-muted">#{r.id} · {r.service}</small></td>
@@ -193,6 +199,8 @@ export default function MyRepairs() {
                     <td>{fmtDate(r.due || r.date)}</td>
                     <td>{r.status === 'complete' ? nu(r.cost) : '—'}</td>
                     <td><span className={'acp-badge ' + BADGE[r.status][0]}>{BADGE[r.status][1]}</span></td>
+                    <td>{r.status !== 'complete' ? '—' : r.paid ? PAID
+                      : <PayWhatsApp small amount={r.cost} what={`booking #${r.id} (${r.service}, ${r.vehicle})`} />}</td>
                     <td><button className="btn btn-link p-0 text-brand-red fw-bold" onClick={() => details(r)}>Details</button></td>
                   </tr>
                 ))}
@@ -204,10 +212,11 @@ export default function MyRepairs() {
         {reservations.length > 0 && (
           <>
             <h3 className="h5 fw-bold mb-3"><i className="bi bi-bag"></i> My Part Orders</h3>
+            {unpaidOrders.length > 0 && <PayInfo />}
             <div className="acp-card p-0 overflow-hidden">
               <div className="table-responsive">
                 <table className="table acp-table mb-0">
-                  <thead><tr><th>Item</th><th>Qty</th><th>Total</th><th>Pickup</th><th>Status</th></tr></thead>
+                  <thead><tr><th>Item</th><th>Qty</th><th>Total</th><th>Pickup</th><th>Status</th><th>Payment</th></tr></thead>
                   <tbody>
                     {reservations.map((x) => (
                       <tr key={x.id}>
@@ -216,6 +225,8 @@ export default function MyRepairs() {
                         <td>{nu(x.qty * x.price)}</td>
                         <td>{fmtDate(x.pickup)}</td>
                         <td><span className={'acp-badge ' + RES_BADGE[x.status][0]}>{RES_BADGE[x.status][1]}</span></td>
+                        <td>{x.status === 'cancelled' ? '—' : x.paid ? PAID
+                          : <PayWhatsApp small amount={x.qty * x.price} what={`part order #${x.id} (${x.qty} × ${x.name})`} />}</td>
                       </tr>
                     ))}
                   </tbody>
