@@ -53,7 +53,7 @@ async function book(req, res) {
   }
   const { timeSlots, maxPerSlot } = await bookingRules();
   if (!timeSlots.includes(apptTime)) {
-    return res.status(400).json({ error: 'Please choose one of the time shown.' });
+    return res.status(400).json({ error: 'Please choose one of the times shown.' });
   }
   if (await Repair.countInSlot(apptDate, apptTime) >= maxPerSlot) {
     return res.status(409).json({ error: 'That time is already full. Please pick another.' });

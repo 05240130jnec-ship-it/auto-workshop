@@ -292,7 +292,7 @@ export default function Booking() {
                 })}
               </div>
 
-              <h4 className="h6 fw-bold mb-2">What time will you bring you car? {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
+              <h4 className="h6 fw-bold mb-2">What time will you bring your car? {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
               <div className="row g-2 mb-3">
                 {slotTimes.map((t) => {
                   const full = taken(t)
