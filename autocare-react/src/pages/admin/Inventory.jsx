@@ -27,9 +27,14 @@ export default function AdminInventory() {
   const cats = [...new Set([...shopCategories(settings).map((c) => c.name), ...items.map((p) => p.category).filter(Boolean)])]
   const query = q.trim().toLowerCase()
   const onOrder = (id) => store.data.orders.filter((o) => o.partId === id && (o.status === 'pending' || o.status === 'approved')).reduce((s, o) => s + o.qty, 0)
+  // Parts the workshop bought from customers (Shop & Listings → Sell requests → "Bought, add to inventory").
+  // Each bought sell request remembers its inventory part (partId), so: part id -> the sell request
+  const fromCustomer = {}
+  for (const l of store.data.listings || []) if (l.status === 'bought' && l.partId) fromCustomer[l.partId] = l
+  const sellerOf = (p) => fromCustomer[p.id] && (fromCustomer[p.id].customerName || Q.customerName(fromCustomer[p.id].customerId))
   const rows = items
-    .filter((p) => filter === 'all' || (filter === 'low' ? p.stock <= p.reorder : p.category === filter))
-    .filter((p) => !query || [p.name, p.sku, p.category, Q.supplierName(p.supplierId)].join(' ').toLowerCase().includes(query))
+    .filter((p) => filter === 'all' || (filter === 'low' ? p.stock <= p.reorder : filter === 'customers' ? !!fromCustomer[p.id] : p.category === filter))
+    .filter((p) => !query || [p.name, p.sku, p.category, Q.supplierName(p.supplierId), sellerOf(p) || ''].join(' ').toLowerCase().includes(query))
 
   const fields = () => [
     { name: 'name', label: 'Part name', required: true, col: 8 },
@@ -97,7 +102,10 @@ export default function AdminInventory() {
   const value = items.reduce((s, p) => s + p.stock * p.price, 0)
   const lowN = items.filter((p) => p.stock > 0 && p.stock <= p.reorder).length
   const outN = items.filter((p) => p.stock <= 0).length
-  const tabs = [['all', 'All', items.length], ...cats.map((c) => [c, c, items.filter((p) => p.category === c).length]), ['low', '⚠ Needs reorder', Q.lowStock().length]]
+  const fromCustomerN = items.filter((p) => fromCustomer[p.id]).length
+  const tabs = [['all', 'All', items.length], ...cats.map((c) => [c, c, items.filter((p) => p.category === c).length]),
+    ...(fromCustomerN ? [['customers', '♻ From customers', fromCustomerN]] : []),
+    ['low', '⚠ Needs reorder', Q.lowStock().length]]
 
   return (
     <>
@@ -119,11 +127,16 @@ export default function AdminInventory() {
         {rows.map((p) => {
           const st = Q.stockState(p), incoming = onOrder(p.id)
           return (
-            <tr key={p.id}>
+            <tr key={p.id} className={fromCustomer[p.id] ? 'a-row-from-customer' : undefined}>
               <td>
                 <div className="d-flex align-items-center gap-2">
-                  {p.image && <img src={p.image} alt="" style={{ width: 44, height: 34, objectFit: 'cover', borderRadius: 6, flex: '0 0 44px' }} />}
-                  <div><strong>{p.name}</strong><small>{p.sku}{p.inShop ? <> · <i className="bi bi-shop"></i> in shop</> : null}</small></div>
+                  {p.image
+                    ? <img src={p.image} alt="" style={{ width: 44, height: 34, objectFit: 'cover', borderRadius: 6, flex: '0 0 44px' }} />
+                    : fromCustomer[p.id] && <span className="a-from-customer-icon"><i className="bi bi-recycle"></i></span>}
+                  <div><strong>{p.name}</strong>
+                    <small>{p.sku}{p.inShop ? <> · <i className="bi bi-shop"></i> in shop</> : null}</small>
+                    {fromCustomer[p.id] && <span className="a-from-customer"><i className="bi bi-recycle"></i> Bought from {sellerOf(p)} · {fromCustomer[p.id].item_condition || 'used'}</span>}
+                  </div>
                 </div>
               </td>
               <td>{p.category}</td>
@@ -138,7 +151,7 @@ export default function AdminInventory() {
               <td>{p.reorder}</td>
               <td>{nu(p.price)}</td>
               <td>{nu(p.stock * p.price)}</td>
-              <td>{Q.supplierName(p.supplierId)}</td>
+              <td>{p.supplierId ? Q.supplierName(p.supplierId) : fromCustomer[p.id] ? <span className="text-muted">Customer</span> : Q.supplierName(p.supplierId)}</td>
               <td><span className={'a-badge a-badge-' + st.cls}>{st.label}</span></td>
               <td><div className="a-actions">
                 <IconBtn icon="bi-cart-plus" title="Reorder" onClick={() => reorder(p)} />
