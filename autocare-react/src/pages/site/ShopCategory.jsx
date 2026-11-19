@@ -40,13 +40,7 @@ export default function ShopCategory() {
 
           <ShopGrid category={cat.name} />
 
-          <div className="p-4 rounded-3 mt-5 mb-0 d-flex flex-wrap justify-content-between align-items-center gap-3" style={{ background: 'var(--brand-purple)', color: '#fff' }}>
-            <div>
-              <h2 className="h5 fw-bold mb-1">Have spare parts to sell?</h2>
-              <p className="mb-0 small opacity-75">List your used or surplus auto parts and reach buyers directly.</p>
-            </div>
-            <Link to="/sell-part" className="btn btn-brand-yellow">+ Sell a Part</Link>
-          </div>
+          
         </div>
       </section>
     </>
