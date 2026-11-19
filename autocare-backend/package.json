@@ -5,7 +5,12 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
-    "start": "node server.js"
+    "start": "node server.js",
+    "seed": "node scripts/seed.js",
+    "setup-content": "node scripts/content-setup.js",
+    "shop-products": "node scripts/shop-products.js",
+    "import-tables": "node scripts/import-tables.js",
+    "test-email": "node scripts/test-email.js"
   },
   "keywords": [],
   "author": "",

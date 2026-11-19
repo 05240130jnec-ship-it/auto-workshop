@@ -14,10 +14,47 @@ Built with Node.js, Express, MySQL, JWT and bcrypt.
 4. In this folder, run:
    ```
    npm install
-   node seed.js
+   npm run seed
    npm run dev
    ```
 5. Open http://localhost:3000/api/db-test. It should show `"connected": true`.
+
+## Folder structure (MVC)
+The backend follows **MVC** (Model – View – Controller). The "View" is the React website
+(`autocare-react`): the backend only sends JSON.
+
+```
+autocare-backend/
+├── server.js          start here: makes the Express app and connects the routes
+├── config/            settings of the app
+│   ├── db.js                  the MySQL connection (reads .env)
+│   ├── default-settings.js    starting website text + booking rules
+│   └── upgrade-database.js    adds missing columns when the server starts
+├── routes/            ROUTES: which URL goes to which controller function (+ who may use it)
+├── controllers/       CONTROLLERS: check the request, decide what to do, send the answer
+├── models/            MODELS: all the SQL – one file per table (repairModel.js = repairs …)
+├── middleware/        auth.js: requireAuth (logged in?) and requireRole (admin / mechanic / customer?)
+├── utils/             helpers: mailer.js (emails), vehicle-rules.js (plate + car name checks)
+├── scripts/           run by hand: seed, content setup, shop products, import tables, test email
+├── database.sql       all the tables
+└── ca.pem             Aiven SSL certificate
+```
+
+One request, step by step (example: a customer books a repair):
+`POST /api/repairs` → **routes/repairs.js** (checks the token, role = customer) →
+**controllers/repairController.js** `book()` (checks plate, vehicle, time slot) →
+**models/repairModel.js** `createBooking()` (the INSERT into MySQL) → JSON answer `{ id }` → React shows it.
+
+## Scripts
+| Command | What it does |
+|---|---|
+| `npm run dev` | Start the server (restarts when you save) |
+| `npm start` | Start the server |
+| `npm run seed` | **Deletes all data** and adds the starting data (only on your own test database!) |
+| `npm run setup-content` | Adds the website content (services, offers, settings) – keeps your data |
+| `npm run shop-products` | Adds the shop products – keeps your data |
+| `npm run import-tables` | Creates the tables from database.sql |
+| `npm run test-email` | Sends a test email to check the Gmail settings |
 
 ## Test accounts (from seed.js)
 | Role | Email | Password |

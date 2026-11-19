@@ -1,12 +1,12 @@
 // shop-products.js — puts the website shop products (with their pictures) into the inventory.
 //
-// Run once:   node shop-products.js
+// Run once:   node scripts/shop-products.js
 // It only ADDS products whose SKU is missing, so it never deletes or changes your data.
 // After that the admin controls everything on the Inventory page:
 // name, price, stock, category, picture, "Show in shop?" — or delete a product.
 // (seed.js also calls addShopProducts() so a fresh database has the shop filled.)
 
-const db = require('./db');
+const db = require('../config/db');
 
 // [id, sku, name, category (= shop page), stock, reorder level, price, picture]
 const SHOP_PRODUCTS = [
@@ -57,7 +57,7 @@ async function addShopProducts(conn = db) {
 
 module.exports = { addShopProducts };
 
-// When run directly:  node shop-products.js
+// When run directly:  node scripts/shop-products.js
 if (require.main === module) {
   addShopProducts()
     .then(async (n) => {

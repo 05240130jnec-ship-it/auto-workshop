@@ -1,11 +1,9 @@
-// settings.js — the website text and booking rules, saved in the MySQL table `settings`.
-// The admin edits them in Website Content. These are only the STARTING values:
-// content-setup.js puts them into the table once, after that MySQL is the only source.
+// config/default-settings.js — the STARTING website text and booking rules.
+// The admin edits them in Website Content. These values are put into the MySQL table
+// `settings` once (models/settingsModel.js -> setupSettings); after that MySQL is the only source.
 //
 // Lists are written one item per line. Some lines have parts separated by "|",
 // e.g. hours:  "Saturday|8:00 AM – 6:00 PM".  In titles, *stars* mark the orange words.
-
-const db = require('./db');
 
 const DEFAULT_SETTINGS = {
   // ---------- Booking rules ----------
@@ -162,128 +160,4 @@ const DEFAULT_SETTINGS = {
   specializations: 'Engine & Diagnostics\nBrake Systems\nGeneral Repairs\nElectrical Systems\nBody & Paint\nAC & Cooling\nTyres & Alignment',
 };
 
-// Create the table and add any missing setting (existing values are never changed)
-async function setupSettings(conn = db) {
-  await conn.query(`
-    CREATE TABLE IF NOT EXISTS settings (
-      name varchar(60) NOT NULL PRIMARY KEY,
-      value text DEFAULT NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4`);
-  for (const [name, value] of Object.entries(DEFAULT_SETTINGS)) {
-    const [found] = await conn.query('SELECT name FROM settings WHERE name = ?', [name]);
-    if (found.length === 0) await conn.query('INSERT INTO settings (name, value) VALUES (?, ?)', [name, value]);
-  }
-}
-
-// All settings as one object: { timeSlots: '08:00 AM\n...', maxPerSlot: '2', ... }
-async function getSettings() {
-  const [rows] = await db.query('SELECT name, value FROM settings');
-  const out = {};
-  rows.forEach((r) => { out[r.name] = r.value; });
-  return out;
-}
-
-// Small helpers for the booking rules
-const toLines = (text) => String(text || '').split('\n').map((s) => s.trim()).filter(Boolean);
-
-async function bookingRules() {
-  const s = await getSettings();
-  return {
-    timeSlots: toLines(s.timeSlots),
-    maxPerSlot: Number(s.maxPerSlot) || 1,
-    pickupFee: Number(s.pickupFee) || 0,
-  };
-}
-
-// Toyota models from the admin's list: [{ type, model }]
-function toyotaModels(s) {
-  return toLines(s.carModels).map((l) => l.split('|').map((x) => x.trim())).filter((p) => p[0] && p[1])
-    .map(([type, model]) => ({ type, model }));
-}
-
-// Checks "Toyota <model> <year>" against the admin's list for that vehicle type.
-// Returns the tidy text, or null if the model is not in the list for that type.
-async function checkToyota(type, vehicle) {
-  const s = await getSettings();
-  const v = String(vehicle || '').trim().replace(/\s+/g, ' ');
-  const thisYear = new Date().getFullYear();
-  for (const m of toyotaModels(s)) {
-    if (m.type !== type) continue;
-    const start = 'Toyota ' + m.model;
-    if (v === start) return v;
-    if (v.startsWith(start + ' ')) {
-      const year = Number(v.slice(start.length + 1));
-      if (Number.isInteger(year) && year >= 1980 && year <= thisYear + 1) return v;
-    }
-  }
-  return null;
-}
-
-// The vehicle type if it is in the admin's list (Website Content -> Lists), otherwise null
-async function checkVehicleType(type) {
-  const s = await getSettings();
-  const list = toLines(s.vehicleTypes);
-  const t = String(type || '').trim();
-  return list.includes(t) ? t : null;
-}
-
-// Runs every time the server starts, so the database is always up to date
-// (no extra command needed). It only ADDS what is missing, it never deletes data.
-async function upgradeDatabase() {
-  await setupSettings();                       // adds new settings such as vehicleTypes
-  // The old general list (power tiller, JCB …) -> the Toyota types, only if the admin never changed it
-  await db.query("UPDATE settings SET value = ? WHERE name = 'vehicleTypes' AND value LIKE 'Light vehicle (car, SUV)%Earth-moving machine (excavator, JCB)'",
-    [DEFAULT_SETTINGS.vehicleTypes]);
-  // The home page label follows the workshop address (only if the admin never changed the label)
-  await db.query("UPDATE settings SET value = ? WHERE name = 'homeTag' AND value = 'Auto workshop · Sarpang, Bhutan'",
-    [DEFAULT_SETTINGS.homeTag]);
-  // Service pictures can now be uploaded (saved as text), so the columns must be bigger
-  const [pic] = await db.query(
-    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'services' AND COLUMN_NAME = 'image' AND DATA_TYPE <> 'mediumtext'`);
-  if (Number(pic[0].n) > 0) {
-    await db.query('ALTER TABLE services MODIFY image MEDIUMTEXT NULL, MODIFY gallery MEDIUMTEXT NULL');
-  }
-  // Inventory (shop) pictures can be uploaded too
-  const [invPic] = await db.query(
-    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'inventory' AND COLUMN_NAME = 'image' AND DATA_TYPE <> 'mediumtext'`);
-  if (Number(invPic[0].n) > 0) {
-    await db.query('ALTER TABLE inventory MODIFY image MEDIUMTEXT NULL');
-  }
-  const [col] = await db.query(
-    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'repairs' AND COLUMN_NAME = 'vehicleType'`);
-  if (Number(col[0].n) === 0) {
-    await db.query('ALTER TABLE repairs ADD COLUMN vehicleType varchar(60) DEFAULT NULL AFTER customerId');
-    console.log('Database: added the column repairs.vehicleType');
-  }
-  // Profile photo of customers (saved in the database as text)
-  const [pc] = await db.query(
-    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'customers' AND COLUMN_NAME = 'photo'`);
-  if (Number(pc[0].n) === 0) {
-    await db.query('ALTER TABLE customers ADD COLUMN photo MEDIUMTEXT NULL');
-    console.log('Database: added the column customers.photo');
-  }
-  // Mechanic profile photo: a picture saved as text needs MEDIUMTEXT (it was varchar(200))
-  const [mp] = await db.query(
-    `SELECT DATA_TYPE AS t FROM information_schema.COLUMNS
-     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'mechanics' AND COLUMN_NAME = 'photo'`);
-  if (mp.length && String(mp[0].t).toLowerCase() !== 'mediumtext') {
-    await db.query('ALTER TABLE mechanics MODIFY photo MEDIUMTEXT NULL');
-    console.log('Database: mechanics.photo can now hold a profile picture');
-  }
-  // Admin profile: phone + photo (Admin → My profile)
-  for (const [col, type] of [['phone', 'varchar(20) DEFAULT NULL'], ['photo', 'MEDIUMTEXT NULL']]) {
-    const [found] = await db.query(
-      `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
-       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'admins' AND COLUMN_NAME = ?`, [col]);
-    if (Number(found[0].n) === 0) {
-      await db.query(`ALTER TABLE admins ADD COLUMN ${col} ${type}`);
-      console.log('Database: added the column admins.' + col);
-    }
-  }
-}
-
-module.exports = { DEFAULT_SETTINGS, setupSettings, getSettings, bookingRules, checkVehicleType, checkToyota, upgradeDatabase };
+module.exports = { DEFAULT_SETTINGS };

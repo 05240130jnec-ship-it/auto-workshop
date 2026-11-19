@@ -4,7 +4,7 @@
 require('dotenv').config();          // read settings from .env
 const express = require('express');
 const cors = require('cors');
-const db = require('./db');          // our MySQL connection
+const db = require('./config/db');          // our MySQL connection
 
 // 2. Create the app
 const app = express();
@@ -58,5 +58,5 @@ app.listen(PORT, () => {
 });
 
 // 8. Make sure the database has the newest tables/columns/settings (only adds, never deletes)
-require('./settings').upgradeDatabase()
+require('./config/upgrade-database').upgradeDatabase()
   .catch((err) => console.error('Could not upgrade the database:', err.message));
