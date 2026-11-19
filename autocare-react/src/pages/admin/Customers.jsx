@@ -7,14 +7,13 @@ import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
 import Avatar from './Avatar.jsx'
-import useOnce from './useOnce.js'
 import { Badge, Tabs, EmptyRow, IconBtn, TableCard } from './parts.jsx'
 
 export default function AdminCustomers() {
   usePageTitle('Customers')
   const store = useAdmin()
   const { act } = store
-  const { toast, confirm, form, view } = useDialogs()
+  const { toast, confirm, view } = useDialogs()
   const [params] = useSearchParams()
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState(params.get('q') || '')        // ?q= from the Dashboard search
@@ -29,26 +28,9 @@ export default function AdminCustomers() {
   const rows = all.filter((c) => filter === 'all' || c.status === filter)
     .filter((c) => !query || [c.id, c.name, c.phone, c.email, c.address].join(' ').toLowerCase().includes(query))
 
-  const fields = [
-    { name: 'name', label: 'Full name', required: true, placeholder: 'e.g. Karma Dorji' },
-    { name: 'phone', label: 'Phone', type: 'tel', required: true, placeholder: '+975 17XXXXXX', pattern: '^\\+?[0-9 ]{8,15}$', help: '8-digit Bhutan mobile, with or without +975' },
-    { name: 'email', label: 'Email (used to log in)', type: 'email', required: true, placeholder: 'name@example.com' },
-    { name: 'address', label: 'Address', placeholder: 'e.g. Motithang, Thimphu' },
-    { name: 'status', label: 'Status', type: 'select', options: [{ value: 'active', label: 'Active' }, { value: 'inactive', label: 'Inactive' }], default: 'active' },
-  ]
-  const normPhone = (p) => { const d = (p || '').replace(/\D/g, ''); return d.length === 8 ? '+975 ' + d : d.startsWith('975') ? '+975 ' + d.slice(3) : p }
-  const check = (id) => (v) => {
-    if (store.all('customers').some((c) => c.id !== id && (c.phone || '').replace(/\D/g, '').endsWith(v.phone.replace(/\D/g, '').slice(-8)))) return 'A customer with this phone number already exists'
-    if (store.all('customers').some((c) => c.id !== id && (c.email || '').toLowerCase() === v.email.toLowerCase())) return 'A customer with this email already exists'
-    return null
-  }
+  // Customers make their own account on the website (Sign up), so there is no "Add customer" here.
 
-  async function add() {
-    const v = await form({ title: 'Add customer', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'welcome123', help: 'Tell the customer so they can log in and change it' }], submitText: 'Add customer', validate: check() })
-    if (!v) return
-    act(() => api('/admin/customers', { method: 'POST', body: { ...v, phone: normPhone(v.phone), email: v.email.toLowerCase() } }),
-      <><b>{v.name}</b> added as a customer</>)
-  }
+
   // The admin can only block / unblock a customer. The details are changed by the customer
   // (website → My profile), so the admin cannot take over someone's account.
   async function toggleBlock(c) {
@@ -90,7 +72,7 @@ export default function AdminCustomers() {
           </table>
         ) : <p className="text-muted small mb-0">No repairs yet.</p>}
       </>
-    ), <Link className="a-btn a-btn-primary" to="/admin/repairs?new=1"><i className="bi bi-plus-lg"></i> New job</Link>)
+    ))
   }
   async function del(c) {
     const jobs = jobsOf(c.id)
@@ -105,13 +87,10 @@ export default function AdminCustomers() {
     if (ok) act(() => api('/admin/customers/' + c.id, { method: 'DELETE' }), c.name + ' deleted', 'info')
   }
 
-  useOnce(() => { if (params.get('new')) add() })
 
   return (
     <>
-      <ATopbar title="Customers" sub="Everyone who has an account or booked a service" search={q} onSearch={setQ} placeholder="Search name, phone, email...">
-        <button className="a-btn a-btn-primary" onClick={add}><i className="bi bi-plus-lg"></i> Add Customer</button>
-      </ATopbar>
+      <ATopbar title="Customers" sub="Everyone who has an account or booked a service" search={q} onSearch={setQ} placeholder="Search name, phone, email..." />
       <Tabs value={filter} onChange={setFilter} tabs={[['all', 'All', all.length], ['active', 'Active', all.filter((c) => c.status === 'active').length], ['inactive', 'Inactive', all.filter((c) => c.status === 'inactive').length]]} />
       <TableCard head={['ID', 'Customer', 'Contact', 'Vehicles', 'Repairs', 'Total Spent', 'Status', '']} foot={`Showing ${rows.length} of ${all.length} customers`}>
         {rows.length === 0 && <EmptyRow cols={8} text={query ? `No customers match "${q}"` : 'No customers yet'} />}

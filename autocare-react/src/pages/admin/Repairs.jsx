@@ -86,22 +86,7 @@ export default function AdminRepairs() {
     return null
   }
 
-  async function addJob() {
-    const v = await form({ title: 'New repair job', fields: fields(), submitText: 'Create job', validate })
-    if (!v) return
-    v.mechanicId = v.mechanicId || null
-    v.plate = cleanPlate(v.plate)
-    v.vehicle = cleanVehicle(v.vehicle)
-    if (v.mechanicId && v.status === 'pending') v.status = 'progress'
-    let id = ''
-    const ok = await act(async () => {
-      const res = await api('/admin/repairs', { method: 'POST', body: v })   // backend makes the new ACP id
-      id = res.id
-    })
-    if (!ok) return
-    setFilter('all')
-    toast(<>Job <b>#{id}</b> created for {Q.customerName(v.customerId)}</>)
-  }
+
 
   async function editJob(r) {
     const v = await form({ title: 'Edit job #' + r.id, fields: fields(r.service, r.vehicleType), values: { ...r, mechanicId: r.mechanicId || '', vehicleType: r.vehicleType || '' }, submitText: 'Save changes', validate })
@@ -201,7 +186,6 @@ export default function AdminRepairs() {
   }
 
   useOnce(() => {
-    if (params.get('new')) addJob()
     if (params.get('open')) viewJob(params.get('open'))
   })
 
@@ -210,9 +194,7 @@ export default function AdminRepairs() {
   return (
     <>
       <ATopbar title="Repair Jobs" sub="Assign mechanics and track every job from booking to hand-over"
-        search={q} onSearch={setQ} placeholder="Search job ID, plate, customer...">
-        <button className="a-btn a-btn-primary" onClick={addJob}><i className="bi bi-plus-lg"></i> New Job</button>
-      </ATopbar>
+        search={q} onSearch={setQ} placeholder="Search job ID, plate, customer..." />
 
       <Tabs tabs={tabs} value={filter} onChange={setFilter} />
 
@@ -253,7 +235,11 @@ export default function AdminRepairs() {
               <td>
                 <div className="a-actions">
                   {r.status === 'progress' && <IconBtn icon="bi-check2-circle" title="Mark complete" tone="success" onClick={() => completeJob(r)} />}
-                  {r.status === 'complete' && !r.paid && <IconBtn icon="bi-cash-coin" title="Mark as paid" tone="success" onClick={() => markPaid(r)} />}
+                  {r.status === 'complete' && !r.paid && (
+                    <button type="button" className="a-btn a-btn-success a-btn-sm" onClick={() => markPaid(r)} title="The customer paid (screenshot checked)">
+                      <i className="bi bi-cash-coin"></i> Mark paid
+                    </button>
+                  )}
                   <IconBtn icon="bi-eye" title="View details" onClick={() => viewJob(r.id)} />
                   <IconBtn icon="bi-pencil" title="Edit" onClick={() => editJob(r)} />
                   <IconBtn icon="bi-trash3" title="Delete" tone="danger" onClick={() => deleteJob(r)} />

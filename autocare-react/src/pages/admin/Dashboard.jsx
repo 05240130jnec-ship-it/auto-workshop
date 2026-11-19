@@ -173,8 +173,6 @@ export default function AdminDashboard() {
         <div className="a-panel">
           <div className="a-panel-head"><h3>Quick actions</h3></div>
           <div className="a-quick-grid">
-            <Link to="/admin/repairs?new=1" className="a-quick-btn a-quick-primary"><i className="bi bi-plus-circle"></i> New repair job</Link>
-            <Link to="/admin/customers?new=1" className="a-quick-btn"><i className="bi bi-person-plus"></i> Add customer</Link>
             <Link to="/admin/inventory?new=1" className="a-quick-btn"><i className="bi bi-box-seam"></i> Add part</Link>
             <Link to="/admin/shop" className="a-quick-btn"><i className="bi bi-bag-check"></i> Orders &amp; requests</Link>
             <Link to="/admin/mechanics?new=1" className="a-quick-btn"><i className="bi bi-person-badge"></i> Add mechanic</Link>
