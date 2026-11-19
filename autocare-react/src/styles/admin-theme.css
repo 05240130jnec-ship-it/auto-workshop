@@ -134,3 +134,16 @@
 }
 .a-img-add i { font-size: 1.4rem; }
 .a-img-add:hover { background: #ffefdc; }
+
+/* ===== Inventory: parts bought from customers (Inventory.jsx) ===== */
+.a-row-from-customer td { background: #f2fbf6; }
+.a-row-from-customer td:first-child { box-shadow: inset 3px 0 0 #16a34a; }
+.a-from-customer {
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 3px;
+  padding: 1px 8px; border-radius: 999px; background: #dcfce7; color: #15803d;
+  font-size: 0.72rem; font-weight: 600;
+}
+.a-from-customer-icon {
+  width: 44px; height: 34px; flex: 0 0 44px; border-radius: 6px; background: #dcfce7; color: #16a34a;
+  display: grid; place-items: center; font-size: 1.1rem;
+}
