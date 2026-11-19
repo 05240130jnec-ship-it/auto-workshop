@@ -36,11 +36,12 @@ async function nextId() {
   return 'L-' + ((rows[0].last || 100) + 1);
 }
 
-async function create({ id, customerId, name, category, condition, price, qty, description }) {
+// photos = the pictures as text ("data:image/jpeg;base64,…"), one per line
+async function create({ id, customerId, name, category, condition, price, qty, description, photos }) {
   await db.query(
-    `INSERT INTO listings (id, customerId, name, category, item_condition, price, qty, description, status, date)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'review', CURDATE())`,
-    [id, customerId, name, category, condition, price, qty, description]
+    `INSERT INTO listings (id, customerId, name, category, item_condition, price, qty, description, photos, status, date)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'review', CURDATE())`,
+    [id, customerId, name, category, condition, price, qty, description, photos]
   );
 }
 
@@ -48,9 +49,19 @@ async function setStatus(id, status) {
   await db.query('UPDATE listings SET status = ? WHERE id = ?', [status, id]);
 }
 
+async function findById(id) {
+  const [rows] = await db.query('SELECT * FROM listings WHERE id = ?', [id]);
+  return rows[0];
+}
+
+// The workshop bought the part: remember which inventory part it became
+async function markBought(id, partId) {
+  await db.query("UPDATE listings SET status = 'bought', partId = ? WHERE id = ?", [partId, id]);
+}
+
 async function countInReview() {
   const [[row]] = await db.query("SELECT COUNT(*) AS total FROM listings WHERE status = 'review'");
   return row.total;
 }
 
-module.exports = { findByCustomer, findAll, findStatus, nextId, create, setStatus, countInReview };
+module.exports = { findByCustomer, findAll, findStatus, nextId, create, setStatus, findById, markBought, countInReview };

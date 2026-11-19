@@ -4,6 +4,7 @@ const STATUS = {
   cancelled: ['Cancelled', 'muted'], approved: ['Approved', 'progress'], received: ['Received', 'complete'],
   rejected: ['Rejected', 'danger'], active: ['Active', 'complete'], inactive: ['Inactive', 'muted'],
   review: ['In review', 'pending'], ready: ['Ready for pickup', 'progress'], collected: ['Collected', 'complete'],
+  bought: ['Bought', 'complete'],
 }
 
 export function Badge({ status, label }) {

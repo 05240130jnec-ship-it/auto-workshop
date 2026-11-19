@@ -51,6 +51,28 @@ async function upgradeDatabase() {
     await db.query('ALTER TABLE mechanics MODIFY photo MEDIUMTEXT NULL');
     console.log('Database: mechanics.photo can now hold a profile picture');
   }
+  // Photos of parts customers want to sell (saved as text, one picture per line)
+  const [lp] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'listings' AND COLUMN_NAME = 'photos'`);
+  if (Number(lp[0].n) === 0) {
+    await db.query('ALTER TABLE listings ADD COLUMN photos MEDIUMTEXT NULL AFTER description');
+    console.log('Database: added the column listings.photos');
+  }
+  // A part the workshop bought from a customer: status 'bought' + the inventory part it became
+  const [ls] = await db.query(
+    `SELECT COLUMN_TYPE AS t FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'listings' AND COLUMN_NAME = 'status'`);
+  if (ls.length && !String(ls[0].t).includes("'bought'")) {
+    await db.query("ALTER TABLE listings MODIFY status ENUM('review','approved','rejected','bought') DEFAULT 'review'");
+    console.log('Database: listings can now be marked as bought');
+  }
+  const [lpid] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'listings' AND COLUMN_NAME = 'partId'`);
+  if (Number(lpid[0].n) === 0) {
+    await db.query('ALTER TABLE listings ADD COLUMN partId varchar(20) DEFAULT NULL AFTER status');
+  }
   // Admin profile: phone + photo (Admin → My profile)
   for (const [col, type] of [['phone', 'varchar(20) DEFAULT NULL'], ['photo', 'MEDIUMTEXT NULL']]) {
     const [found] = await db.query(

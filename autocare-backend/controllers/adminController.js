@@ -426,6 +426,41 @@ async function updateListing(req, res) {
   res.json({ id: req.params.id, status });
 }
 
+// POST /api/admin/shop/listings/L-101/buy  -> the workshop bought an accepted part:
+// it becomes a new inventory part (workshop only, never in the website shop) and the listing is "bought".
+// body: { name, category, stock, reorder, price, supplierId, sku? }  (filled in from the listing on the admin page)
+async function buyListing(req, res) {
+  const listing = await Listing.findById(req.params.id);
+  if (!listing) return res.status(404).json({ error: 'Listing not found.' });
+  if (listing.status !== 'approved') {
+    return res.status(400).json({ error: 'Only accepted parts can be bought (this one is ' + listing.status + ').' });
+  }
+  const b = req.body || {};
+  const name = String(b.name || listing.name || '').trim();
+  const stock = Number(b.stock ?? listing.qty);
+  if (!name) return res.status(400).json({ error: 'Please enter the part name.' });
+  if (!(Number(b.price) >= 0) || b.price === '' || b.price === undefined) return res.status(400).json({ error: 'Please enter the price.' });
+  if (!Number.isInteger(stock) || stock < 1 || stock > 1000) return res.status(400).json({ error: 'Quantity must be a whole number from 1 to 1000.' });
+
+  const photo = String(listing.photos || '').split('\n').filter(Boolean)[0] || null;   // the first photo becomes the part picture
+  const sku = String(b.sku || '').trim() || await Inventory.freeSku(name, false);
+  const id = await Inventory.nextId();
+  try {
+    await Inventory.create({
+      id, sku, name, category: b.category || listing.category || 'Other', stock,
+      reorder: Number(b.reorder) >= 0 && b.reorder !== '' ? Number(b.reorder) : 1,
+      price: Number(b.price), supplierId: b.supplierId || null, image: photo,
+      inShop: 0,                          // bought from a customer = for the workshop only
+    });
+  } catch (err) {
+    if (err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'This SKU already exists.' });
+    if (err.code === 'ER_NO_REFERENCED_ROW_2') return res.status(400).json({ error: 'Supplier not found.' });
+    throw err;
+  }
+  await Listing.markBought(listing.id, id);
+  res.status(201).json({ id: listing.id, status: 'bought', partId: id });
+}
+
 // ---------- SHOP: RESERVATIONS (customers reserving workshop parts) ----------
 
 // GET /api/admin/shop/reservations   (?status=ready -> waiting for pickup)
@@ -506,6 +541,6 @@ module.exports = {
   listInventory, createPart, updatePart, deletePart,
   listSuppliers, createSupplier, updateSupplier, deleteSupplier,
   listOrders, createOrder, updateOrder,
-  listListings, updateListing, listReservations, updateReservation,
+  listListings, updateListing, buyListing, listReservations, updateReservation,
   getProfile, updateProfile, changePassword,
 };
