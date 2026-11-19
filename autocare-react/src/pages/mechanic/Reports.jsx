@@ -7,7 +7,6 @@ import MTopbar from './MTopbar.jsx'
 import useSettings from '../../data/useSettings.js'
 import { mt } from './texts.js'
 import Badge from './Badge.jsx'
-import { daysBetween } from './helpers.js'
 
 // My Reports (/mechanic/reports): a summary of my work. The parts list has its own page (Parts Used).
 const PERIODS = [['month', 'This month'], ['week', 'This week'], ['all', 'All time']]
@@ -24,7 +23,6 @@ export default function Reports() {
   const parts = mine.flatMap((r) => (r.parts || []).map((p) => ({ ...p, vehicle: r.vehicle, plate: r.plate })))
   const services = mine.reduce((s, r) => s + (r.services || []).length, 0)
   // (online bookings may have no "due" date, so fall back to the booking date)
-  const avgDays = done.length ? done.reduce((s, r) => s + daysBetween(r.date, r.completedOn || r.due || r.date), 0) / done.length : 0
   const onTime = done.filter((r) => !r.due || (r.completedOn || r.due) <= r.due).length
   const revenue = done.reduce((s, r) => s + r.cost, 0)
   const allMine = data.repairs.filter((r) => r.status !== 'cancelled')
@@ -63,10 +61,6 @@ export default function Reports() {
         <div className="m-stat">
           <div className="m-stat-icon m-icon-green"><i className="bi bi-tools"></i></div>
           <div><h6>Work done</h6><div className="m-stat-value">{services}</div><p className="m-stat-foot green">Service items added</p></div>
-        </div>
-        <div className="m-stat">
-          <div className="m-stat-icon m-icon-orange"><i className="bi bi-clock-history"></i></div>
-          <div><h6>Avg. repair time</h6><div className="m-stat-value">{done.length === 0 ? '—' : avgDays < 1 ? 'Same day' : avgDays.toFixed(1) + ' days'}</div><p className="m-stat-foot orange">{done.length === 0 ? 'No finished jobs yet' : 'From booking to finished'}</p></div>
         </div>
       </section>
 
