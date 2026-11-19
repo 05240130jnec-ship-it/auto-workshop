@@ -493,6 +493,7 @@ html.theme-site .acp-contact-icon { flex-basis: 46px; width: 46px; height: 46px;
 html.theme-site .acp-hours-card { padding: 1.5rem; }
 }
 html.theme-site p, html.theme-site li { font-size: 1.06rem; }
+html.theme-site p.small, html.theme-site li.small { font-size: .875rem; }
 html.theme-site .acp-banner-text { font-size: 1.12rem; }
 html.theme-site .acp-intro { padding: 4rem 0; }
 html.theme-site .acp-container-wide { max-width: 1280px; }
