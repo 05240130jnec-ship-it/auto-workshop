@@ -48,6 +48,7 @@ router.patch('/orders/:id', admin.updateOrder);
 // Shop: customer listings and reservations
 router.get('/shop/listings', admin.listListings);
 router.patch('/shop/listings/:id', admin.updateListing);
+router.post('/shop/listings/:id/buy', admin.buyListing);      // bought -> becomes an inventory part
 router.get('/shop/reservations', admin.listReservations);
 router.patch('/shop/reservations/:id', admin.updateReservation);
 

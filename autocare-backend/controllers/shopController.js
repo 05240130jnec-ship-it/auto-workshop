@@ -67,18 +67,26 @@ async function myListings(req, res) {
   res.json(await Listing.findByCustomer(req.user.id));
 }
 
-// POST /api/shop/listings  -> list a part for sale (admin approves it later)
+// POST /api/shop/listings  -> offer a part to the workshop (the admin accepts or rejects it)
+// photos: 1 to 3 pictures, made small in the browser and sent as text ("data:image/jpeg;base64,…")
 async function createListing(req, res) {
   const { name, category, condition, price, qty, description } = req.body || {};
 
   if (!name || !price) {
     return res.status(400).json({ error: 'Please enter a name and a price.' });
   }
+  const photos = Array.isArray(req.body.photos) ? req.body.photos : [];
+  if (photos.length < 1 || photos.length > 3) {
+    return res.status(400).json({ error: 'Please add 1 to 3 photos of the part.' });
+  }
+  if (photos.some((p) => typeof p !== 'string' || !/^data:image\/(jpeg|png|webp);base64,/.test(p) || p.length > 600 * 1024)) {
+    return res.status(400).json({ error: 'One of the photos is not valid or is too big.' });
+  }
 
   const id = await Listing.nextId();
   await Listing.create({
     id, customerId: req.user.id, name, category: category || 'Other', condition: condition || 'used',
-    price, qty: Number(qty) || 1, description: description || '',
+    price, qty: Number(qty) || 1, description: description || '', photos: photos.join('\n'),
   });
   res.status(201).json({ id, status: 'review' });
 }

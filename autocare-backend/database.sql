@@ -89,7 +89,9 @@ CREATE TABLE `listings` (
   `price` decimal(10,2) DEFAULT 0.00,
   `qty` int(11) DEFAULT 1,
   `description` text DEFAULT NULL,
-  `status` enum('review','approved','rejected') DEFAULT 'review',
+  `photos` mediumtext DEFAULT NULL,
+  `status` enum('review','approved','rejected','bought') DEFAULT 'review',
+  `partId` varchar(20) DEFAULT NULL,
   `date` date DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
