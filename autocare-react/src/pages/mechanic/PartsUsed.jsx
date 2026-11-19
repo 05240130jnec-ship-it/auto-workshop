@@ -28,12 +28,6 @@ export default function PartsUsed() {
 
   const count = parts.reduce((s, p) => s + p.qty, 0)
   const cost = parts.reduce((s, p) => s + p.qty * p.price, 0)
-  const jobs = new Set(parts.map((p) => p.repairId)).size
-
-  // The part I used most in this period
-  const byName = {}
-  parts.forEach((p) => { byName[p.name] = (byName[p.name] || 0) + p.qty })
-  const top = Object.entries(byName).sort((a, b) => b[1] - a[1])[0]
 
   return (
     <>
@@ -51,14 +45,6 @@ export default function PartsUsed() {
         <div className="m-stat">
           <div className="m-stat-icon m-icon-green"><i className="bi bi-cash-stack"></i></div>
           <div><h6>Parts cost</h6><div className="m-stat-value">{nu(cost)}</div><p className="m-stat-foot green">Total value</p></div>
-        </div>
-        <div className="m-stat">
-          <div className="m-stat-icon m-icon-blue"><i className="bi bi-car-front-fill"></i></div>
-          <div><h6>Jobs</h6><div className="m-stat-value">{jobs}</div><p className="m-stat-foot blue">With parts logged</p></div>
-        </div>
-        <div className="m-stat">
-          <div className="m-stat-icon m-icon-purple"><i className="bi bi-star-fill"></i></div>
-          <div><h6>Most used</h6><div className="m-stat-value" style={{ fontSize: '1.05rem' }}>{top ? top[0] : '—'}</div><p className="m-stat-foot">{top ? top[1] + ' pcs' : 'No parts yet'}</p></div>
         </div>
       </section>
 
