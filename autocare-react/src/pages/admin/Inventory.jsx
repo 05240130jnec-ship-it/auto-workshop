@@ -26,7 +26,7 @@ export default function AdminInventory() {
   const settings = useSettings()
   const cats = [...new Set([...shopCategories(settings).map((c) => c.name), ...items.map((p) => p.category).filter(Boolean)])]
   const query = q.trim().toLowerCase()
-  // Parts the workshop bought from customers (Shop & Listings → Sell requests → "Bought, add to inventory").
+  // Parts the workshop bought from customers (Orders & Requests → Sell requests → "Bought, add to inventory").
   // Each bought sell request remembers its inventory part (partId), so: part id -> the sell request
   const fromCustomer = {}
   for (const l of store.data.listings || []) if (l.status === 'bought' && l.partId) fromCustomer[l.partId] = l

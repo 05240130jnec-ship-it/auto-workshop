@@ -11,7 +11,7 @@ import { shopCategories } from '../../data/content.js'
 
 // Orders customers placed in the shop + parts customers want to sell
 export default function AdminShop() {
-  usePageTitle('Shop & Listings')
+  usePageTitle('Orders & Requests')
   const store = useAdmin()
   const { Q, act } = store
   const { confirm, view, form } = useDialogs()
@@ -86,7 +86,7 @@ export default function AdminShop() {
 
   return (
     <>
-      <ATopbar title="Shop & Listings" sub="Part orders from the website and parts customers want to sell" />
+      <ATopbar title="Orders & Requests" sub="Part orders from the website and parts customers want to sell" />
       <Tabs value={tab} onChange={setTab} tabs={[
         ['orders', 'Part orders', reservations.filter((x) => x.status === 'ready').length],
         ['listings', 'Sell requests', listings.filter((l) => l.status === 'review').length],

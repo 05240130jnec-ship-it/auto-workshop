@@ -60,7 +60,7 @@ function AdminShell() {
           <ul className="a-nav">
             {link('/admin', 'bi-grid-1x2-fill', 'Dashboard', 0, '', true)}
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
-            {link('/admin/shop', 'bi-shop', 'Shop & Listings', shop)}
+            {link('/admin/shop', 'bi-shop', 'Orders & Requests', shop)}
           </ul>
         </div>
         <div className="a-nav-group">

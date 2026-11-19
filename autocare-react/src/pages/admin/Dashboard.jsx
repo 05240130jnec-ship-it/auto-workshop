@@ -142,7 +142,7 @@ export default function AdminDashboard() {
             <Link to="/admin/repairs?new=1" className="a-quick-btn a-quick-primary"><i className="bi bi-plus-circle"></i> New repair job</Link>
             <Link to="/admin/customers?new=1" className="a-quick-btn"><i className="bi bi-person-plus"></i> Add customer</Link>
             <Link to="/admin/inventory?new=1" className="a-quick-btn"><i className="bi bi-box-seam"></i> Add part</Link>
-            <Link to="/admin/shop" className="a-quick-btn"><i className="bi bi-shop"></i> Shop orders</Link>
+            <Link to="/admin/shop" className="a-quick-btn"><i className="bi bi-bag-check"></i> Orders &amp; requests</Link>
             <Link to="/admin/mechanics?new=1" className="a-quick-btn"><i className="bi bi-person-badge"></i> Add mechanic</Link>
             <Link to="/admin/suppliers?new=1" className="a-quick-btn"><i className="bi bi-truck"></i> Add supplier</Link>
           </div>
