@@ -15,7 +15,7 @@ export default function AdminSuppliers() {
   const { Q, act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(params.get('q') || '')        // ?q= from the Dashboard search
   const partsOf = (id) => store.data.inventory.filter((p) => p.supplierId === id)
   const query = q.trim().toLowerCase()
   const rows = store.data.suppliers.filter((s) => !query || [s.name, s.person, s.phone, s.email, s.address].join(' ').toLowerCase().includes(query))

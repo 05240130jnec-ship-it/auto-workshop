@@ -18,7 +18,7 @@ export default function AdminInventory() {
   const { toast, confirm, form } = useDialogs()
   const [params] = useSearchParams()
   const [filter, setFilter] = useState('all')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(params.get('q') || '')        // ?q= from the Dashboard search
 
   const items = store.data.inventory
   // Categories = the standard ones + any others already used in the database (e.g. the shop products)

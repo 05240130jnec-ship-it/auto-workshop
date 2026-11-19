@@ -18,6 +18,25 @@ export default function AdminDashboard() {
   const navigate = useNavigate()
   const [q, setQ] = useState('')
 
+  // ----- Search everything: jobs, customers, mechanics, parts (5 of each at most) -----
+  const term = q.trim().toLowerCase()
+  const has = (...fields) => fields.join(' ').toLowerCase().includes(term)
+  const results = term.length < 2 ? [] : [
+    { group: 'Repair jobs', icon: 'bi-wrench-adjustable', items: data.repairs
+      .filter((r) => has(r.id, r.vehicle, r.plate, r.service, Q.customerName(r.customerId)))
+      .map((r) => ({ key: r.id, title: '#' + r.id + ' · ' + r.vehicle, sub: r.plate + ' · ' + r.service + ' · ' + Q.customerName(r.customerId), to: '/admin/repairs?open=' + r.id })) },
+    { group: 'Customers', icon: 'bi-people', items: data.customers
+      .filter((c) => has(c.name, c.email, c.phone))
+      .map((c) => ({ key: c.id, title: c.name, sub: [c.phone, c.email].filter(Boolean).join(' · '), to: '/admin/customers?q=' + encodeURIComponent(c.name) })) },
+    { group: 'Mechanics', icon: 'bi-person-badge', items: data.mechanics
+      .filter((m) => has(m.name, m.email, m.phone, m.specialization))
+      .map((m) => ({ key: m.id, title: m.name, sub: m.specialization + ' · ' + Q.mechanicState(m).label, to: '/admin/mechanics?q=' + encodeURIComponent(m.name) })) },
+    { group: 'Parts', icon: 'bi-box-seam', items: data.inventory
+      .filter((p) => has(p.name, p.sku, p.category))
+      .map((p) => ({ key: p.id, title: p.name, sub: p.sku + ' · ' + p.stock + ' in stock', to: '/admin/inventory?q=' + encodeURIComponent(p.name) })) },
+  ].map((g) => ({ ...g, more: g.items.length - 5, items: g.items.slice(0, 5) })).filter((g) => g.items.length)
+  const first = results[0] && results[0].items[0]
+
   const repairs = data.repairs
   const now = new Date()
   const month = (d) => d.slice(0, 7)
@@ -55,10 +74,25 @@ export default function AdminDashboard() {
       <ATopbar
         title="Dashboard"
         sub={`${h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening'}, ${user.name} · ${now.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}
-        search={q} onSearch={setQ} placeholder="Search repairs, plates… (Enter)"
-        onEnter={(v) => { if (v.trim()) navigate('/admin/repairs?q=' + encodeURIComponent(v.trim())) }}
+        search={q} onSearch={setQ} placeholder="Search jobs, customers, mechanics, parts…"
+        onEnter={() => { if (first) navigate(first.to) }}
       />
-      {q && <p className="small text-muted" style={{ marginTop: -16 }}>Press <b>Enter</b> or <Link to={'/admin/repairs?q=' + encodeURIComponent(q)}>search repairs for “{q}”</Link></p>}
+      {term.length >= 2 && (
+        <div className="a-panel a-gsearch">
+          {results.length === 0 && <p className="text-muted mb-0"><i className="bi bi-search"></i> Nothing found for “{q.trim()}”.</p>}
+          {results.map((g) => (
+            <div key={g.group} className="a-gsearch-group">
+              <div className="a-gsearch-head"><i className={'bi ' + g.icon}></i> {g.group}{g.more > 0 && <small> · {g.more} more</small>}</div>
+              {g.items.map((it) => (
+                <Link key={it.key} to={it.to} className="a-gsearch-item">
+                  <strong>{it.title}</strong><small>{it.sub}</small>
+                </Link>
+              ))}
+            </div>
+          ))}
+          {first && <p className="small text-muted mb-0 mt-2">Press <b>Enter</b> to open the first result.</p>}
+        </div>
+      )}
 
       <section className="a-stats">
         <Stat icon="bi-wrench-adjustable" label="Active jobs" value={active.length}

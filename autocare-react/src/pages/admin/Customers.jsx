@@ -17,7 +17,7 @@ export default function AdminCustomers() {
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
   const [filter, setFilter] = useState('all')
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(params.get('q') || '')        // ?q= from the Dashboard search
 
   const repairs = store.data.repairs
   const jobsOf = (id) => repairs.filter((r) => r.customerId === id)
@@ -140,4 +140,4 @@ export default function AdminCustomers() {
       </TableCard>
     </>
   )
-}
+}

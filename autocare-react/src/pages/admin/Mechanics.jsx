@@ -18,7 +18,7 @@ export default function AdminMechanics() {
   const { Q, act } = store
   const { toast, confirm, form, view } = useDialogs()
   const [params] = useSearchParams()
-  const [q, setQ] = useState('')
+  const [q, setQ] = useState(params.get('q') || '')        // ?q= from the Dashboard search
   const ms = store.data.mechanics
   const states = ms.map(Q.mechanicState)
   const query = q.trim().toLowerCase()
