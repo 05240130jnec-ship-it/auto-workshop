@@ -18,18 +18,27 @@ const RES_BADGE = {
   collected: ['completed', 'Collected'],
   cancelled: ['review', 'Cancelled'],
 }
+// Parts I offered to the workshop (Sell a Spare Part)
+const SOLD_BADGE = {
+  review: ['scheduled', 'In review', 'Our team will look at it soon.'],
+  approved: ['completed', 'Accepted', 'The workshop wants to buy it — we will call you.'],
+  rejected: ['review', 'Not accepted', 'Sorry, the workshop cannot buy this part.'],
+  bought: ['completed', 'Bought', 'Bought by the workshop — thank you!'],
+}
 const DOT = ['text-danger', 'text-warning', 'text-primary', 'text-success', 'text-info']
 
 // The backend stores the appointment as apptDate + apptTime
 const appt = (r) => (r.apptDate ? `${fmtDate(r.apptDate)}, ${r.apptTime}` : null)
 
-// My Repairs — data comes from the backend (GET /api/repairs and /api/shop/reservations)
+// My Repairs — data comes from the backend (GET /api/repairs, /api/shop/reservations and /api/shop/listings)
+// All my history in one place: repairs, parts I bought, parts I sold to the workshop
 export default function MyRepairs() {
   usePageTitle('My Repairs')
   const { confirm, toast, view } = useDialogs()
 
   const repairs = useApi('/repairs')
   const res = useApi('/shop/reservations')
+  const sold = useApi('/shop/listings')     // parts I offered to the workshop
 
   if (repairs.loading) return <section className="acp-section"><div className="container"><Loading /></div></section>
   if (repairs.error) return <section className="acp-section"><div className="container"><Loading error={repairs.error} onRetry={repairs.reload} /></div></section>
@@ -38,6 +47,7 @@ export default function MyRepairs() {
   const active = mine.filter((r) => r.status === 'pending' || r.status === 'progress')
   const past = mine.filter((r) => r.status === 'complete' || r.status === 'cancelled')
   const reservations = res.data || []
+  const listings = sold.data || []
 
   const specialist = (r, i) => (
     r.mechanicName
@@ -214,7 +224,44 @@ export default function MyRepairs() {
             </div>
           </>
         )}
+
+        {/* ----- Parts I sold to the workshop ----- */}
+        <div className="d-flex justify-content-between align-items-center mb-3 mt-4">
+          <h3 className="h5 fw-bold mb-0"><i className="bi bi-tag"></i> Parts I Sold</h3>
+          <Link to="/sell-part" className="btn btn-outline-secondary btn-sm"><i className="bi bi-plus-lg"></i> Sell a part</Link>
+        </div>
+        <div className="acp-card p-0 overflow-hidden">
+          <div className="table-responsive">
+            <table className="table acp-table mb-0">
+              <thead><tr><th>Part</th><th>Price</th><th>Date</th><th>Status</th></tr></thead>
+              <tbody>
+                {listings.length === 0 && (
+                  <tr><td colSpan={4} className="text-center text-muted py-4">
+                    You have not offered any parts yet. <Link to="/sell-part" className="text-brand-purple fw-bold">Sell a part</Link> you no longer need.
+                  </td></tr>
+                )}
+                {listings.map((l) => {
+                  const [cls, label, note] = SOLD_BADGE[l.status] || ['review', l.status, '']
+                  const photo = String(l.photos || '').split('\n').filter(Boolean)[0]
+                  return (
+                    <tr key={l.id}>
+                      <td>
+                        <div className="d-flex align-items-center gap-2">
+                          {photo && <img src={photo} alt="" style={{ width: 52, height: 40, objectFit: 'cover', borderRadius: 6, flex: '0 0 52px' }} />}
+                          <div>{l.name}<br /><small className="text-muted">{l.category} · {l.item_condition} · {l.qty} pc</small></div>
+                        </div>
+                      </td>
+                      <td>{nu(l.price)}</td>
+                      <td>{fmtDate(l.date)}</td>
+                      <td><span className={'acp-badge ' + cls}>{label}</span><br /><small className="text-muted">{note}</small></td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
   )
-}
+}
