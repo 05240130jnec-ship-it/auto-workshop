@@ -1200,3 +1200,13 @@ html.theme-site .acp-login-btn {
   text-decoration: none; white-space: nowrap; transition: background .15s, color .15s;
 }
 html.theme-site .acp-login-btn:hover { background: var(--brand-yellow); color: #fff; }
+/* Contact page: business hours box on top of the photo */
+html.theme-site .acp-contact-hours {
+  position: absolute; left: -2.5rem; bottom: -2.5rem; width: 300px; z-index: 2;
+  padding: 1rem 1.25rem; box-shadow: 0 14px 34px rgba(16, 41, 74, .22);
+}
+html.theme-site .acp-contact-hours h3 { font-size: 1rem; margin-bottom: .25rem; }
+html.theme-site .acp-contact-hours li { padding: .45rem 0; font-size: .85rem; }
+@media (max-width: 991.98px) {
+  html.theme-site .acp-contact-hours { position: relative; left: auto; bottom: auto; width: auto; margin-top: 1.5rem; }
+}

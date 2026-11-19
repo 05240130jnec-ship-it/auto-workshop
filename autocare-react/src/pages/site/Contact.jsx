@@ -25,14 +25,30 @@ export default function Contact() {
 
   return (
     <>
-      {/* ===== HEADER ===== */}
-            <section className="acp-hero2 acp-page-hero acp-contact-hero">
+      {/* ===== HEADER: text left, photo + business hours right (same layout as About) ===== */}
+      <section className="acp-hero2 acp-page-hero acp-contact-hero">
         <div className="container">
-          <div className="row">
+          <div className="row align-items-center g-5">
             <div className="col-lg-6">
               <span className="acp-hero2-tag"><i className="bi bi-chat-dots-fill"></i>{' '}Contact</span>
               <h1 className="acp-hero2-title">Get in <span>touch</span> with us</h1>
               <p className="acp-hero2-text mb-0">{s.contactIntro}</p>
+            </div>
+            <div className="col-lg-6">
+              <div className="acp-hero2-media">
+                <img src="/media/banner.jpg" alt="A mechanic working on an engine" />
+                <div className="acp-hours-box acp-contact-hours">
+                  <h3><span className="acp-feature-icon"><i className="bi bi-clock-fill"></i></span>Business hours</h3>
+                  <ul>
+                    {hours.map(([day, time], i) => (
+                      <li key={i}>
+                        <span>{day}</span>
+                        <strong className={/closed/i.test(time || '') ? 'is-closed' : ''}>{time}</strong>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -57,29 +73,11 @@ export default function Contact() {
         </div>
       </section>
 
-      {/* ===== HOURS + MAP ===== */}
+      {/* ===== MAP (full width) ===== */}
       <section className="acp-section pt-2">
         <div className="container">
-          <div className="row g-4 align-items-stretch">
-            <div className="col-lg-5">
-              <div className="acp-hours-box h-100">
-                <h3><span className="acp-feature-icon"><i className="bi bi-clock-fill"></i></span>Business hours</h3>
-                <ul>
-                  {hours.map(([day, time], i) => (
-                    <li key={i}>
-                      <span>{day}</span>
-                      <strong className={/closed/i.test(time || '') ? 'is-closed' : ''}>{time}</strong>
-                    </li>
-                  ))}
-                </ul>
-                {s.hoursNote && <p className="acp-hours-box-note"><i className="bi bi-info-circle-fill"></i>{s.hoursNote}</p>}
-              </div>
-            </div>
-            <div className="col-lg-7">
-              <div className="acp-map h-100">
-                <iframe title={'Map: ' + s.address} src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
-              </div>
-            </div>
+          <div className="acp-map" style={{ height: 380 }}>
+            <iframe title={'Map: ' + s.address} src={mapSrc} loading="lazy" referrerPolicy="no-referrer-when-downgrade"></iframe>
           </div>
         </div>
       </section>
