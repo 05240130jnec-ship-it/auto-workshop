@@ -26,7 +26,6 @@ export default function AdminInventory() {
   const settings = useSettings()
   const cats = [...new Set([...shopCategories(settings).map((c) => c.name), ...items.map((p) => p.category).filter(Boolean)])]
   const query = q.trim().toLowerCase()
-  const onOrder = (id) => store.data.orders.filter((o) => o.partId === id && (o.status === 'pending' || o.status === 'approved')).reduce((s, o) => s + o.qty, 0)
   // Parts the workshop bought from customers (Shop & Listings → Sell requests → "Bought, add to inventory").
   // Each bought sell request remembers its inventory part (partId), so: part id -> the sell request
   const fromCustomer = {}
@@ -67,22 +66,18 @@ export default function AdminInventory() {
     // (SKU is kept exactly as typed — the shop products use lowercase SKUs like "engine-oil")
     act(() => api('/admin/inventory/' + p.id, { method: 'PATCH', body: forSave(v) }), 'Part updated')
   }
-  async function reorder(p) {
-    if (!p.supplierId) return toast(<><b>{p.name}</b> has no supplier yet. Edit the part and choose a supplier first.</>, 'warn')
+  // New stock arrived (bought from the supplier): add many pieces at once
+  async function restock(p) {
     const v = await form({
-      title: 'Reorder ' + p.name, size: 'sm', submitText: 'Create purchase order', values: { qty: Math.max(p.reorder * 2 - p.stock, p.reorder, 1) },
+      title: 'Add stock · ' + p.name, size: 'sm', submitText: 'Add to stock', values: { qty: Math.max(p.reorder * 2 - p.stock, p.reorder, 1) },
       fields: [
-        { name: 'qty', label: 'Quantity', type: 'number', min: 1, required: true, col: 12, help: (vals) => <>Unit price {nu(p.price)} · supplier {Q.supplierName(p.supplierId)}<br /><b>Total: {nu((Number(vals.qty) || 0) * p.price)}</b></> },
-        { name: 'note', label: 'Note (optional)', type: 'textarea', col: 12 },
+        { name: 'qty', label: 'Pieces received', type: 'number', min: 1, max: 10000, required: true, col: 12,
+          help: (vals) => <>Stock now {p.stock} → <b>{p.stock + (Number(vals.qty) || 0)}</b>{p.supplierId ? <> · supplier {Q.supplierName(p.supplierId)}</> : null}</> },
       ],
     })
     if (!v) return
-    let id = ''
-    const ok = await act(async () => {
-      const res = await api('/admin/orders', { method: 'POST', body: { partId: p.id, qty: v.qty, note: v.note } })
-      id = res.id
-    })
-    if (ok) toast(<>Purchase order <b>{id}</b> sent to {Q.supplierName(p.supplierId)}</>)
+    act(() => api('/admin/inventory/' + p.id, { method: 'PATCH', body: { stock: p.stock + Number(v.qty) } }),
+      <>{v.qty} × <b>{p.name}</b> added · stock now {p.stock + Number(v.qty)}</>)
   }
   async function del(p) {
     const ok = await confirm(<><b>{p.name}</b> ({p.sku}) will be removed from inventory.</>, { title: 'Delete part?', okText: 'Delete', danger: true })
@@ -125,7 +120,7 @@ export default function AdminInventory() {
       <TableCard head={['Part', 'Category', 'In Stock', 'Reorder At', 'Unit Price', 'Stock Value', 'Supplier', 'Status', '']} foot={`Showing ${rows.length} of ${items.length} products`}>
         {rows.length === 0 && <EmptyRow cols={9} text={query ? `No parts match "${q}"` : 'No parts in this category'} />}
         {rows.map((p) => {
-          const st = Q.stockState(p), incoming = onOrder(p.id)
+          const st = Q.stockState(p)
           return (
             <tr key={p.id} className={fromCustomer[p.id] ? 'a-row-from-customer' : undefined}>
               <td>
@@ -146,7 +141,6 @@ export default function AdminInventory() {
                   <span className={'a-stock ' + st.key}>{p.stock}</span>
                   <button onClick={() => adjust(p, 1)} title="Add 1">+</button>
                 </div>
-                {incoming > 0 && <small style={{ color: 'var(--a-blue)' }}>+{incoming} on order</small>}
               </td>
               <td>{p.reorder}</td>
               <td>{nu(p.price)}</td>
@@ -154,7 +148,7 @@ export default function AdminInventory() {
               <td>{p.supplierId ? Q.supplierName(p.supplierId) : fromCustomer[p.id] ? <span className="text-muted">Customer</span> : Q.supplierName(p.supplierId)}</td>
               <td><span className={'a-badge a-badge-' + st.cls}>{st.label}</span></td>
               <td><div className="a-actions">
-                <IconBtn icon="bi-cart-plus" title="Reorder" onClick={() => reorder(p)} />
+                <IconBtn icon="bi-box-arrow-in-down" title="Add stock" onClick={() => restock(p)} />
                 <IconBtn icon="bi-pencil" title="Edit" onClick={() => edit(p)} />
                 <IconBtn icon="bi-trash3" title="Delete" tone="danger" onClick={() => del(p)} />
               </div></td>

@@ -37,8 +37,6 @@ export default function ATopbar({ title, sub, search, onSearch, onEnter, placeho
       text: <><strong>{r.id}</strong> needs a mechanic</>, sub: r.vehicle + ' · ' + r.service, to: '/admin/repairs?open=' + r.id })),
     ...data.repairs.filter((r) => r.status === 'progress' && r.due && r.due < now).map((r) => ({ key: 'late-' + r.id + '-' + r.due, icon: 'bi-alarm', tone: 'red',
       text: <><strong>{r.id}</strong> is overdue</>, sub: r.vehicle + ' · was due ' + fmtDate(r.due), to: '/admin/repairs?open=' + r.id })),
-    ...Q.pendingOrders().map((o) => ({ key: 'po-' + o.id, icon: 'bi-bag', tone: 'blue',
-      text: <><strong>{o.id}</strong> awaiting approval</>, sub: o.qty + ' × ' + ((Q.part(o.partId) || {}).name || 'part'), to: '/admin/orders' })),
     ...Q.lowStock().map((p) => ({ key: 'stock-' + p.id + '-' + p.stock, icon: 'bi-exclamation-triangle', tone: 'red',
       text: <><strong>{p.name}</strong> {p.stock ? 'is running low' : 'is out of stock'}</>, sub: p.stock + ' left · reorder at ' + p.reorder, to: '/admin/inventory' })),
     ...(data.listings || []).filter((l) => l.status === 'review').map((l) => ({ key: 'sell-' + l.id, icon: 'bi-tag', tone: 'purple',

@@ -12,7 +12,6 @@ const LISTS = {
   customers: '/admin/customers',
   inventory: '/admin/inventory',
   suppliers: '/admin/suppliers',
-  orders: '/admin/orders',
   listings: '/admin/shop/listings',
   reservations: '/admin/shop/reservations',
   services: '/content/services-all',   // every service (website + workshop-only), for the job form
@@ -58,7 +57,6 @@ function helpers(data) {
     },
     poCost: (o) => { const p = get('inventory', o.partId); return p ? p.price * o.qty : 0 },
     lowStock: () => data.inventory.filter((p) => p.stock <= p.reorder),
-    pendingOrders: () => data.orders.filter((o) => o.status === 'pending'),
     unassigned: () => data.repairs.filter((r) => !r.mechanicId && r.status === 'pending'),
     partsTotal: (r) => (r.parts || []).reduce((s, p) => s + p.qty * Number(p.price), 0),
     servicesTotal: (r) => (r.services || []).reduce((s, x) => s + x.qty * Number(x.cost), 0),
@@ -113,4 +111,4 @@ export default function AdminDataProvider({ children }) {
     )
   }
   return <AdminContext.Provider value={value}>{children}</AdminContext.Provider>
-}
+}

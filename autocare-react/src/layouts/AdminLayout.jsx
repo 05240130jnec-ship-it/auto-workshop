@@ -29,7 +29,6 @@ function AdminShell() {
   useEffect(() => { reload() }, [pathname, reload])
 
   const pendingRepairs = data.repairs.filter((r) => r.status === 'pending').length
-  const pendingPO = Q.pendingOrders().length
   const low = Q.lowStock().length
   const shop = (data.listings || []).filter((l) => l.status === 'review').length + (data.reservations || []).filter((x) => x.status === 'ready').length
 
@@ -60,7 +59,6 @@ function AdminShell() {
           <ul className="a-nav">
             {link('/admin', 'bi-grid-1x2-fill', 'Dashboard', 0, '', true)}
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
-            {link('/admin/orders', 'bi-bag-check-fill', 'Purchase Orders', pendingPO)}
             {link('/admin/shop', 'bi-shop', 'Shop & Listings', shop)}
           </ul>
         </div>

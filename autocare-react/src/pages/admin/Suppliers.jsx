@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { nu, relDate } from '../../data/store.js'
+import { nu } from '../../data/store.js'
 import { api } from '../../api.js'
 import { useAdmin } from './AdminContext.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
 import useOnce from './useOnce.js'
-import { Badge, EmptyRow, IconBtn, TableCard } from './parts.jsx'
+import { EmptyRow, IconBtn, TableCard } from './parts.jsx'
 
 export default function AdminSuppliers() {
   usePageTitle('Suppliers')
@@ -17,7 +17,6 @@ export default function AdminSuppliers() {
   const [params] = useSearchParams()
   const [q, setQ] = useState('')
   const partsOf = (id) => store.data.inventory.filter((p) => p.supplierId === id)
-  const ordersOf = (id) => store.data.orders.filter((o) => o.supplierId === id)
   const query = q.trim().toLowerCase()
   const rows = store.data.suppliers.filter((s) => !query || [s.name, s.person, s.phone, s.email, s.address].join(' ').toLowerCase().includes(query))
 
@@ -39,7 +38,7 @@ export default function AdminSuppliers() {
     act(() => api('/admin/suppliers/' + s.id, { method: 'PATCH', body: v }), 'Supplier updated')
   }
   function show(s) {
-    const parts = partsOf(s.id), orders = ordersOf(s.id).sort((a, b) => b.date.localeCompare(a.date))
+    const parts = partsOf(s.id)
     view(s.name, (
       <>
         <div className="a-detail-grid">
@@ -55,13 +54,6 @@ export default function AdminSuppliers() {
             <tbody>{parts.map((p) => { const st = Q.stockState(p); return <tr key={p.id}><td>{p.name}</td><td>{p.sku}</td><td><span className={'a-badge a-badge-' + st.cls}>{p.stock}</span></td><td className="text-end">{nu(p.price)}</td></tr> })}</tbody>
           </table>
         ) : <p className="text-muted small">No products linked.</p>}
-        <div className="a-section-title">Order history ({orders.length})</div>
-        {orders.length ? (
-          <table className="a-mini-table">
-            <thead><tr><th>PO</th><th>Date</th><th>Part</th><th>Qty</th><th>Status</th><th className="text-end">Cost</th></tr></thead>
-            <tbody>{orders.map((o) => <tr key={o.id}><td className="a-id">#{o.id}</td><td>{relDate(o.date)}</td><td>{(Q.part(o.partId) || {}).name}</td><td>{o.qty}</td><td><Badge status={o.status} /></td><td className="text-end">{nu(Q.poCost(o))}</td></tr>)}</tbody>
-          </table>
-        ) : <p className="text-muted small mb-0">No orders yet.</p>}
       </>
     ))
   }
@@ -79,18 +71,16 @@ export default function AdminSuppliers() {
       <ATopbar title="Suppliers" sub="Companies you buy parts and supplies from" search={q} onSearch={setQ} placeholder="Search suppliers...">
         <button className="a-btn a-btn-primary" onClick={add}><i className="bi bi-plus-lg"></i> Add Supplier</button>
       </ATopbar>
-      <TableCard head={['Supplier', 'Contact', 'Address', 'Parts Supplied', 'Orders', '']} foot={`${rows.length} supplier${rows.length === 1 ? '' : 's'}`}>
+      <TableCard head={['Supplier', 'Contact', 'Address', 'Parts Supplied', '']} foot={`${rows.length} supplier${rows.length === 1 ? '' : 's'}`}>
         {rows.length === 0 && <EmptyRow cols={6} text={query ? `No suppliers match "${q}"` : 'No suppliers yet'} />}
         {rows.map((s) => {
-          const parts = partsOf(s.id), orders = ordersOf(s.id)
-          const received = orders.filter((o) => o.status === 'received').reduce((t, o) => t + Q.poCost(o), 0)
+          const parts = partsOf(s.id)
           return (
             <tr key={s.id}>
               <td><strong>{s.name}</strong><small>{s.person}</small></td>
               <td><a href={'tel:' + (s.phone || '').replace(/\s/g, '')}>{s.phone}</a><small>{s.email}</small></td>
               <td>{s.address}</td>
               <td>{parts.length} product{parts.length === 1 ? '' : 's'}<small>{parts.slice(0, 2).map((p) => p.name).join(', ')}{parts.length > 2 ? '…' : ''}</small></td>
-              <td>{orders.length}<small>{nu(received)} received</small></td>
               <td><div className="a-actions">
                 <IconBtn icon="bi-eye" title="View" onClick={() => show(s)} />
                 <IconBtn icon="bi-pencil" title="Edit" onClick={() => edit(s)} />
@@ -102,4 +92,4 @@ export default function AdminSuppliers() {
       </TableCard>
     </>
   )
-}
+}

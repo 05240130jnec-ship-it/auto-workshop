@@ -44,7 +44,6 @@ export default function AdminDashboard() {
   const recent = [...repairs].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5)
   const attention = [
     ...unassigned.map((r) => ({ key: r.id, to: '/admin/repairs?open=' + r.id, icon: 'bi-person-exclamation', tone: 'orange', title: <>Assign a mechanic to {r.id}<Priority p={r.priority} /></>, sub: `${r.vehicle} · ${r.service} · booked ${relDate(r.date).toLowerCase()}` })),
-    ...Q.pendingOrders().map((o) => ({ key: o.id, to: '/admin/orders', icon: 'bi-bag', tone: 'blue', title: `Approve ${o.id} — ${(Q.part(o.partId) || {}).name || ''}`, sub: `${o.qty} units · ${nu(Q.poCost(o))} · by ${Q.mechanicName(o.requestedBy)}` })),
     ...low.map((p) => ({ key: p.id, to: '/admin/inventory', icon: 'bi-box-seam', tone: 'red', title: p.name + (p.stock ? ' running low' : ' out of stock'), sub: `${p.stock} left · reorder level ${p.reorder}` })),
     ...(data.listings || []).filter((l) => l.status === 'review').map((l) => ({ key: l.id, to: '/admin/shop', icon: 'bi-tag', tone: 'purple', title: `Review listing: ${l.name}`, sub: `${Q.customerName(l.customerId)} · ${nu(l.price)}` })),
   ]
@@ -142,7 +141,7 @@ export default function AdminDashboard() {
             <Link to="/admin/repairs?new=1" className="a-quick-btn a-quick-primary"><i className="bi bi-plus-circle"></i> New repair job</Link>
             <Link to="/admin/customers?new=1" className="a-quick-btn"><i className="bi bi-person-plus"></i> Add customer</Link>
             <Link to="/admin/inventory?new=1" className="a-quick-btn"><i className="bi bi-box-seam"></i> Add part</Link>
-            <Link to="/admin/orders" className="a-quick-btn"><i className="bi bi-bag-check"></i> Review orders</Link>
+            <Link to="/admin/shop" className="a-quick-btn"><i className="bi bi-shop"></i> Shop orders</Link>
             <Link to="/admin/mechanics?new=1" className="a-quick-btn"><i className="bi bi-person-badge"></i> Add mechanic</Link>
             <Link to="/admin/suppliers?new=1" className="a-quick-btn"><i className="bi bi-truck"></i> Add supplier</Link>
           </div>

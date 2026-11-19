@@ -35,7 +35,6 @@ import Profile from './pages/mechanic/Profile.jsx'
 import AdminLayout from './layouts/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/Dashboard.jsx'
 import AdminRepairs from './pages/admin/Repairs.jsx'
-import AdminOrders from './pages/admin/Orders.jsx'
 import AdminShop from './pages/admin/Shop.jsx'
 import AdminCustomers from './pages/admin/Customers.jsx'
 import AdminMechanics from './pages/admin/Mechanics.jsx'
@@ -87,7 +86,6 @@ export default function App() {
       <Route path="/admin" element={<RequireRole roles={['admin']}><AdminLayout /></RequireRole>}>
         <Route index element={<AdminDashboard />} />
         <Route path="repairs" element={<AdminRepairs />} />
-        <Route path="orders" element={<AdminOrders />} />
         <Route path="shop" element={<AdminShop />} />
         <Route path="customers" element={<AdminCustomers />} />
         <Route path="mechanics" element={<AdminMechanics />} />

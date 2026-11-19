@@ -38,8 +38,9 @@ export default function AdminMechanics() {
   ]
   const emailCheck = (id) => (v) => store.all('mechanics').some((m) => m.id !== id && (m.email || '').toLowerCase() === v.email.toLowerCase()) ? 'Another mechanic already uses that email' : null
 
+  // A new mechanic always starts as "Working" — Busy / On leave are changed later (Edit or the Leave button)
   async function add() {
-    const v = await form({ title: 'Add mechanic', fields: [...fields, { name: 'password', label: 'Temporary password', required: true, default: 'mech123', help: 'They log in at /login with their email and this password' }], submitText: 'Add mechanic', validate: emailCheck() })
+    const v = await form({ title: 'Add mechanic', fields: [...fields.filter((f) => f.name !== 'status'), { name: 'password', label: 'Temporary password', required: true, default: 'mech123', help: 'They log in on the staff login page (/staff-login) with their email and this password' }], submitText: 'Add mechanic', validate: emailCheck() })
     if (!v) return
     act(() => api('/admin/mechanics', { method: 'POST', body: { ...v, email: v.email.toLowerCase() } }),
       <><b>{v.name}</b> joined the team</>)
@@ -134,4 +135,4 @@ export default function AdminMechanics() {
       </div>
     </>
   )
-}
+}
