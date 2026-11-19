@@ -40,15 +40,16 @@ export default function AuthProvider({ children }) {
   }, [])
 
   // Returns { user } on success or { error } on failure
-  async function login(email, password) {
+  // portal = 'customer' (/login) or 'staff' (/staff-login): the backend refuses the wrong page
+  async function login(email, password, portal) {
     try {
       const data = await api('/auth/login', {
         method: 'POST',
-        body: { email: email.trim().toLowerCase(), password },
+        body: { email: email.trim().toLowerCase(), password, portal },
       })
       return { user: start(data.token, data.user) }
     } catch (err) {
-      return { error: err.message, wait: err.data && err.data.wait }
+      return { error: err.message, wait: err.data && err.data.wait, staff: err.data && err.data.staff, customer: err.data && err.data.customer }
     }
   }
 
@@ -60,7 +61,7 @@ export default function AuthProvider({ children }) {
       const data = await api('/auth/google', { method: 'POST', body })
       return { user: start(data.token, data.user) }
     } catch (err) {
-      return { error: err.message }
+      return { error: err.message, staff: err.data && err.data.staff }
     }
   }
 

@@ -13,6 +13,7 @@ export default function LoginForm({ onDone, onLink, google = true }) {
   const [password, setPassword] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [error, setError] = useState('')
+  const [goTo, setGoTo] = useState('')      // wrong login page -> link to the right one
   const [loading, setLoading] = useState(false)
   const [wait, setWait] = useState(0)   // seconds left after 5 wrong passwords
 
@@ -31,12 +32,15 @@ export default function LoginForm({ onDone, onLink, google = true }) {
   async function handleSubmit(e) {
     e.preventDefault()
     setError('')
+    setGoTo('')
     if (!email || !password) return setError('Please enter your email and password.')
     setLoading(true)
-    const res = await login(email, password)   // waits for the backend's answer
+    // google = customer page, no google = staff page; the backend refuses the wrong page
+    const res = await login(email, password, google ? 'customer' : 'staff')   // waits for the backend's answer
     setLoading(false)
     if (res.error) {
       if (res.wait) setWait(res.wait)
+      setGoTo(res.staff ? 'staff' : res.customer ? 'customer' : '')
       return setError(res.error)
     }
     onDone(res.user)
@@ -46,13 +50,21 @@ export default function LoginForm({ onDone, onLink, google = true }) {
   async function handleGoogle(credential) {
     setError('')
     const res = await loginWithGoogle(credential)
-    if (res.error) return setError(res.error)
+    if (res.error) {
+      setGoTo(res.staff ? 'staff' : '')
+      return setError(res.error)
+    }
     onDone(res.user)
   }
 
   return (
     <>
-      {error && <div className="lg-error"><i className="bi bi-exclamation-circle"></i> {error}</div>}
+      {error && (
+        <div className="lg-error"><i className="bi bi-exclamation-circle"></i> {error}
+          {goTo === 'staff' && <> <Link to="/staff-login" className="lg-link">Go to staff login</Link></>}
+          {goTo === 'customer' && <> <Link to="/login" className="lg-link">Go to customer login</Link></>}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} noValidate>
         <div className="lg-field">
@@ -88,4 +100,4 @@ export default function LoginForm({ onDone, onLink, google = true }) {
       {google && <GoogleButton onCredential={handleGoogle} />}
     </>
   )
-}
+}

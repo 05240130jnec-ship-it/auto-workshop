@@ -51,6 +51,16 @@ async function login(req, res) {
     return res.status(403).json({ error: 'This account is inactive. Please contact the workshop.' });
   }
 
+  // Two separate login pages: /login is only for customers, /staff-login only for mechanics and the admin.
+  // The page sends portal: 'customer' or 'staff'; the wrong page gets no token.
+  const portal = req.body.portal;
+  if (portal === 'customer' && acc.role !== 'customer') {
+    return res.status(403).json({ error: 'This login is for customers. Workshop staff (mechanics and admin), please use the staff login.', staff: true });
+  }
+  if (portal === 'staff' && acc.role === 'customer') {
+    return res.status(403).json({ error: 'This login is only for workshop staff. Customers, please use the customer login.', customer: true });
+  }
+
   const user = { id: acc.id, role: acc.role, name: acc.name, email: acc.email };
   res.json({ token: makeToken(user), user });
 }
@@ -136,6 +146,10 @@ async function google(req, res) {
     return res.status(403).json({ error: 'This account is inactive. Please contact the workshop.' });
   }
   await LoginAttempt.clear(email).catch(() => {});
+  // "Continue with Google" is only on the customer login: staff must use the staff login
+  if (acc.role !== 'customer') {
+    return res.status(403).json({ error: 'This login is for customers. Workshop staff (mechanics and admin), please use the staff login.', staff: true });
+  }
 
   const user = { id: acc.id, role: acc.role, name: acc.name, email: acc.email };
   res.json({ token: makeToken(user), user });
