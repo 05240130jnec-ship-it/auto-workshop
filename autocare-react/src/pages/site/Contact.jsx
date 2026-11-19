@@ -36,7 +36,7 @@ export default function Contact() {
             </div>
             <div className="col-lg-6">
               <div className="acp-hero2-media">
-                <img src="/media/banner.jpg" alt="A mechanic working on an engine" />
+                <img src="/media/contact.webp" alt="A smiling mechanic in our workshop" />
                 <div className="acp-hours-box acp-contact-hours">
                   <h3><span className="acp-feature-icon"><i className="bi bi-clock-fill"></i></span>Business hours</h3>
                   <ul>
