@@ -2,7 +2,7 @@
 // (offers, services + prices, shop products) now lives in MySQL.
 //
 // Run once on a database you already have (it keeps all your data):
-//     node content-setup.js
+//     node scripts/content-setup.js
 //
 // What it does (safe to run again any time):
 //   1. creates the tables `services` and `offers` if they are missing
@@ -13,8 +13,8 @@
 //
 // seed.js also calls setupContent(db, { reset: true }) so a fresh database gets the same content.
 
-const db = require('./db');
-const { setupSettings } = require('./settings');   // website text + booking rules
+const db = require('../config/db');
+const { setupSettings } = require('../models/settingsModel');   // website text + booking rules
 
 // ---------- starting content (the same as the old static pages) ----------
 
@@ -204,7 +204,7 @@ async function setupContent(conn = db, { reset = false } = {}) {
 
 module.exports = { setupContent };
 
-// When run directly:  node content-setup.js
+// When run directly:  node scripts/content-setup.js
 if (require.main === module) {
   setupContent()
     .then(async () => {

@@ -13,7 +13,7 @@ const config = {
   dateStrings: true,
   // Aiven only accepts secure (SSL) connections, checked with its certificate
   ssl: process.env.DB_SSL === 'true'
-    ? { ca: fs.readFileSync(path.join(__dirname, 'ca.pem')) }
+    ? { ca: fs.readFileSync(path.join(__dirname, '..', 'ca.pem')) }
     : undefined,
 };
 

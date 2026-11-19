@@ -1,5 +1,5 @@
 // test-email.js — checks that the Gmail settings in .env work.
-// Run in the autocare-backend folder:   node test-email.js
+// Run in the autocare-backend folder:   node scripts/test-email.js
 // It sends one test email to EMAIL_USER (yourself) and prints exactly what went wrong if it fails.
 require('dotenv').config();
 const nodemailer = require('nodemailer');

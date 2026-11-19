@@ -1,4 +1,4 @@
-// vehicle-rules.js — checks the vehicle name and the Bhutan plate number.
+// utils/vehicle-rules.js — checks the vehicle name and the Bhutan plate number.
 // The website does the same check (autocare-react/src/data/vehicle.js), and the backend
 // checks again here so nobody can skip it.
 //

@@ -1,10 +1,10 @@
 // seed.js — fills the database with the starting data: 1 admin, 1 mechanic, 1 customer,
 // the website shop products (with pictures) and the website content. No sample suppliers, repairs or orders.
-// Run with:  node seed.js
+// Run with:  node scripts/seed.js
 // It deletes old data first, so you can run it again any time to reset.
 
 const bcrypt = require('bcrypt');
-const db = require('./db');
+const db = require('../config/db');
 const { setupContent } = require('./content-setup');   // services, offers, page settings
 const { addShopProducts } = require('./shop-products'); // the website shop products + pictures
 

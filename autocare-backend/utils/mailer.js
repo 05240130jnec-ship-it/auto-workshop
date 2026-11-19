@@ -1,4 +1,4 @@
-// mailer.js — sends emails from the workshop's Gmail (used for "Forgot password").
+// utils/mailer.js — sends emails from the workshop's Gmail (used for "Forgot password").
 //
 // Set these 2 lines in .env (see .env.example):
 //   EMAIL_USER=yourworkshop@gmail.com
