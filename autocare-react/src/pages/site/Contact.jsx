@@ -26,11 +26,15 @@ export default function Contact() {
   return (
     <>
       {/* ===== HEADER ===== */}
-      <section className="acp-hero2 acp-page-hero acp-contact-hero text-center">
+            <section className="acp-hero2 acp-page-hero acp-contact-hero">
         <div className="container">
-          <span className="acp-hero2-tag"><i className="bi bi-chat-dots-fill"></i>{' '}Contact</span>
-          <h1 className="acp-hero2-title">Get in <span>touch</span> with us</h1>
-          <p className="acp-hero2-text mx-auto mb-0">{s.contactIntro}</p>
+          <div className="row">
+            <div className="col-lg-6">
+              <span className="acp-hero2-tag"><i className="bi bi-chat-dots-fill"></i>{' '}Contact</span>
+              <h1 className="acp-hero2-title">Get in <span>touch</span> with us</h1>
+              <p className="acp-hero2-text mb-0">{s.contactIntro}</p>
+            </div>
+          </div>
         </div>
       </section>
 
