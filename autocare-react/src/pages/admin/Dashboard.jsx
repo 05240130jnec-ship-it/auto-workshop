@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext.js'
-import { nu, nuShort, relDate, today } from '../../data/store.js'
+import { nu, nuShort, relDate, today, fmtDate } from '../../data/store.js'
 import { useAdmin } from './AdminContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
@@ -44,6 +44,7 @@ export default function AdminDashboard() {
   const recent = [...repairs].sort((a, b) => b.date.localeCompare(a.date) || b.id.localeCompare(a.id)).slice(0, 5)
   const attention = [
     ...unassigned.map((r) => ({ key: r.id, to: '/admin/repairs?open=' + r.id, icon: 'bi-person-exclamation', tone: 'orange', title: <>Assign a mechanic to {r.id}<Priority p={r.priority} /></>, sub: `${r.vehicle} · ${r.service} · booked ${relDate(r.date).toLowerCase()}` })),
+    ...Q.pendingLeaves().map((l) => ({ key: l.id, to: '/admin/mechanics', icon: 'bi-calendar2-x', tone: 'orange', title: `Leave request: ${l.mechanicName}`, sub: `${fmtDate(l.fromDate)}${l.toDate !== l.fromDate ? ' – ' + fmtDate(l.toDate) : ''} · ${l.reason}` })),
     ...low.map((p) => ({ key: p.id, to: '/admin/inventory', icon: 'bi-box-seam', tone: 'red', title: p.name + (p.stock ? ' running low' : ' out of stock'), sub: `${p.stock} left · reorder level ${p.reorder}` })),
     ...(data.listings || []).filter((l) => l.status === 'review').map((l) => ({ key: l.id, to: '/admin/shop', icon: 'bi-tag', tone: 'purple', title: `Review listing: ${l.name}`, sub: `${Q.customerName(l.customerId)} · ${nu(l.price)}` })),
   ]

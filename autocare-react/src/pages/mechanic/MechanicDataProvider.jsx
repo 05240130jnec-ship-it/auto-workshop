@@ -9,6 +9,7 @@ const LISTS = {
   repairs: '/mechanic/repairs',   // my jobs, each with its parts + services
   profile: '/mechanic/profile',   // my own mechanic record
   parts: '/mechanic/parts',       // inventory to pick parts from
+  leaves: '/mechanic/leaves',     // my leave requests (the admin approves them)
 }
 
 // Make numbers real numbers and give fields the names the pages already use
@@ -30,8 +31,9 @@ export default function MechanicDataProvider({ children }) {
 
   const reload = useCallback(async () => {
     try {
-      const [repairs, profile, parts] = await Promise.all([api(LISTS.repairs), api(LISTS.profile), api(LISTS.parts)])
+      const [repairs, profile, parts, leaves] = await Promise.all([api(LISTS.repairs), api(LISTS.profile), api(LISTS.parts), api(LISTS.leaves)])
       setData({
+        leaves,
         repairs: repairs.map(cleanRepair),
         profile,
         parts: parts.map((p) => ({ ...p, price: Number(p.price) || 0 })),
@@ -76,4 +78,4 @@ export default function MechanicDataProvider({ children }) {
     )
   }
   return <MechanicContext.Provider value={value}>{children}</MechanicContext.Provider>
-}
+}

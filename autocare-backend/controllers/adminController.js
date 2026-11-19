@@ -13,6 +13,7 @@ const Supplier = require('../models/supplierModel');
 const Order = require('../models/orderModel');
 const Listing = require('../models/listingModel');
 const Reservation = require('../models/reservationModel');
+const Leave = require('../models/leaveModel');
 const { onlyFields } = require('../models/helpers');
 const { checkVehicleType } = require('../models/settingsModel');
 const { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } = require('../utils/vehicle-rules');
@@ -63,6 +64,9 @@ async function updateRepair(req, res) {
   }
   if (body.mechanicId && !(await Mechanic.exists(body.mechanicId))) {
     return res.status(400).json({ error: 'Mechanic not found.' });
+  }
+  if (body.mechanicId && (await Mechanic.findById(body.mechanicId)).status === 'leave') {
+    return res.status(400).json({ error: 'This mechanic is not available (on leave). Please choose another mechanic.' });
   }
   if (body.customerId && !(await Customer.exists(body.customerId))) {
     return res.status(400).json({ error: 'Customer not found.' });
@@ -127,6 +131,11 @@ async function createRepair(req, res) {
   if (status === 'progress' && !b.mechanicId) {
     return res.status(400).json({ error: 'Assign a mechanic to mark the job In Progress.' });
   }
+  if (b.mechanicId) {
+    const m = await Mechanic.findById(b.mechanicId);
+    if (!m) return res.status(400).json({ error: 'Mechanic not found.' });
+    if (m.status === 'leave') return res.status(400).json({ error: 'This mechanic is not available (on leave). Please choose another mechanic.' });
+  }
 
   const id = await Repair.nextId();
   await Repair.createByAdmin({
@@ -146,6 +155,7 @@ async function deleteRepair(req, res) {
 
 // GET /api/admin/mechanics  -> all mechanics + how many open jobs each has
 async function listMechanics(req, res) {
+  await Leave.applyLeaves();                   // an approved leave may have started or ended today
   res.json(await Mechanic.findAllWithOpenJobs());
 }
 
@@ -188,6 +198,7 @@ async function updateMechanic(req, res) {
     ['name', 'email', 'phone', 'specialization', 'experience', 'status', 'joined']));
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
   if (!ok) return res.status(404).json({ error: 'Mechanic not found.' });
+  if (body.status === 'active' || body.status === 'busy') await Leave.endCurrent(req.params.id);   // back from leave early
 
   res.json(await Mechanic.findById(req.params.id));
 }
@@ -506,6 +517,27 @@ async function updateReservation(req, res) {
   res.json({ id: reservation.id, status });
 }
 
+// ---------- LEAVE REQUESTS (mechanics ask, the admin decides) ----------
+
+// GET /api/admin/leaves  -> all leave requests (waiting ones first)
+async function listLeaves(req, res) {
+  await Leave.applyLeaves();
+  res.json(await Leave.findAll());
+}
+
+// PATCH /api/admin/leaves/LV-1001  { status: 'approved' | 'rejected', adminNote? }
+// Approved: from the first day the mechanic is "On leave" and his open jobs go back to Pending.
+async function decideLeave(req, res) {
+  const { status, adminNote } = req.body || {};
+  if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ error: 'Status must be approved or rejected.' });
+  const leave = await Leave.findById(req.params.id);
+  if (!leave) return res.status(404).json({ error: 'Leave request not found.' });
+  if (leave.status !== 'pending') return res.status(400).json({ error: `This request is already ${leave.status}.` });
+  await Leave.setStatus(leave.id, status, String(adminNote || '').trim().slice(0, 300));
+  await Leave.applyLeaves();                   // starts today? -> the mechanic is on leave right away
+  res.json(await Leave.findById(leave.id));
+}
+
 // ---------- MY PROFILE (the admin who is logged in) ----------
 // The login email is not changed here.
 
@@ -564,4 +596,5 @@ module.exports = {
   listOrders, createOrder, updateOrder,
   listListings, updateListing, buyListing, listReservations, updateReservation,
   getProfile, updateProfile, changePassword,
+  listLeaves, decideLeave,
 };

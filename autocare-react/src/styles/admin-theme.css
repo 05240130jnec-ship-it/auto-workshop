@@ -147,3 +147,10 @@
   width: 44px; height: 34px; flex: 0 0 44px; border-radius: 6px; background: #dcfce7; color: #16a34a;
   display: grid; place-items: center; font-size: 1.1rem;
 }
+
+/* ===== Mechanics: leave requests + "On leave" note (Mechanics.jsx) ===== */
+.a-leave-panel { border-left: 4px solid #f57c00; }
+.a-leave-note {
+  margin: -4px 0 2px; padding: 6px 10px; border-radius: 8px;
+  background: #fff4e5; color: #c2410c; font-size: 0.8rem; font-weight: 600;
+}

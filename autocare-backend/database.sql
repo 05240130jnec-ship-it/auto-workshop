@@ -77,6 +77,26 @@ CREATE TABLE `inventory` (
 -- --------------------------------------------------------
 
 --
+-- Table structure for table `leave_requests` (a mechanic asks for leave, the admin decides)
+--
+
+CREATE TABLE IF NOT EXISTS `leave_requests` (
+  `id` varchar(20) NOT NULL,
+  `mechanicId` varchar(20) NOT NULL,
+  `fromDate` date NOT NULL,
+  `toDate` date NOT NULL,
+  `reason` varchar(300) DEFAULT NULL,
+  `status` enum('pending','approved','rejected','finished','cancelled') DEFAULT 'pending',
+  `adminNote` varchar(300) DEFAULT NULL,
+  `date` date DEFAULT NULL,
+  `decidedAt` date DEFAULT NULL,
+  PRIMARY KEY (`id`),
+  KEY `mechanicId` (`mechanicId`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+-- --------------------------------------------------------
+
+--
 -- Table structure for table `listings`
 --
 

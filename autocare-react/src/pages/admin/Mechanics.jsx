@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
-import { nu, relDate, today } from '../../data/store.js'
+import { nu, relDate, today, fmtDate } from '../../data/store.js'
 import useSettings from '../../data/useSettings.js'
 import { lines } from '../../data/content.js'
 import { api } from '../../api.js'
@@ -83,6 +83,24 @@ export default function AdminMechanics() {
     ) : <div className="a-empty"><i className="bi bi-inbox"></i><p>No jobs assigned yet.</p></div>)
   }
 
+  // ----- Leave requests (the mechanic asks on "My Leave", I decide here) -----
+  const dates = (l) => fmtDate(l.fromDate) + (l.toDate !== l.fromDate ? ' – ' + fmtDate(l.toDate) : '')
+  const nDays = (l) => (new Date(l.toDate) - new Date(l.fromDate)) / 86400000 + 1
+  const pending = Q.pendingLeaves()
+  const upcoming = store.all('leaves').filter((l) => l.status === 'approved').sort((a, b) => a.fromDate.localeCompare(b.fromDate))
+  async function approveLeave(l) {
+    const open = Q.activeJobs(l.mechanicId)
+    const ok = await confirm(<>Approve leave for <b>{l.mechanicName}</b>, {dates(l)} ({nDays(l)} day{nDays(l) > 1 ? 's' : ''})?
+      {open > 0 && <><br /><br />He has <b>{open} open job{open > 1 ? 's' : ''}</b>. If they are not finished when the leave starts, they go back to <b>Pending</b> so you can give them to another mechanic.</>}</>,
+    { title: 'Approve leave?', okText: 'Approve' })
+    if (ok) act(() => api('/admin/leaves/' + l.id, { method: 'PATCH', body: { status: 'approved' } }), <>Leave approved for <b>{l.mechanicName}</b></>)
+  }
+  async function rejectLeave(l) {
+    const v = await form({ title: 'Reject leave · ' + l.mechanicName, size: 'sm', submitText: 'Reject',
+      fields: [{ name: 'adminNote', label: 'Reason (the mechanic sees it)', type: 'textarea', col: 12, placeholder: 'e.g. Too many jobs that week' }] })
+    if (v) act(() => api('/admin/leaves/' + l.id, { method: 'PATCH', body: { status: 'rejected', adminNote: v.adminNote } }), 'Leave request rejected', 'info')
+  }
+
   useOnce(() => { if (params.get('new')) add() })
 
   return (
@@ -98,12 +116,43 @@ export default function AdminMechanics() {
         <Stat icon="bi-gear-wide-connected" tone="blue" label="Jobs in progress" value={store.data.repairs.filter((r) => r.status === 'progress').length} foot="Across the workshop" />
       </section>
 
+      {(pending.length > 0 || upcoming.length > 0) && (
+        <div className="a-panel mb-4 a-leave-panel">
+          <div className="a-panel-head"><h3><i className="bi bi-calendar2-x"></i> Leave</h3>
+            {pending.length > 0 && <span className="a-badge a-badge-pending">{pending.length} waiting for you</span>}</div>
+          <div style={{ overflowX: 'auto' }}>
+            <table className="a-table">
+              <thead><tr><th>Mechanic</th><th>Dates</th><th>Reason</th><th>Status</th><th></th></tr></thead>
+              <tbody>
+                {[...pending, ...upcoming].map((l) => {
+                  const now = l.status === 'approved' && l.fromDate <= today()
+                  return (
+                    <tr key={l.id}>
+                      <td><div className="a-person"><Avatar name={l.mechanicName} photo={(Q.mechanic(l.mechanicId) || {}).photo} /><span>{l.mechanicName}</span></div></td>
+                      <td><strong>{dates(l)}</strong><small>{nDays(l)} day{nDays(l) > 1 ? 's' : ''} · asked {relDate(l.date).toLowerCase()}</small></td>
+                      <td style={{ maxWidth: 260 }}>{l.reason}</td>
+                      <td>{l.status === 'pending' ? <span className="a-badge a-badge-pending">Waiting</span>
+                        : now ? <span className="a-badge a-badge-danger">On leave now</span> : <span className="a-badge a-badge-complete">Approved</span>}</td>
+                      <td>{l.status === 'pending' && <div className="a-actions">
+                        <button className="a-btn a-btn-success a-btn-sm" onClick={() => approveLeave(l)}><i className="bi bi-check-lg"></i> Approve</button>
+                        <button className="a-btn a-btn-outline a-btn-sm" onClick={() => rejectLeave(l)}>Reject</button>
+                      </div>}</td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       <div className="a-cards">
         {list.length === 0 && <div className="a-panel"><div className="a-empty"><i className="bi bi-search"></i><p>No mechanics match your search.</p></div></div>}
         {list.map((m) => {
           const st = Q.mechanicState(m), active = Q.activeJobs(m.id), done = Q.completedJobs(m.id)
           const earned = store.data.repairs.filter((r) => r.mechanicId === m.id && r.status === 'complete').reduce((s, r) => s + r.cost, 0)
           const pct = Math.min(active * 25, 100)
+          const lv = Q.leaveOf(m.id)        // approved leave, now or coming
           return (
             <div className={'a-mcard' + (st.key === 'leave' ? ' off' : '')} key={m.id}>
               <div className="a-mcard-head">
@@ -111,6 +160,7 @@ export default function AdminMechanics() {
                 <div style={{ flex: 1, minWidth: 0 }}><h4>{m.name}</h4><p>{m.specialization}</p><p>{m.phone}</p></div>
                 <span className={'a-badge a-badge-' + st.cls}>{st.label}</span>
               </div>
+              {lv && <div className="a-leave-note"><i className="bi bi-calendar2-x"></i> {lv.fromDate <= today() ? 'On leave until ' + fmtDate(lv.toDate) : 'Leave ' + dates(lv)}</div>}
               <div className="a-mcard-stats">
                 <div><strong>{active}</strong><small>Active</small></div>
                 <div><strong>{done}</strong><small>Done</small></div>

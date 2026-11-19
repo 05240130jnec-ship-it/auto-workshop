@@ -24,4 +24,9 @@ router.get('/profile', mechanic.getProfile);
 router.patch('/profile', mechanic.updateProfile);
 router.patch('/profile/password', mechanic.changePassword);
 
+// Leave: I ask, the admin decides
+router.get('/leaves', mechanic.myLeaves);
+router.post('/leaves', mechanic.requestLeave);
+router.delete('/leaves/:id', mechanic.cancelLeave);              // only while still pending
+
 module.exports = router;

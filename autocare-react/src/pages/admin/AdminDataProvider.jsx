@@ -16,6 +16,7 @@ const LISTS = {
   reservations: '/admin/shop/reservations',
   services: '/content/services-all',   // every service (website + workshop-only), for the job form
   profile: '/admin/profile',           // me (the admin who is logged in): name, phone, photo
+  leaves: '/admin/leaves',             // leave requests from mechanics
 }
 
 // MySQL sends DECIMAL numbers as text ("1500.00"), so turn them into real numbers.
@@ -33,6 +34,9 @@ function clean(name, rows) {
 }
 
 // Lookups and business rules used across the admin pages (same names as before)
+// Today in the browser's time, as 'YYYY-MM-DD'
+const todayStr = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10) }
+
 function helpers(data) {
   const get = (c, id) => (data[c] || []).find((x) => x.id === id)
   const Q = {
@@ -57,6 +61,20 @@ function helpers(data) {
     },
     poCost: (o) => { const p = get('inventory', o.partId); return p ? p.price * o.qty : 0 },
     lowStock: () => data.inventory.filter((p) => p.stock <= p.reorder),
+    // Leave: requests waiting for me, and a mechanic's approved leave that is running now or coming
+    // Can this mechanic take a job (on the job's date)? On leave now, or an approved leave on that date
+    //   -> not available. Gives { ok, label } for the "Assign mechanic" lists.
+    availability(m, date) {
+      const fmt = (d) => new Date(d + 'T00:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
+      const now = (data.leaves || []).find((l) => l.mechanicId === m.id && l.status === 'approved' && l.fromDate <= todayStr() && l.toDate >= todayStr())
+      if (m.status === 'leave') return { ok: false, label: 'Not available · on leave' + (now ? ' until ' + fmt(now.toDate) : '') }
+      const onDate = date && (data.leaves || []).find((l) => l.mechanicId === m.id && l.status === 'approved' && l.fromDate <= date && l.toDate >= date)
+      if (onDate) return { ok: false, label: 'Not available · on leave ' + fmt(onDate.fromDate) + (onDate.toDate !== onDate.fromDate ? '–' + fmt(onDate.toDate) : '') }
+      return { ok: true, label: Q.activeJobs(m.id) + ' jobs' }
+    },
+    pendingLeaves: () => (data.leaves || []).filter((l) => l.status === 'pending'),
+    leaveOf: (mid) => (data.leaves || []).filter((l) => l.mechanicId === mid && l.status === 'approved')
+      .sort((a, b) => a.fromDate.localeCompare(b.fromDate))[0],
     unassigned: () => data.repairs.filter((r) => !r.mechanicId && r.status === 'pending'),
     partsTotal: (r) => (r.parts || []).reduce((s, p) => s + p.qty * Number(p.price), 0),
     servicesTotal: (r) => (r.services || []).reduce((s, x) => s + x.qty * Number(x.cost), 0),

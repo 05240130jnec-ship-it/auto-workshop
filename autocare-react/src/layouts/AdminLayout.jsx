@@ -30,6 +30,7 @@ function AdminShell() {
 
   const pendingRepairs = data.repairs.filter((r) => r.status === 'pending').length
   const low = Q.lowStock().length
+  const leaves = Q.pendingLeaves().length
   const shop = (data.listings || []).filter((l) => l.status === 'review').length + (data.reservations || []).filter((x) => x.status === 'ready').length
 
   const link = (to, icon, label, count, tone, end) => (
@@ -66,7 +67,7 @@ function AdminShell() {
           <span className="a-nav-label">Manage</span>
           <ul className="a-nav">
             {link('/admin/customers', 'bi-people-fill', 'Customers')}
-            {link('/admin/mechanics', 'bi-person-badge-fill', 'Mechanics')}
+            {link('/admin/mechanics', 'bi-person-badge-fill', 'Mechanics', leaves)}
             {link('/admin/inventory', 'bi-box-seam-fill', 'Inventory', low, 'red')}
             {link('/admin/suppliers', 'bi-truck', 'Suppliers')}
           </ul>

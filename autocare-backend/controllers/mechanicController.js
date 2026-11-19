@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt');
 const Repair = require('../models/repairModel');
 const Inventory = require('../models/inventoryModel');
 const Mechanic = require('../models/mechanicModel');
+const Leave = require('../models/leaveModel');
 const { onlyFields } = require('../models/helpers');
 
 const NOT_MINE = { error: 'Job not found or not assigned to you.' };
@@ -172,6 +173,7 @@ async function reports(req, res) {
 
 // GET /api/mechanic/profile
 async function getProfile(req, res) {
+  await Leave.applyLeaves();                   // an approved leave may have started or ended today
   res.json(await Mechanic.findById(req.user.id));
 }
 
@@ -179,15 +181,16 @@ async function getProfile(req, res) {
 // photo and availability (name and email are controlled by the admin)
 async function updateProfile(req, res) {
   const body = { ...(req.body || {}) };
-  if (body.status && !['active', 'busy', 'leave'].includes(body.status)) {
-    return res.status(400).json({ error: 'Status must be active, busy or leave.' });
-  }
-  // On leave? Only when no open jobs are left (otherwise the jobs would be stuck with me)
+  // The mechanic can say "Available" or "Busy". Leave is asked for with a leave request (the admin decides).
   if (body.status === 'leave') {
-    const open = await Mechanic.countOpenJobs(req.user.id);
-    if (open > 0) {
-      return res.status(400).json({ error: `You still have ${open} open job${open > 1 ? 's' : ''}. Finish them or ask the admin to give them to another mechanic first.` });
-    }
+    return res.status(400).json({ error: 'To go on leave, please send a leave request. The admin will approve it.' });
+  }
+  if (body.status && !['active', 'busy'].includes(body.status)) {
+    return res.status(400).json({ error: 'Status must be active or busy.' });
+  }
+  if (body.status) {
+    const me = await Mechanic.findById(req.user.id);
+    if (me && me.status === 'leave') return res.status(400).json({ error: 'You are on leave. The admin will set you back to work.' });
   }
   // Bhutan phone, e.g. 17123456 or +975 17123456
   if (body.phone !== undefined) {
@@ -234,7 +237,48 @@ async function changePassword(req, res) {
   res.json({ message: 'Password changed.' });
 }
 
+// ---------- LEAVE ----------
+
+// GET /api/mechanic/leaves  -> my leave requests (newest first)
+async function myLeaves(req, res) {
+  await Leave.applyLeaves();
+  res.json(await Leave.findByMechanic(req.user.id));
+}
+
+// POST /api/mechanic/leaves  { fromDate, toDate, reason }  -> ask the admin for leave
+async function requestLeave(req, res) {
+  const { fromDate, toDate } = req.body || {};
+  const reason = String((req.body || {}).reason || '').trim();
+  const DATE = /^\d{4}-\d{2}-\d{2}$/;
+  if (!DATE.test(fromDate || '') || !DATE.test(toDate || '')) {
+    return res.status(400).json({ error: 'Please choose the first and the last day of your leave.' });
+  }
+  const todayLocal = new Date(Date.now() + 6 * 3600 * 1000).toISOString().slice(0, 10);   // Bhutan time
+  if (fromDate < todayLocal) return res.status(400).json({ error: 'The leave cannot start in the past.' });
+  if (toDate < fromDate) return res.status(400).json({ error: 'The last day must be on or after the first day.' });
+  const days = (new Date(toDate) - new Date(fromDate)) / 86400000 + 1;
+  if (days > 60) return res.status(400).json({ error: 'A leave can be 60 days at most.' });
+  if (reason.length < 3) return res.status(400).json({ error: 'Please write a short reason.' });
+  if (reason.length > 300) return res.status(400).json({ error: 'The reason is too long (300 letters at most).' });
+  if (await Leave.overlaps(req.user.id, fromDate, toDate)) {
+    return res.status(409).json({ error: 'You already asked for leave on some of these days.' });
+  }
+  const id = await Leave.nextId();
+  await Leave.create({ id, mechanicId: req.user.id, fromDate, toDate, reason });
+  res.status(201).json(await Leave.findById(id));
+}
+
+// DELETE /api/mechanic/leaves/LV-1001  -> take back a request the admin has not decided yet
+async function cancelLeave(req, res) {
+  const leave = await Leave.findById(req.params.id);
+  if (!leave || leave.mechanicId !== req.user.id) return res.status(404).json({ error: 'Leave request not found.' });
+  if (leave.status !== 'pending') return res.status(400).json({ error: 'The admin has already decided on this request.' });
+  await Leave.setStatus(leave.id, 'cancelled');
+  res.json({ id: leave.id, status: 'cancelled' });
+}
+
 module.exports = {
   myRepairs, getRepair, updateRepair, parts, addPart, removePart, addService, removeService,
   reports, getProfile, updateProfile, changePassword,
+  myLeaves, requestLeave, cancelLeave,
 };

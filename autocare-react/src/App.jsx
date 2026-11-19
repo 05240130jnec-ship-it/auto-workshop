@@ -30,6 +30,7 @@ import RepairDetail from './pages/mechanic/RepairDetail.jsx'
 import Reports from './pages/mechanic/Reports.jsx'
 import PartsUsed from './pages/mechanic/PartsUsed.jsx'
 import Profile from './pages/mechanic/Profile.jsx'
+import MechanicLeave from './pages/mechanic/Leave.jsx'
 
 // Admin panel (from your admin interface folder)
 import AdminLayout from './layouts/AdminLayout.jsx'
@@ -80,6 +81,7 @@ export default function App() {
         <Route path="parts" element={<PartsUsed />} />
         <Route path="reports" element={<Reports />} />
         <Route path="profile" element={<Profile />} />
+        <Route path="leave" element={<MechanicLeave />} />
       </Route>
 
       {/* Admin panel — admins only */}

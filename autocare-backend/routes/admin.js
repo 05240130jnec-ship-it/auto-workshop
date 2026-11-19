@@ -22,6 +22,10 @@ router.post('/mechanics', admin.createMechanic);
 router.patch('/mechanics/:id', admin.updateMechanic);
 router.delete('/mechanics/:id', admin.deleteMechanic);
 
+// Leave requests from mechanics
+router.get('/leaves', admin.listLeaves);
+router.patch('/leaves/:id', admin.decideLeave);              // approve / reject
+
 // Customers (the admin can only block / unblock)
 router.get('/customers', admin.listCustomers);
 router.post('/customers', admin.createCustomer);

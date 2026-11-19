@@ -43,6 +43,9 @@ export default function AdminRepairs() {
   }
 
   function assign(r, mechanicId) {
+    const m = mechanicId && Q.mechanic(mechanicId)
+    const av = m && Q.availability(m, (r.appointment && r.appointment.date) || r.due)
+    if (av && !av.ok) return toast(<><b>{m.name}</b> is not available ({av.label.replace('Not available · ', '')}). Please choose another mechanic.</>, 'error')
     if (!mechanicId) {
       return act(() => patchRepair(r.id, { mechanicId: null, status: 'pending' }), '#' + r.id + ' unassigned', 'info')
     }
@@ -63,7 +66,11 @@ export default function AdminRepairs() {
     { name: 'vehicleType', label: 'Vehicle type', type: 'select', empty: 'Select type…', options: typeNames(currentType) },
     { name: 'vehicle', label: 'Vehicle (make & model)', required: true, placeholder: 'e.g. Toyota Corolla' },
     { name: 'plate', label: 'Plate number', required: true, placeholder: 'e.g. BP-1-A1234', help: 'Starts with BP, BT, BG, RBP or RBG, e.g. BP-1-A1234' },
-    { name: 'mechanicId', label: 'Assign mechanic', type: 'select', empty: 'Assign later', options: store.all('mechanics').filter((m) => m.status !== 'leave').map((m) => ({ value: m.id, label: `${m.name} — ${m.specialization} (${Q.activeJobs(m.id)} jobs)` })) },
+    // Mechanics on leave are shown as "Not available" and cannot be chosen
+    { name: 'mechanicId', label: 'Assign mechanic', type: 'select', empty: 'Assign later', options: store.all('mechanics').map((m) => {
+      const av = Q.availability(m)
+      return { value: m.id, label: `${m.name} — ${m.specialization} (${av.label})`, disabled: !av.ok }
+    }) },
     { name: 'priority', label: 'Priority', type: 'select', options: [{ value: 'normal', label: 'Normal' }, { value: 'high', label: 'High' }, { value: 'urgent', label: 'Urgent' }], default: 'normal' },
     { name: 'date', label: 'Booked on', type: 'date', required: true, default: today() },
     { name: 'due', label: 'Promised by', type: 'date', required: true, default: daysAgo(-1) },
@@ -228,8 +235,9 @@ export default function AdminRepairs() {
                   <select className={'a-select-sm' + (r.mechanicId ? '' : ' unassigned')} value={r.mechanicId || ''} onChange={(e) => assign(r, e.target.value)}>
                     <option value="">— Assign —</option>
                     {store.all('mechanics').map((m) => {
-                      const st = Q.mechanicState(m)
-                      return <option key={m.id} value={m.id} disabled={st.key === 'leave'}>{m.name} ({st.key === 'leave' ? 'on leave' : Q.activeJobs(m.id) + ' jobs'})</option>
+                      const av = Q.availability(m, (r.appointment && r.appointment.date) || r.due)
+                      const lv = Q.leaveOf(m.id)
+                      return <option key={m.id} value={m.id} disabled={!av.ok}>{m.name} ({av.label}{av.ok && lv ? ' · leave from ' + fmtDate(lv.fromDate) : ''})</option>
                     })}
                   </select>
                 ) : r.mechanicId ? (

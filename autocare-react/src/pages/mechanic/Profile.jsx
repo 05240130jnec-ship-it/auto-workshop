@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { fmtDate, initials } from '../../data/store.js'
 import useSettings from '../../data/useSettings.js'
 import { lines } from '../../data/content.js'
@@ -76,13 +77,10 @@ export default function Profile() {
     }), 'Password updated')
     if (ok) setPw({ current: '', next: '', confirm: '' })
   }
+  // Available / Busy. Leave is asked for on the My Leave page (the admin approves it).
   function setAvailability(e) {
     const status = e.target.value
-    // Open jobs would be stuck with me while I am away
-    if (status === 'leave' && jobs > 0) {
-      return toast(`You still have ${jobs} open job${jobs > 1 ? 's' : ''}. Finish them or ask the admin to give them to another mechanic first.`, 'error')
-    }
-    saveProfile({ status }, status === 'leave' ? 'Marked as on leave — the admin can see this' : status === 'busy' ? 'Marked as busy' : 'Marked as available')
+    saveProfile({ status }, status === 'busy' ? 'Marked as busy' : 'Marked as available')
   }
 
   // ----- Photo -----
@@ -131,11 +129,15 @@ export default function Profile() {
             </div>
             <hr />
             <label className="m-form-label text-start">Availability Status</label>
-            <select className="m-form-control" value={m.status} onChange={setAvailability}>
-              <option value="active">🟢 Available</option>
-              <option value="busy">🟡 Busy</option>
-              <option value="leave">🔴 On Leave</option>
-            </select>
+            {m.status === 'leave' ? (
+              <p className="m-form-control mb-0" style={{ background: '#fee2e2', color: '#b91c1c' }}>🔴 On leave — the admin sets you back to work</p>
+            ) : (
+              <select className="m-form-control" value={m.status} onChange={setAvailability}>
+                <option value="active">🟢 Available</option>
+                <option value="busy">🟡 Busy</option>
+              </select>
+            )}
+            <Link to="/mechanic/leave" className="small d-inline-block mt-2"><i className="bi bi-calendar2-x"></i> Need a leave? Ask the admin</Link>
             <p className="small text-muted mt-2 mb-0">Joined {fmtDate(m.joined)}</p>
           </div>
         </div>
@@ -181,4 +183,4 @@ export default function Profile() {
       </div>
     </>
   )
-}
+}

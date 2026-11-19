@@ -23,6 +23,8 @@ export const MECHANIC_GROUPS = [
       { name: 'mReportsText', label: 'My Reports: text under the title' },
       { name: 'mProfileTitle', label: 'My Profile: title', required: true },
       { name: 'mProfileText', label: 'My Profile: text under the title' },
+      { name: 'mLeaveTitle', label: 'My Leave: title', required: true, help: 'Also the menu name' },
+      { name: 'mLeaveText', label: 'My Leave: text under the title' },
     ],
   },
   {
@@ -62,6 +64,8 @@ export const MECHANIC_GROUPS = [
       { name: 'mNoteNew', label: 'New job given to the mechanic', required: true },
       { name: 'mNoteToday', label: 'Customer’s car comes today', required: true, help: '{time} = the appointment time' },
       { name: 'mNoteLate', label: 'Job past its due date', required: true },
+      { name: 'mNoteLeaveOk', label: 'Leave request approved', required: true },
+      { name: 'mNoteLeaveNo', label: 'Leave request not approved', required: true },
       { name: 'mNoteEmpty', label: 'When there are no notifications', required: true, col: 12 },
     ],
   },

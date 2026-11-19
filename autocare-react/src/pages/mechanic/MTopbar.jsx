@@ -21,7 +21,7 @@ export default function MTopbar({ title, sub, back, children }) {
   const box = useRef(null)
 
   // ---------- Notifications, made from my jobs ----------
-  const notes = makeNotes(data.repairs, s)
+  const notes = makeNotes(data.repairs, s, data.leaves)
 
   // Which notifications I have already seen (kept in this browser, per mechanic)
   const seenKey = 'acp_mech_seen_' + user.id
@@ -82,7 +82,7 @@ export default function MTopbar({ title, sub, back, children }) {
               {notes.length === 0 && <p className="mm-empty"><i className="bi bi-bell-slash"></i> {mt(s, 'mNoteEmpty')}</p>}
               <div className="mm-list">
                 {notes.map((n) => (
-                  <Link key={n.key} to={'/mechanic/repairs/' + n.repairId} className={'mm-note' + (seen.includes(n.key) ? '' : ' is-new')}
+                  <Link key={n.key} to={n.to || '/mechanic/repairs/' + n.repairId} className={'mm-note' + (seen.includes(n.key) ? '' : ' is-new')}
                     onClick={() => { setOpen(null); markOneRead(n.key) }}>
                     <span className={'mm-note-icon ' + n.tone}><i className={'bi ' + n.icon}></i></span>
                     <span className="mm-note-body">
@@ -138,7 +138,7 @@ export default function MTopbar({ title, sub, back, children }) {
 //   - a job the admin gave me that I have not started yet
 //   - a car that comes to the workshop today
 //   - a job in progress that is past its due date
-function makeNotes(repairs, s) {
+function makeNotes(repairs, s, leaves) {
   const now = today()
   const notes = []
   for (const r of repairs) {
@@ -156,5 +156,13 @@ function makeNotes(repairs, s) {
         title: mt(s, 'mNoteLate'), text: car + ' — was due ' + fmtDate(r.due) })
     }
   }
+  // The admin answered my leave request
+  for (const l of leaves || []) {
+    if (l.status !== 'approved' && l.status !== 'rejected') continue
+    const dates = fmtDate(l.fromDate) + (l.toDate !== l.fromDate ? ' – ' + fmtDate(l.toDate) : '')
+    notes.push(l.status === 'approved'
+      ? { key: 'leave-ok-' + l.id, to: '/mechanic/leave', date: l.decidedAt || l.date || '', icon: 'bi-calendar2-check', tone: 'm-icon-green', title: mt(s, 'mNoteLeaveOk'), text: dates }
+      : { key: 'leave-no-' + l.id, to: '/mechanic/leave', date: l.decidedAt || l.date || '', icon: 'bi-calendar2-x', tone: 'm-icon-red', title: mt(s, 'mNoteLeaveNo'), text: dates + (l.adminNote ? ' — ' + l.adminNote : '') })
+  }
   return notes.sort((a, b) => b.date.localeCompare(a.date))
-}
+}

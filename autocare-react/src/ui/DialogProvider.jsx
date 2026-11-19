@@ -90,7 +90,7 @@ function FormModal({ opts, onDone }) {
                     {f.options.map((o) => {
                       const ov = typeof o === 'object' ? o.value : o
                       const ol = typeof o === 'object' ? o.label : o
-                      return <option key={ov} value={ov}>{ol}</option>
+                      return <option key={ov} value={ov} disabled={typeof o === 'object' && o.disabled}>{ol}</option>
                     })}
                   </select>
                 )

@@ -68,6 +68,10 @@ function MechanicShell() {
           <NavLink to="/mechanic/reports" onClick={go} className={({ isActive }) => cls(isActive)}>
             <i className="bi bi-file-earmark-bar-graph-fill"></i><span>{mt(s, 'mReportsTitle')}</span>
           </NavLink>
+          <NavLink to="/mechanic/leave" onClick={go} className={({ isActive }) => cls(isActive)}>
+            <i className="bi bi-calendar2-x-fill"></i><span>{mt(s, 'mLeaveTitle')}</span>
+            {(data.leaves || []).some((l) => l.status === 'pending') && <em className="ms-badge">1</em>}
+          </NavLink>
         </nav>
 
         {/* Today card */}
@@ -94,4 +98,4 @@ function MechanicShell() {
       </main>
     </div>
   )
-}
+}

@@ -166,3 +166,6 @@ html.theme-mechanic .mp-cam {
 html.theme-mechanic .mp-cam:hover { background: #f57c00; }
 html.theme-mechanic .mp-remove { display: block; margin: 0 auto 12px; background: none; border: none; padding: 0; color: var(--m-red); font-size: .82rem; font-weight: 600; cursor: pointer; }
 html.theme-mechanic .mp-remove:hover { text-decoration: underline; }
+
+/* ===== My Leave page (pages/mechanic/Leave.jsx) ===== */
+:root.theme-mechanic .m-badge-cancelled { background: #fee2e2; color: #b91c1c; }
