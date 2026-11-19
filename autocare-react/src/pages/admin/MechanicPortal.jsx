@@ -29,11 +29,8 @@ export default function AdminMechanicPortal() {
 
   return (
     <>
-      <ATopbar title="Mechanic Portal" sub="The words mechanics see in their portal (not the customer website)" />
-      <p className="text-muted small mb-3">
-        <i className="bi bi-info-circle me-1"></i>
-        Words in <b>{'{curly brackets}'}</b> are filled in by the system, e.g. <b>{'{name}'}</b> becomes the mechanic’s name. Keep them in the text.
-      </p>
+      <ATopbar title="Mechanic Portal" />
+      
 
       {!settings ? <Loading /> : MECHANIC_GROUPS.map((g) => (
         <div className="mb-4" key={g.key}>
@@ -41,10 +38,10 @@ export default function AdminMechanicPortal() {
             <h5 className="mb-0"><i className={'bi ' + g.icon + ' me-2'}></i>{g.label}</h5>
             <button className="a-btn a-btn-primary a-btn-sm" onClick={() => editGroup(g)}><i className="bi bi-pencil"></i> Edit</button>
           </div>
-          <TableCard head={['Text', 'What mechanics see now']}>
+            <TableCard head={['Text', 'Current text']}>
             {g.fields.map((f) => (
               <tr key={f.name}>
-                <td style={{ width: '32%' }}><strong>{f.label}</strong>{f.help && <small>{f.help}</small>}</td>
+                <td style={{ width: '32%' }}><strong>{f.label}</strong></td>
                 <td>{settings[f.name] || '—'}</td>
               </tr>
             ))}
