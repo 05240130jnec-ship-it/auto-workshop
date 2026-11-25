@@ -15,7 +15,7 @@ const Listing = require('../models/listingModel');
 const Reservation = require('../models/reservationModel');
 const Leave = require('../models/leaveModel');
 const { onlyFields } = require('../models/helpers');
-const { checkVehicleType } = require('../models/settingsModel');
+const { checkVehicleType, saveSetting } = require('../models/settingsModel');
 const { cleanPlate, cleanVehicle, PLATE_ERROR, VEHICLE_ERROR } = require('../utils/vehicle-rules');
 
 const today = () => new Date().toISOString().slice(0, 10);
@@ -568,6 +568,14 @@ async function updateProfile(req, res) {
   }
   const ok = await Admin.update(req.user.id, onlyFields(body, ['name', 'phone', 'photo']));
   if (ok === null) return res.status(400).json({ error: 'Nothing to update.' });
+
+  // The admin's phone is also the workshop phone: update the website phone and the
+  // WhatsApp number (customers pay there) so they always match.
+  if (body.phone) {
+    const digits = body.phone.replace(/\D/g, '').slice(-8);           // the 8-digit number
+    await saveSetting('phone', '+975 ' + digits);
+    await saveSetting('whatsapp', '975' + digits);
+  }
   res.json(await Admin.findById(req.user.id));
 }
 
