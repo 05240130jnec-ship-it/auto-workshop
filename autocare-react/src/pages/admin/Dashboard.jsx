@@ -48,8 +48,13 @@ export default function AdminDashboard() {
   const active = repairs.filter((r) => r.status === 'pending' || r.status === 'progress')
   const unassigned = Q.unassigned()
   const doneThis = repairs.filter((r) => r.status === 'complete' && month(doneDate(r)) === thisMonth)
-  const revThis = doneThis.reduce((s, r) => s + r.cost, 0)
-  const revLast = repairs.filter((r) => r.status === 'complete' && month(doneDate(r)) === lastMonth).reduce((s, r) => s + r.cost, 0)
+  // Revenue = money from parts sold in the shop (paid or collected orders, not cancelled).
+  // The date of the sale is the day it was paid, or else the pickup / order date.
+  const sold = (data.reservations || []).filter((x) => x.status !== 'cancelled' && (x.paid || x.status === 'collected'))
+  const saleDate = (x) => x.paidAt || x.pickup || x.date || ''
+  const salesIn = (m) => sold.filter((x) => month(saleDate(x)) === m).reduce((s, x) => s + Number(x.qty) * Number(x.price), 0)
+  const revThis = salesIn(thisMonth)
+  const revLast = salesIn(lastMonth)
   const trend = revLast ? Math.round((revThis - revLast) / revLast * 100) : 0
   const low = Q.lowStock()
 
@@ -99,7 +104,7 @@ export default function AdminDashboard() {
           foot={unassigned.length ? `${unassigned.length} waiting for a mechanic` : 'All jobs assigned'} footTone={unassigned.length ? 'orange' : 'green'} />
         <Stat icon="bi-check2-circle" tone="green" label="Completed this month" value={doneThis.length} foot={repairs.filter((r) => r.status === 'complete').length + ' all time'} footTone="green" />
         <Stat icon="bi-cash-stack" tone="blue" label="Revenue this month" value={nuShort(revThis)} footTone="blue"
-          foot={revLast ? <><span className={'a-trend ' + (trend >= 0 ? 'up' : 'down')}>{trend >= 0 ? '▲ ' : '▼ '}{Math.abs(trend)}%</span> vs last month</> : 'From completed jobs'} />
+          foot={revLast ? <><span className={'a-trend ' + (trend >= 0 ? 'up' : 'down')}>{trend >= 0 ? '▲ ' : '▼ '}{Math.abs(trend)}%</span> vs last month</> : 'From parts sold'} />
         <Stat icon="bi-exclamation-triangle" tone="red" label="Low stock items" value={low.length} foot={low.length ? 'Reorder soon' : 'Stock looks healthy'} footTone={low.length ? 'red' : 'green'} />
       </section>
 
