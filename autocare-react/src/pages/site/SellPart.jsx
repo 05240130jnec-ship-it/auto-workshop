@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { nu } from '../../data/store.js'
 import { useDialogs } from '../../ui/DialogContext.js'
+import useSettings from '../../data/useSettings.js'
+import { fillText } from '../../data/content.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
@@ -47,7 +49,8 @@ function shrinkPhoto(file) {
 // The admin looks at it and accepts it (the workshop buys it and calls the customer) or rejects it.
 export default function SellPart() {
   usePageTitle('Sell a Spare Part')
-  const { toast } = useDialogs()
+  const { confirm, notice } = useDialogs()
+  const settings = useSettings() || {}
   const [f, setF] = useState(EMPTY)
   const [photos, setPhotos] = useState([])      // pictures as text, ready to send (3 at most)
   const [error, setError] = useState('')
@@ -76,6 +79,9 @@ export default function SellPart() {
     setError('')
     if (!f.name.trim() || !f.price || !f.description.trim()) return setError('Please fill in the part name, price and description.')
     if (photos.length === 0) return setError('Please add at least 1 photo.')
+    const sure = await confirm(fillText(settings.askSell, { name: f.name.trim(), qty: f.qty, price: nu(Number(f.price)) }),
+      { title: settings.askSellTitle || 'Send this part to the workshop?', okText: 'Yes, send it' })
+    if (!sure) return
 
     setSaving(true)
     try {
@@ -91,10 +97,13 @@ export default function SellPart() {
           photos,
         },
       })
+      const partName = f.name.trim()
       setF(EMPTY)
       setPhotos([])
-      toast('Thank you! Our team will look at your part soon')
       listings.reload()
+      setSaving(false)
+      await notice(settings.msgSoldTitle || 'Part sent to the workshop!', fillText(settings.msgSold, { name: partName }))
+      return                                   // saving is already finished
     } catch (err) {
       setError(err.message)
     }
@@ -200,4 +209,4 @@ export default function SellPart() {
       </div>
     </section>
   )
-}
+}

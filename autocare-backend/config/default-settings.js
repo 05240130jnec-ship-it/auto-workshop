@@ -26,6 +26,25 @@ const DEFAULT_SETTINGS = {
   payText: 'Pay with mBoB or mPay to the workshop account, then send the payment screenshot to us on WhatsApp. We will mark it as paid.',
   payMessage: 'Hello AutoCare Pro, I want to pay {amount} for {what}. I will send the payment screenshot here.',
 
+  // ---------- Pop-up messages for customers ----------
+  // {id} {service} {vehicle} {date} {time} {item} {qty} {pickup} {name} are filled in by the website
+  askBookTitle: 'Confirm your booking?',
+  askBook: '{service} for your {vehicle} on {date} at {time}. Estimated total: {total}.',
+  askOrderTitle: 'Confirm your order?',
+  askOrder: '{qty} × {item} for {total}. You will collect it on {pickup}.',
+  askSellTitle: 'Send this part to the workshop?',
+  askSell: '{qty} × {name} for {price} each. Our team will check it and answer you.',
+  msgCancelledTitle: 'Cancelled',
+  msgCancelled: '{what} #{id} has been cancelled.',
+  msgBookedTitle: 'Booking confirmed!',
+  msgBooked: 'Your booking #{id} for {service} is saved. Please bring your {vehicle} on {date} at {time}.',
+  msgOrderedTitle: 'Order placed!',
+  msgOrdered: 'Your order #{id} ({qty} × {item}) is reserved for you. Please collect it on {pickup}. You can pay via WhatsApp in My Repairs.',
+  msgSoldTitle: 'Part sent to the workshop!',
+  msgSold: 'Thank you! We received your {name}. Our team will check it and you will see the answer in My Repairs.',
+  msgCancelBooking: 'Do you really want to cancel booking #{id} for your {vehicle}?',
+  msgCancelOrder: 'Do you really want to cancel order #{id} ({qty} × {item})? The part goes back to the shop.',
+
   // ---------- Home page ----------
   homeTag: 'Auto workshop · {address}',            // {address} = the address from Contact & footer
   homeTitle: 'Your Trusted *Auto Care* Partner',
