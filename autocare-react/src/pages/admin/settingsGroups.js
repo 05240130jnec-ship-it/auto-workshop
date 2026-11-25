@@ -64,7 +64,7 @@ export const SETTINGS_GROUPS = [
     key: 'contact', label: 'Contact & footer',
     fields: [
       { name: 'email', label: 'Email', type: 'email', required: true, help: 'The Email Us buttons open Gmail to this address' },
-      { name: 'phone', label: 'Phone (shown on the site)', required: true, placeholder: '+975 17XXXXXX' },
+      { name: 'phone', label: 'Phone (shown on the site)', required: true, placeholder: '+975 17XXXXXX', help: 'Changes by itself when you change your phone in My Profile.' },
       { name: 'whatsapp', label: 'WhatsApp number', required: true, placeholder: '97517XXXXXX', help: 'Country code + number, no + or spaces. Payments are also sent here.' },
       { name: 'payText', label: 'How to pay (shown above the Pay via WhatsApp button)', type: 'textarea', col: 12, help: 'e.g. your mBoB / mPay account number' },
       { name: 'payMessage', label: 'WhatsApp payment message', type: 'textarea', col: 12, help: '{amount} = the amount, {what} = the booking or order' },
