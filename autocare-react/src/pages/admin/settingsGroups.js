@@ -84,6 +84,27 @@ export const SETTINGS_GROUPS = [
     ],
   },
   {
+    key: 'popups', label: 'Pop-up messages',
+    fields: [
+      { name: 'askBookTitle', label: 'Before booking a repair — question', required: true },
+      { name: 'askBook', label: 'Before booking a repair — details', type: 'textarea', required: true, col: 12, help: 'You can write {service}, {vehicle}, {date}, {time} and {total}' },
+      { name: 'askOrderTitle', label: 'Before ordering a part — question', required: true },
+      { name: 'askOrder', label: 'Before ordering a part — details', type: 'textarea', required: true, col: 12, help: 'You can write {item}, {qty}, {total} and {pickup}' },
+      { name: 'askSellTitle', label: 'Before selling a part — question', required: true },
+      { name: 'askSell', label: 'Before selling a part — details', type: 'textarea', required: true, col: 12, help: 'You can write {name}, {qty} and {price}' },
+      { name: 'msgCancelledTitle', label: 'After cancelling — title', required: true },
+      { name: 'msgCancelled', label: 'After cancelling — message', type: 'textarea', required: true, col: 12, help: 'You can write {what} (Booking or Order) and {id}' },
+      { name: 'msgBookedTitle', label: 'After booking a repair — title', required: true },
+      { name: 'msgBooked', label: 'After booking a repair — message', type: 'textarea', required: true, col: 12, help: 'You can write {id}, {service}, {vehicle}, {date} and {time}' },
+      { name: 'msgOrderedTitle', label: 'After ordering a part — title', required: true },
+      { name: 'msgOrdered', label: 'After ordering a part — message', type: 'textarea', required: true, col: 12, help: 'You can write {id}, {item}, {qty} and {pickup}' },
+      { name: 'msgSoldTitle', label: 'After selling a part — title', required: true },
+      { name: 'msgSold', label: 'After selling a part — message', type: 'textarea', required: true, col: 12, help: 'You can write {name} (the part name)' },
+      { name: 'msgCancelBooking', label: 'Before cancelling a booking', type: 'textarea', required: true, col: 12, help: 'You can write {id} and {vehicle}' },
+      { name: 'msgCancelOrder', label: 'Before cancelling a part order', type: 'textarea', required: true, col: 12, help: 'You can write {id}, {item} and {qty}' },
+    ],
+  },
+  {
     key: 'shop', label: 'Shop pages',
     fields: [
       { name: 'shopCategories', label: 'Shop pages', type: 'textarea', required: true, col: 12,

@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom'
 import { nu, fmtDate, relDate } from '../../data/store.js'
 import { imageFor } from '../../data/services.js'
 import { useDialogs } from '../../ui/DialogContext.js'
+import useSettings from '../../data/useSettings.js'
+import { fillText } from '../../data/content.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
@@ -37,7 +39,8 @@ const appt = (r) => (r.apptDate ? `${fmtDate(r.apptDate)}, ${r.apptTime}` : null
 // All my history in one place: repairs, parts I bought, parts I sold to the workshop
 export default function MyRepairs() {
   usePageTitle('My Repairs')
-  const { confirm, toast, view } = useDialogs()
+  const { confirm, notice, toast, view } = useDialogs()
+  const settings = useSettings() || {}
 
   const repairs = useApi('/repairs')
   const res = useApi('/shop/reservations')
@@ -61,12 +64,27 @@ export default function MyRepairs() {
   )
 
   async function cancel(r) {
-    const ok = await confirm(`Cancel booking #${r.id} for your ${r.vehicle}?`, { title: 'Cancel booking?', okText: 'Yes, cancel', danger: true })
+    const ok = await confirm(fillText(settings.msgCancelBooking || 'Cancel booking #{id} for your {vehicle}?', { id: r.id, vehicle: r.vehicle }),
+      { title: 'Cancel booking?', okText: 'Yes, cancel', danger: true })
     if (!ok) return
     try {
       await api('/repairs/' + r.id, { method: 'PATCH', body: { status: 'cancelled' } })
-      toast('Booking #' + r.id + ' cancelled', 'info')
       repairs.reload()   // load the list again so the page shows the change
+      notice(settings.msgCancelledTitle || 'Cancelled', fillText(settings.msgCancelled || '{what} #{id} has been cancelled.', { what: 'Booking', id: r.id }))
+    } catch (err) {
+      toast(err.message, 'danger')
+    }
+  }
+
+  // Cancel a part order (only while it is waiting for pickup and not paid) — the part goes back to the shop
+  async function cancelOrder(x) {
+    const ok = await confirm(fillText(settings.msgCancelOrder || 'Cancel order #{id} ({qty} × {item})?', { id: x.id, qty: x.qty, item: x.name }),
+      { title: 'Cancel order?', okText: 'Yes, cancel', danger: true })
+    if (!ok) return
+    try {
+      await api('/shop/reservations/' + x.id, { method: 'PATCH', body: { status: 'cancelled' } })
+      res.reload()
+      notice(settings.msgCancelledTitle || 'Cancelled', fillText(settings.msgCancelled || '{what} #{id} has been cancelled.', { what: 'Order', id: x.id }))
     } catch (err) {
       toast(err.message, 'danger')
     }
@@ -224,7 +242,8 @@ export default function MyRepairs() {
                         <td>{x.qty}</td>
                         <td>{nu(x.qty * x.price)}</td>
                         <td>{fmtDate(x.pickup)}</td>
-                        <td><span className={'acp-badge ' + RES_BADGE[x.status][0]}>{RES_BADGE[x.status][1]}</span></td>
+                        <td><span className={'acp-badge ' + RES_BADGE[x.status][0]}>{RES_BADGE[x.status][1]}</span>
+                          {x.status === 'ready' && !x.paid && <><br /><button className="btn btn-link btn-sm text-muted p-0" onClick={() => cancelOrder(x)}>Cancel</button></>}</td>
                         <td>{x.status === 'cancelled' ? '—' : x.paid ? PAID
                           : <PayWhatsApp small amount={x.qty * x.price} what={`part order #${x.id} (${x.qty} × ${x.name})`} />}</td>
                       </tr>
@@ -275,4 +294,4 @@ export default function MyRepairs() {
       </div>
     </section>
   )
-}
+}

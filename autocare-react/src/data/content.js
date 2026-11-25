@@ -45,3 +45,8 @@ export function whatsappLink(number) {
   return 'https://wa.me/' + String(number || '').replace(/\D/g, '') + '?text=' + encodeURIComponent('Hello AutoCarePro, I would like to ask about a service.')
 }
 
+
+// Fill a message from Website Content: fillText('Order #{id}', { id: 'R-3' }) → 'Order #R-3'
+export function fillText(text, values) {
+  return String(text || '').replace(/\{(\w+)\}/g, (all, key) => (values[key] != null ? values[key] : all))
+}

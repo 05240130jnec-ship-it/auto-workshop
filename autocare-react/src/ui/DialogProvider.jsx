@@ -140,6 +140,8 @@ export default function DialogProvider({ children }) {
     confirm: (message, opts = {}) => new Promise((resolve) => setDialog({ kind: 'confirm', opts: { ...opts, message }, resolve })),
     form: (opts) => new Promise((resolve) => setDialog({ kind: 'form', opts: { ...opts, toast }, resolve })),
     view: (title, body, footer) => setViewer({ title, body, footer }),
+    // Success pop-up with one OK button:  await notice('Order placed!', 'Collect it on ...')
+    notice: (title, message) => new Promise((resolve) => setDialog({ kind: 'notice', opts: { title, message }, resolve })),
     closeView: () => setViewer(null),
   }), [toast])
 
@@ -181,6 +183,17 @@ export default function DialogProvider({ children }) {
                 {dialog.opts.okText || 'Confirm'}
               </button>
             </div>
+          </div>
+        </Modal>
+      )}
+
+      {dialog && dialog.kind === 'notice' && (
+        <Modal size="modal-sm" onClose={() => finish(true)}>
+          <div className="modal-body text-center p-4">
+            <div className="a-confirm-icon success"><i className="bi bi-check-lg"></i></div>
+            <h5 className="a-modal-title mb-2">{dialog.opts.title}</h5>
+            <p className="text-muted small mb-4">{dialog.opts.message}</p>
+            <button className="a-btn a-btn-primary" onClick={() => finish(true)} autoFocus>OK</button>
           </div>
         </Modal>
       )}

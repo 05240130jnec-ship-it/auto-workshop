@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate, useSearchParams } from 'react-router-dom'
 import { nu, today, daysAgo, fmtDate } from '../../data/store.js'
 import useSettings from '../../data/useSettings.js'
-import { shopCategories, shopLink } from '../../data/content.js'
+import { shopCategories, shopLink, fillText } from '../../data/content.js'
 import { useDialogs } from '../../ui/DialogContext.js'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
@@ -16,7 +16,7 @@ export default function Reserve() {
   usePageTitle('Order Part')
   const [params] = useSearchParams()
   const sku = params.get('item')
-  const { toast } = useDialogs()
+  const { confirm, notice } = useDialogs()
   const navigate = useNavigate()
   const settings = useSettings()
   const [qty, setQty] = useState(1)
@@ -49,13 +49,19 @@ export default function Reserve() {
     e.preventDefault()
     setError('')
     if (!pickup || pickup < today()) return setError('Please choose a pickup date from today on.')
+    const st = settings || {}
+    const sure = await confirm(fillText(st.askOrder, { item: item.name, qty: amount, total: nu(total), pickup: fmtDate(pickup) }),
+      { title: st.askOrderTitle || 'Confirm your order?', okText: 'Yes, order it' })
+    if (!sure) return
     setSaving(true)
     try {
       const data = await api('/shop/reservations', {
         method: 'POST',
         body: { partId: item.sku, qty: amount, pickup },
       })
-      toast(`Order #${data.id} placed — collect it on ${fmtDate(pickup)}. You can pay now via WhatsApp below.`)
+      const s = settings || {}
+      await notice(s.msgOrderedTitle || 'Order placed!',
+        fillText(s.msgOrdered, { id: data.id, item: item.name, qty: amount, pickup: fmtDate(pickup) }))
       navigate('/my-repairs')
     } catch (err) {
       setSaving(false)
