@@ -11,7 +11,7 @@ const PasswordReset = require('../models/passwordResetModel');
 const { getSettings } = require('../models/settingsModel');
 const { sendMail } = require('../utils/mailer');
 
-const { LOCK_SECONDS } = LoginAttempt;
+const { waitText } = LoginAttempt;
 
 // Make a token that lasts 1 day
 function makeToken(user) {
@@ -28,18 +28,19 @@ async function login(req, res) {
   await LoginAttempt.setupTable();
   const locked = await LoginAttempt.secondsLocked(email);
   if (locked) {
-    return res.status(429).json({ error: `Too many wrong attempts. Try again in ${locked} second${locked > 1 ? 's' : ''}.`, wait: locked });
+    return res.status(429).json({ error: `Too many wrong attempts. Try again in ${waitText(locked)}.`, wait: locked });
   }
 
   // 2. Check the email and password
   const acc = await User.findByEmail(email);
   if (!acc || !(await bcrypt.compare(password, acc.password))) {
-    const left = await LoginAttempt.countWrongTry(email);
+    // each new lock is longer: 15 s, 30 s, 1 min, 2 min ... (see loginAttemptModel.js)
+    const { left, lock } = await LoginAttempt.countWrongTry(email);
     if (left === 0) {
-      return res.status(429).json({ error: `Too many wrong attempts. Try again in ${LOCK_SECONDS} seconds.`, wait: LOCK_SECONDS });
+      return res.status(429).json({ error: `Too many wrong attempts. Try again in ${waitText(lock)}.`, wait: lock });
     }
     if (left <= 2) {
-      return res.status(401).json({ error: `Wrong email or password. ${left} ${left > 1 ? 'tries' : 'try'} left before the account is locked for ${LOCK_SECONDS} seconds.` });
+      return res.status(401).json({ error: `Wrong email or password. ${left} ${left > 1 ? 'tries' : 'try'} left before the account is locked for ${waitText(lock)}.` });
     }
     return res.status(401).json({ error: 'Wrong email or password.' });
   }
