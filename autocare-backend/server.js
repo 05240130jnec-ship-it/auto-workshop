@@ -38,6 +38,7 @@ app.use('/api/admin', require('./routes/admin'));
 app.use('/api/mechanic', require('./routes/mechanic'));
 app.use('/api/content', require('./routes/content'));   // services, offers, shop products
 app.use('/api/profile', require('./routes/profile'));   // customer: my profile + photo
+app.use('/api/cart', require('./routes/cart'));         // customer: shopping cart
 // Wrong URL -> JSON 404 instead of "Cannot GET ..."
 app.use((req, res) => {
   res.status(404).json({ error: `Route not found: ${req.method} ${req.originalUrl}` });
