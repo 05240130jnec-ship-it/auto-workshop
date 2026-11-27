@@ -117,7 +117,7 @@ export default function Booking() {
     if (!plate.trim()) return setError('Please enter your plate number.')
     if (!cleanPlate(plate)) return setError(PLATE_ERROR)
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
-    if (!slot || taken(slot)) return setError('That time slot is full. Please choose another one.')
+    if (!slot || taken(slot)) return setError('That time is already full. Please choose another one.')
 
     // "Are you sure?" — show the booking details first
     const st = settings || {}
@@ -303,7 +303,7 @@ export default function Booking() {
                 })}
               </div>
 
-              <h4 className="h6 fw-bold mb-2">Select a time slot {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
+              <h4 className="h6 fw-bold mb-2">What time will you bring your car? {slots.loading && <span className="spinner-border spinner-border-sm ms-1"></span>}</h4>
               <div className="row g-2 mb-3">
                 {slotTimes.map((t) => {
                   const full = taken(t)

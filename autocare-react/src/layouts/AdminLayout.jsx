@@ -81,7 +81,7 @@ function AdminShell() {
         </div>
         <div className="a-nav-group a-nav-other">
           <ul className="a-nav">
-            <li><a href="/" target="_blank" rel="noreferrer"><i className="bi bi-globe-central-south-asia-fill"></i> <span>View website</span></a></li>
+            <li><a href="/"><i className="bi bi-globe-central-south-asia-fill"></i> <span>View website</span></a></li>
             <li><a href="#" onClick={refresh}><i className="bi bi-arrow-repeat"></i> <span>Refresh data</span></a></li>
           </ul>
         </div>
