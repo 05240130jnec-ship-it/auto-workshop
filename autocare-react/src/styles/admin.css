@@ -552,8 +552,10 @@
 .a-mcard-stats { display: grid; grid-template-columns: repeat(3, 1fr); background: #fafbfd; border-radius: 12px; padding: 10px 0; text-align: center; }
 .a-mcard-stats strong { display: block; font-family: var(--font-heading); font-size: 1.1rem; }
 .a-mcard-stats small { font-size: 0.7rem; color: var(--a-text-muted); text-transform: uppercase; font-weight: 600; }
-.a-mcard-foot { display: flex; gap: 8px; }
-.a-mcard-foot .a-btn { flex: 1; justify-content: center; }
+.a-mcard-foot { display: flex; gap: 6px; }
+/* 3 buttons + 2 small icon buttons (reset password, remove) must fit inside the card */
+.a-mcard-foot .a-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding-left: 4px; padding-right: 4px; gap: 4px; font-size: .78rem; white-space: nowrap; }
+.a-mcard-foot .a-icon-action { flex: 0 0 32px; }
 
 /* Login */
 .a-login-error { display: none; background: rgba(220,38,38,.08); color: var(--a-red); border-radius: 10px; padding: 10px 12px; font-size: 0.84rem; margin-bottom: 14px; }

@@ -21,6 +21,7 @@ router.get('/mechanics', admin.listMechanics);
 router.post('/mechanics', admin.createMechanic);
 router.patch('/mechanics/:id', admin.updateMechanic);
 router.delete('/mechanics/:id', admin.deleteMechanic);
+router.patch('/mechanics/:id/password', admin.resetMechanicPassword);   // { password } new password from the admin
 
 // Leave requests from mechanics
 router.get('/leaves', admin.listLeaves);

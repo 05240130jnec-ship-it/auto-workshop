@@ -3,6 +3,7 @@
 // shop listings + reservations, and the admin's own profile.
 
 const bcrypt = require('bcrypt');
+const LoginAttempt = require('../models/loginAttemptModel');
 const Repair = require('../models/repairModel');
 const Mechanic = require('../models/mechanicModel');
 const Customer = require('../models/customerModel');
@@ -201,6 +202,19 @@ async function updateMechanic(req, res) {
   if (body.status === 'active' || body.status === 'busy') await Leave.endCurrent(req.params.id);   // back from leave early
 
   res.json(await Mechanic.findById(req.params.id));
+}
+
+// PATCH /api/admin/mechanics/M-006/password   body: { password }
+// The admin gives a mechanic a new password (e.g. they forgot it). Their jobs stay linked to them.
+async function resetMechanicPassword(req, res) {
+  const password = String((req.body || {}).password || '');
+  if (password.length < 6) return res.status(400).json({ error: 'The password must be at least 6 characters.' });
+  const m = await Mechanic.findById(req.params.id);
+  if (!m) return res.status(404).json({ error: 'Mechanic not found.' });
+  await Mechanic.setPassword(req.params.id, await bcrypt.hash(password, 10));
+  await LoginAttempt.setupTable();
+  await LoginAttempt.clear(String(m.email).toLowerCase());   // unlock the login if they were locked out
+  res.json({ ok: true });
 }
 
 // DELETE /api/admin/mechanics/M-006  -> remove (their repairs become unassigned)
@@ -597,7 +611,7 @@ async function changePassword(req, res) {
 module.exports = {
   dashboard,
   listRepairs, getRepair, updateRepair, createRepair, deleteRepair,
-  listMechanics, createMechanic, updateMechanic, deleteMechanic,
+  listMechanics, createMechanic, updateMechanic, deleteMechanic, resetMechanicPassword,
   listCustomers, createCustomer, updateCustomer, deleteCustomer,
   listInventory, createPart, updatePart, deletePart,
   listSuppliers, createSupplier, updateSupplier, deleteSupplier,

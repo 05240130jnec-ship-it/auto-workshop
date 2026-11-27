@@ -68,6 +68,16 @@ export default function AdminMechanics() {
       await api('/admin/mechanics/' + m.id, { method: 'PATCH', body: { status: m.status === 'leave' ? 'active' : 'leave' } })
     }, m.name + (m.status === 'leave' ? ' is back at work' : ' is now on leave'), 'info')
   }
+  // Forgot password? The admin gives the mechanic a new one (their jobs stay linked to them)
+  async function resetPassword(m) {
+    const v = await form({
+      title: 'New password for ' + m.name,
+      fields: [{ name: 'password', label: 'New password', required: true, col: 12, help: 'At least 6 characters. Tell it to ' + m.name + ', they log in on the staff login with ' + m.email + '.' }],
+      submitText: 'Save password',
+      validate: (x) => (String(x.password || '').length < 6 ? 'The password must be at least 6 characters.' : null),
+    })
+    if (v) act(() => api('/admin/mechanics/' + m.id + '/password', { method: 'PATCH', body: { password: v.password } }), 'New password saved for ' + m.name)
+  }
   async function del(m) {
     if (Q.activeJobs(m.id)) return toast(`Reassign ${m.name}'s ${Q.activeJobs(m.id)} active job(s) first`, 'warn')
     const ok = await confirm(<><b>{m.name}</b> will be removed from the team. Their completed jobs stay in the records.</>, { title: 'Remove mechanic?', okText: 'Remove', danger: true })
@@ -177,6 +187,7 @@ export default function AdminMechanics() {
                 <button className="a-btn a-btn-outline a-btn-sm" onClick={() => toggleLeave(m)}>
                   {m.status === 'leave' ? <><i className="bi bi-person-check"></i> Back</> : <><i className="bi bi-calendar-x"></i> Leave</>}
                 </button>
+                <button className="a-icon-action" title="Reset password" onClick={() => resetPassword(m)}><i className="bi bi-key"></i></button>
                 <button className="a-icon-action danger" title="Remove" onClick={() => del(m)}><i className="bi bi-trash3"></i></button>
               </div>
             </div>
@@ -185,4 +196,4 @@ export default function AdminMechanics() {
       </div>
     </>
   )
-}
+}
