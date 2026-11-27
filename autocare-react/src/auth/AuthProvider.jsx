@@ -6,10 +6,11 @@ const KEY = 'acp_session'
 
 function readSession() {
   if (!getToken()) return null              // no token = not logged in
-  try { return JSON.parse(localStorage.getItem(KEY)) } catch { return null }
+  try { return JSON.parse(sessionStorage.getItem(KEY)) } catch { return null }
 }
+// sessionStorage = this browser tab only (see api.js)
 function saveSession(s) {
-  try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY) } catch { /* blocked */ }
+  try { s ? sessionStorage.setItem(KEY, JSON.stringify(s)) : sessionStorage.removeItem(KEY) } catch { /* blocked */ }
 }
 
 export default function AuthProvider({ children }) {
