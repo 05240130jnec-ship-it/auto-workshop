@@ -30,7 +30,13 @@ function setupTable() {
         lockedUntil datetime DEFAULT NULL
       )`);
       // older databases do not have the "locks" column yet
-      await db.query('ALTER TABLE login_attempts ADD COLUMN IF NOT EXISTS locks int NOT NULL DEFAULT 0 AFTER fails');
+      // (works on MySQL 8 / Aiven and on XAMPP: check first, then add)
+      const [[col]] = await db.query(
+        `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+         WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'login_attempts' AND COLUMN_NAME = 'locks'`);
+      if (Number(col.n) === 0) {
+        await db.query('ALTER TABLE login_attempts ADD COLUMN locks int NOT NULL DEFAULT 0 AFTER fails');
+      }
     })().catch((err) => { tableReady = null; throw err; });
   }
   return tableReady;
