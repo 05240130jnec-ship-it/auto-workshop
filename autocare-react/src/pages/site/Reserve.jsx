@@ -8,6 +8,7 @@ import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
 import { api } from '../../api.js'
 import Loading from '../../ui/Loading.jsx'
+import { addToCart } from '../../data/cart.js'
 
 // "Buy Now" on the shop pages → order the part (POST /api/shop/reservations).
 // The customer collects it at the workshop on the pickup date and pays there.
@@ -16,7 +17,7 @@ export default function Reserve() {
   usePageTitle('Order Part')
   const [params] = useSearchParams()
   const sku = params.get('item')
-  const { confirm, notice } = useDialogs()
+  const { confirm, notice, toast } = useDialogs()
   const navigate = useNavigate()
   const settings = useSettings()
   const [qty, setQty] = useState(1)
@@ -44,6 +45,19 @@ export default function Reserve() {
   const amount = Math.min(Math.max(Number(qty) || 1, 1), Math.max(stock, 1))
   const total = item.price * amount
   const lowStock = stock > 0 && stock <= 5
+
+  // Add to cart: keep shopping and order several products together on the My Cart page
+  async function addCart() {
+    setError('')
+    setSaving(true)
+    try {
+      await addToCart(item.id, amount)
+      toast(`${item.name} × ${amount} added to your cart`)
+    } catch (err) {
+      setError(err.message)
+    }
+    setSaving(false)
+  }
 
   async function submit(e) {
     e.preventDefault()
@@ -138,6 +152,11 @@ export default function Reserve() {
                     ? <><span className="spinner-border spinner-border-sm"></span> Placing order…</>
                     : stock === 0 ? 'Out of stock' : <>Place Order · {nu(total)} <i className="bi bi-arrow-right"></i></>}
                 </button>
+                {stock > 0 && (
+                  <button type="button" className="btn btn-outline-secondary w-100 mt-2" onClick={addCart} disabled={saving}>
+                    <i className="bi bi-cart-plus"></i> Add to cart
+                  </button>
+                )}
                 <p className="acp-order-note">
                   <i className="bi bi-geo-alt-fill"></i>
                   Collect and pay at our workshop{settings && settings.address ? <>: <strong>{settings.address}</strong></> : '.'}

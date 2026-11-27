@@ -145,6 +145,14 @@ export default function SiteLayout() {
     return () => window.removeEventListener('profile-changed', again)
   }, [profile])
   const myPhoto = isCustomer && profile.data ? profile.data.photo : null
+  // My cart (saved in MySQL): the number on the cart icon; reloads after Add to cart / Remove
+  const cart = useApi(isCustomer ? '/cart' : null)
+  useEffect(() => {
+    const again = () => cart.reload()
+    window.addEventListener('cart-changed', again)
+    return () => window.removeEventListener('cart-changed', again)
+  }, [cart])
+  const cartCount = isCustomer && cart.data ? cart.data.count : 0
   // Services in the menu come from MySQL (admin → Website Content → Services)
   const menuServices = useApi('/content/services').data || []
   // Shop pages and footer text come from MySQL (admin → Website Content)
@@ -203,6 +211,12 @@ export default function SiteLayout() {
             <div className="d-flex align-items-center gap-3 ms-lg-4 mt-3 mt-lg-0">
               {/* The bell is only for logged-in customers (visitors have no notifications) */}
               {isCustomer && (
+                <Link to="/cart" className="acp-icon-btn position-relative" aria-label="My cart" title="My cart">
+                  <i className="bi bi-cart3"></i>
+                  {cartCount > 0 && <span className="acp-notif-count">{cartCount}</span>}
+                </Link>
+              )}
+              {isCustomer && (
                 <NotificationBell user={user} repairs={repairs.data} reservations={reservations.data} />
               )}
               {user ? (
@@ -242,4 +256,4 @@ export default function SiteLayout() {
       </footer>
     </>
   )
-}
+}
