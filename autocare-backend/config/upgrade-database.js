@@ -8,6 +8,13 @@ const { setupSettings } = require('../models/settingsModel');
 
 async function upgradeDatabase() {
   await setupSettings();                       // adds new settings such as vehicleTypes
+  // Shopping cart of each customer (Inventory → Add to cart)
+  const cartModel = require('../models/cartModel');
+  await db.query(cartModel.CREATE_TABLE);
+  const [[cc]] = await db.query(
+    `SELECT COUNT(*) AS n FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'cart_items' AND COLUMN_NAME = 'partId' AND COLLATION_NAME <> 'utf8mb4_general_ci'`);
+  if (Number(cc.n) > 0) await db.query(cartModel.FIX_COLLATION);
   // The old general list (power tiller, JCB …) -> the Toyota types, only if the admin never changed it
   await db.query("UPDATE settings SET value = ? WHERE name = 'vehicleTypes' AND value LIKE 'Light vehicle (car, SUV)%Earth-moving machine (excavator, JCB)'",
     [DEFAULT_SETTINGS.vehicleTypes]);
