@@ -6,10 +6,11 @@ const KEY = 'acp_session'
 
 function readSession() {
   if (!getToken()) return null              // no token = not logged in
-  try { return JSON.parse(localStorage.getItem(KEY)) } catch { return null }
+  try { return JSON.parse(sessionStorage.getItem(KEY)) } catch { return null }
 }
+// sessionStorage = this browser tab only (see api.js)
 function saveSession(s) {
-  try { s ? localStorage.setItem(KEY, JSON.stringify(s)) : localStorage.removeItem(KEY) } catch { /* blocked */ }
+  try { s ? sessionStorage.setItem(KEY, JSON.stringify(s)) : sessionStorage.removeItem(KEY) } catch { /* blocked */ }
 }
 
 export default function AuthProvider({ children }) {
@@ -72,6 +73,8 @@ export default function AuthProvider({ children }) {
         method: 'POST',
         body: { name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), address: address.trim(), password },
       })
+      // The account is made only after the owner clicks "Yes, it's me" in the email
+      if (data.pending) return { pending: { email: data.email, name: data.name } }
       return { user: start(data.token, data.user) }
     } catch (err) {
       return { error: err.message }
@@ -86,7 +89,7 @@ export default function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateUser, start }}>
       {children}
     </AuthContext.Provider>
   )

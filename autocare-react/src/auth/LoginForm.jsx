@@ -7,6 +7,12 @@ import GoogleButton from '../ui/GoogleButton.jsx'
 //   onDone(user)  → what to do after a good login (the page or pop-up decides)
 //   onLink()      → called when a link inside is clicked (the pop-up closes itself)
 //   google={false} → no "Continue with Google" (the staff login page)
+// 15 -> "15s", 75 -> "1m 15s" (the wait gets longer after every lock)
+function clock(secs) {
+  const m = Math.floor(secs / 60), s = secs % 60
+  return m ? `${m}m${s ? ' ' + s + 's' : ''}` : `${s}s`
+}
+
 export default function LoginForm({ onDone, onLink, google = true }) {
   const { login, loginWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
@@ -23,7 +29,7 @@ export default function LoginForm({ onDone, onLink, google = true }) {
     const t = setTimeout(() => {
       setWait(wait - 1)
       if (wait - 1 === 0) setError('')
-      else setError(`Too many wrong attempts. Try again in ${wait - 1} second${wait - 1 > 1 ? 's' : ''}.`)
+      else setError(`Too many wrong attempts. Try again in ${clock(wait - 1)}.`)
     }, 1000)
     return () => clearTimeout(t)
   }, [wait])
@@ -92,7 +98,7 @@ export default function LoginForm({ onDone, onLink, google = true }) {
 
         <button type="submit" className="lg-btn" disabled={loading || wait > 0}>
           {loading ? <><span className="spinner-border spinner-border-sm"></span> Signing in…</>
-            : wait > 0 ? <><i className="bi bi-hourglass-split"></i> Wait {wait}s</>
+            : wait > 0 ? <><i className="bi bi-hourglass-split"></i> Wait {clock(wait)}</>
             : <>Sign in <i className="bi bi-arrow-right"></i></>}
         </button>
       </form>
@@ -100,4 +106,4 @@ export default function LoginForm({ onDone, onLink, google = true }) {
       {google && <GoogleButton onCredential={handleGoogle} />}
     </>
   )
-}
+}

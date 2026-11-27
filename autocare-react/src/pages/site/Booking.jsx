@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { nu, fmtDate } from '../../data/store.js'
 import useSettings from '../../data/useSettings.js'
 import { cleanPlate, plateType, plateStartOk, formatPlate, PLATE_ERROR } from '../../data/vehicle.js'
-import { offerFor, salePrice, lines } from '../../data/content.js'
+import { offerFor, salePrice, lines, fillText } from '../../data/content.js'
+import { useDialogs } from '../../ui/DialogContext.js'
 import Loading from '../../ui/Loading.jsx'
 import usePageTitle from '../../ui/usePageTitle.js'
 import useApi from '../../useApi.js'
@@ -17,6 +18,7 @@ export default function Booking() {
   usePageTitle('Book a Service')
   const [params] = useSearchParams()
   const navigate = useNavigate()
+  const { confirm, notice } = useDialogs()
 
   // Services, prices and running offers come from MySQL (GET /api/content/services and /offers)
   const list = useApi('/content/services')
@@ -117,6 +119,12 @@ export default function Booking() {
     if (problem.trim().length < 10) return setError('Please describe the problem in a little more detail.')
     if (!slot || taken(slot)) return setError('That time is already full. Please choose another one.')
 
+    // "Are you sure?" — show the booking details first
+    const st = settings || {}
+    const sure = await confirm(fillText(st.askBook, { service: svc.serviceName, vehicle, date: fmtDate(date), time: slot, total: nu(total) }),
+      { title: st.askBookTitle || 'Confirm your booking?', okText: 'Yes, book it' })
+    if (!sure) return
+
     setSaving(true)
     try {
       const data = await api('/repairs', {
@@ -132,6 +140,9 @@ export default function Booking() {
           apptTime: slot,
         },
       })
+      const s = settings || {}
+      await notice(s.msgBookedTitle || 'Booking confirmed!',
+        fillText(s.msgBooked, { id: data.id, service: svc.serviceName, vehicle, date: fmtDate(date), time: slot }))
       navigate('/confirm/' + data.id)          // e.g. /confirm/ACP-9252
     } catch (err) {
       setSaving(false)
@@ -326,4 +337,4 @@ export default function Booking() {
       </div>
     </section>
   )
-}
+}

@@ -9,11 +9,16 @@ export const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/ap
 
 const TOKEN_KEY = 'acp_token'
 
+// The login is kept in sessionStorage = ONE BROWSER TAB.
+// So a customer, a mechanic and the admin can each be logged in in their own tab at the same time,
+// and closing the tab logs that person out. (Refreshing the page keeps the login.)
+try { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem('acp_session') } catch { /* old shared login */ }
+
 export function getToken() {
-  try { return localStorage.getItem(TOKEN_KEY) } catch { return null }
+  try { return sessionStorage.getItem(TOKEN_KEY) } catch { return null }
 }
 export function setToken(token) {
-  try { token ? localStorage.setItem(TOKEN_KEY, token) : localStorage.removeItem(TOKEN_KEY) } catch { /* storage blocked */ }
+  try { token ? sessionStorage.setItem(TOKEN_KEY, token) : sessionStorage.removeItem(TOKEN_KEY) } catch { /* storage blocked */ }
 }
 
 export async function api(path, { method = 'GET', body } = {}) {

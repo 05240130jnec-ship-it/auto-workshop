@@ -60,7 +60,7 @@ function AdminShell() {
           <ul className="a-nav">
             {link('/admin', 'bi-grid-1x2-fill', 'Dashboard', 0, '', true)}
             {link('/admin/repairs', 'bi-wrench-adjustable', 'Repairs', pendingRepairs)}
-            {link('/admin/shop', 'bi-shop', 'Orders & Requests', shop)}
+            {link('/admin/shop', 'bi-bag-fill', 'Orders & Requests', shop)}
           </ul>
         </div>
         <div className="a-nav-group">
@@ -69,20 +69,20 @@ function AdminShell() {
             {link('/admin/customers', 'bi-people-fill', 'Customers')}
             {link('/admin/mechanics', 'bi-person-badge-fill', 'Mechanics', leaves)}
             {link('/admin/inventory', 'bi-box-seam-fill', 'Inventory', low, 'red')}
-            {link('/admin/suppliers', 'bi-truck', 'Suppliers')}
+            {link('/admin/suppliers', 'bi-truck-front-fill', 'Suppliers')}
           </ul>
         </div>
         <div className="a-nav-group">
           <span className="a-nav-label">Settings</span>
           <ul className="a-nav">
             {link('/admin/content', 'bi-megaphone-fill', 'Website Content')}
-            {link('/admin/mechanic-portal', 'bi-person-gear', 'Mechanic Portal')}
+            {link('/admin/mechanic-portal', 'bi-person-fill-gear', 'Mechanic Portal')}
           </ul>
         </div>
         <div className="a-nav-group a-nav-other">
           <ul className="a-nav">
-            <li><a href="/"><i className="bi bi-globe2"></i> <span>View website</span></a></li>
-            <li><a href="#" onClick={refresh}><i className="bi bi-arrow-clockwise"></i> <span>Refresh data</span></a></li>
+            <li><a href="/"><i className="bi bi-globe-central-south-asia-fill"></i> <span>View website</span></a></li>
+            <li><a href="#" onClick={refresh}><i className="bi bi-arrow-repeat"></i> <span>Refresh data</span></a></li>
           </ul>
         </div>
       </aside>

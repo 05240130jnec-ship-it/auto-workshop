@@ -6,6 +6,7 @@ import usePageTitle from '../../ui/usePageTitle.js'
 import ATopbar from './ATopbar.jsx'
 import Avatar from './Avatar.jsx'
 import { useAdmin } from './AdminContext.js'
+import { reloadSettings } from '../../data/useSettings.js'
 
 // Admin → My profile: my name, phone, photo and password.
 // Saved in MySQL through /api/admin/profile (the photo too, as text).
@@ -58,7 +59,11 @@ export default function AdminProfile() {
     const phone = f.phone.replace(/[\s-]/g, '')
     if (!NAME.test(name)) return toast('Please enter your full name (letters and spaces only)', 'error')
     if (phone && !PHONE.test(phone)) return toast('Please enter a valid Bhutan phone number, e.g. 17123456', 'error')
-    if (await save({ name, phone }, 'Your details are saved')) updateUser({ name })
+    const msg = phone && phone !== (me.phone || '') ? 'Saved. The website phone and WhatsApp number are updated too' : 'Your details are saved'
+    if (await save({ name, phone }, msg)) {
+      updateUser({ name })
+      if (phone) reloadSettings().catch(() => {})   // the website shows the new number at once
+    }
   }
 
   async function savePassword(e) {
@@ -130,6 +135,7 @@ export default function AdminProfile() {
               <div className="col-md-6">
                 <label className="a-form-label" htmlFor="ap-phone">Phone</label>
                 <input id="ap-phone" type="tel" className="a-form-control" maxLength={16} value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+                <div className="form-text">Also used as the website phone and WhatsApp number.</div>
               </div>
               <div className="col-md-6">
                 <label className="a-form-label" htmlFor="ap-email">Email</label>
