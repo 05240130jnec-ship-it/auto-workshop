@@ -76,6 +76,16 @@ const DEFAULT_SETTINGS = {
   resetEmailSubject: 'Your AutoCare Pro password reset code',
   resetEmailText: 'Hello {name},\n\nYour password reset code is: {code}\n\nIt works for {minutes} minutes. If you did not ask for this, you can ignore this email.\n\nAutoCare Pro',
 
+  // ---------- "Is it you?" email after sign-up ----------
+  verifyEmailSubject: 'Is it you? Confirm your AutoCare Pro account',
+  verifyEmailText: 'Hello {name},\n\nSomeone used {email} to create an account on AutoCare Pro. Was it you?\n\nIf yes, click "Yes, it\'s me" to finish your account. If not, click "No, it\'s not me" and nobody can use your email.',
+  verifySentTitle: 'Check your email',
+  verifySentText: 'We sent an email to {email}. Open it and click "Yes, it\'s me" to finish your account. (Look in Spam too.)',
+  verifyYesTitle: 'Your email is confirmed!',
+  verifyYesText: 'Welcome to AutoCare Pro, {name}. Your account is ready and you are now logged in.',
+  verifyNoTitle: 'Thank you for telling us',
+  verifyNoText: 'The account was not made, and nobody can use your email.',
+
   // ---------- My profile page (customers) ----------
   profileTitle: 'My *profile*',
   profileText: 'Keep your details up to date so the workshop can reach you about your repairs.',

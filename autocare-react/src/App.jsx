@@ -21,6 +21,7 @@ import SellPart from './pages/site/SellPart.jsx'
 import Reserve from './pages/site/Reserve.jsx'
 import CustomerProfile from './pages/site/Profile.jsx'
 import ForgotPassword from './pages/site/ForgotPassword.jsx'
+import VerifyEmail from './pages/site/VerifyEmail.jsx'
 
 // Mechanic portal (from your machanic folder)
 import MechanicLayout from './layouts/MechanicLayout.jsx'
@@ -55,6 +56,7 @@ export default function App() {
       <Route path="/signup" element={<Login signup />} />
       <Route path="/no-access" element={<NoAccess />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
+      <Route path="/verify-email" element={<VerifyEmail />} />
 
       {/* Customer website — anyone can browse; booking/buying needs a customer login */}
       <Route element={<SiteLayout />}>
