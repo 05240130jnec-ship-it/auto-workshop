@@ -32,7 +32,8 @@ async function findAll(status) {
     sql += ' WHERE r.status = ?';
     params.push(status);
   }
-  const [rows] = await db.query(sql + ' ORDER BY r.pickup', params);
+  // newest order first (R-1012 above R-1011)
+  const [rows] = await db.query(sql + ' ORDER BY r.date DESC, CAST(SUBSTRING(r.id, 3) AS UNSIGNED) DESC', params);
   return rows;
 }
 
