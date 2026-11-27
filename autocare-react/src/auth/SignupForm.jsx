@@ -53,7 +53,7 @@ export default function SignupForm({ onDone }) {
     const res = await signup({ ...f, phone: f.phone.replace(/[\s-]/g, '') })
     setLoading(false)
     if (res.error) return setError(res.error)          // e.g. "An account with this email already exists."
-    onDone(res.user)
+    onDone(res.pending ? { pending: true, ...res.pending } : res.user)   // pending = "check your email" 
   }
 
   async function handleGoogle(credential) {

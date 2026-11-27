@@ -72,6 +72,8 @@ export default function AuthProvider({ children }) {
         method: 'POST',
         body: { name: name.trim(), email: email.trim().toLowerCase(), phone: phone.trim(), address: address.trim(), password },
       })
+      // The account is made only after the owner clicks "Yes, it's me" in the email
+      if (data.pending) return { pending: { email: data.email, name: data.name } }
       return { user: start(data.token, data.user) }
     } catch (err) {
       return { error: err.message }
@@ -86,7 +88,7 @@ export default function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateUser }}>
+    <AuthContext.Provider value={{ user, login, loginWithGoogle, signup, logout, updateUser, start }}>
       {children}
     </AuthContext.Provider>
   )

@@ -253,3 +253,6 @@
 .lg-staff-link { margin-top: -6px; font-size: .82rem; }
 .lg-staff-link .su-link { color: #6b7280; font-weight: 500; }
 .lg-staff-link .su-link:hover { color: #f57c00; }
+
+/* Confirm-email page: a red icon when the link does not work */
+.am-success.vf-bad .am-success-icon { background: rgba(220, 38, 38, .12); color: #dc2626; }

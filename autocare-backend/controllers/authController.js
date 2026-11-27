@@ -8,6 +8,7 @@ const User = require('../models/userModel');
 const Customer = require('../models/customerModel');
 const LoginAttempt = require('../models/loginAttemptModel');
 const PasswordReset = require('../models/passwordResetModel');
+const SignupRequest = require('../models/signupRequestModel');
 const { getSettings } = require('../models/settingsModel');
 const { sendMail } = require('../utils/mailer');
 
@@ -33,6 +34,13 @@ async function login(req, res) {
 
   // 2. Check the email and password
   const acc = await User.findByEmail(email);
+  if (!acc) {
+    // Signed up but did not click "Yes, it's me" in the email yet?
+    await SignupRequest.setupTable();
+    if (await SignupRequest.isWaiting(email)) {
+      return res.status(403).json({ error: 'Please confirm your email first. Open the email we sent you and click "Yes, it\'s me".' });
+    }
+  }
   if (!acc || !(await bcrypt.compare(password, acc.password))) {
     // each new lock is longer: 15 s, 30 s, 1 min, 2 min ... (see loginAttemptModel.js)
     const { left, lock } = await LoginAttempt.countWrongTry(email);
@@ -82,12 +90,71 @@ async function signup(req, res) {
   }
   if (await User.findByEmail(email)) return res.status(409).json({ error: 'An account with this email already exists.' });
 
-  const id = await Customer.nextId();
-  const hash = await bcrypt.hash(password, 10);
-  await Customer.create({ id, name, email, phone: phone || null, address: address || null, password: hash, status: 'active' });
+  // The account is NOT made yet: first the owner of the email must answer "Is it you?" in an email.
+  await SignupRequest.setupTable();
+  const wait = await SignupRequest.secondsToWait(email, RESEND_SECONDS);
+  if (wait) return res.status(429).json({ error: `We just sent an email to ${email}. Please wait ${wait} seconds before trying again.`, wait });
 
-  const user = { id, role: 'customer', name, email };
-  res.status(201).json({ token: makeToken(user), user });
+  const hash = await bcrypt.hash(password, 10);
+  const token = await SignupRequest.save({ name, email, phone: phone || null, address: address || null, password: hash }, VERIFY_HOURS);
+
+  // The two buttons open our website, which then asks the backend (POST /api/auth/verify-email)
+  const site = websiteUrl(req);
+  const yes = `${site}/verify-email?token=${token}&answer=yes`;
+  const no = `${site}/verify-email?token=${token}&answer=no`;
+  const s = await getSettings();
+  const values = { name: name.split(' ')[0], email, hours: VERIFY_HOURS };
+  const text = fill(s.verifyEmailText || 'Hello {name},\n\nSomeone used {email} to create an AutoCare Pro account. Was it you?', values);
+  const esc = (t) => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  try {
+    await sendMail({
+      to: email,
+      subject: fill(s.verifyEmailSubject || 'Is it you? Confirm your AutoCare Pro account', values),
+      text: `${text}\n\nYes, it's me: ${yes}\nNo, it's not me: ${no}`,
+      html: `<div style="font-family:Arial,sans-serif;font-size:15px;color:#1f2933;line-height:1.5">
+        ${esc(text).replace(/\n/g, '<br>')}
+        <p style="margin:26px 0">
+          <a href="${yes}" style="background:#f57c00;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block;margin:0 8px 8px 0">Yes, it's me</a>
+          <a href="${no}" style="background:#eef2f6;color:#1f2933;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:bold;display:inline-block">No, it's not me</a>
+        </p>
+        <small style="color:#6b7785">The link works for ${VERIFY_HOURS} hours.</small></div>`,
+    });
+  } catch (err) {
+    console.error('Could not send the confirm email:', err.message);
+    await SignupRequest.remove(email);
+    return res.status(500).json({ error: 'We could not send the email right now. Please try again later.' });
+  }
+  res.status(202).json({ pending: true, email, name });
+}
+
+// The website address for links in emails: the page that sent the request (e.g. http://localhost:5173)
+function websiteUrl(req) {
+  const origin = req.get('origin') || '';
+  if (/^https?:\/\/[\w.-]+(:\d+)?$/.test(origin)) return origin;
+  return process.env.FRONTEND_URL || 'http://localhost:5173';
+}
+
+// POST /api/auth/verify-email   body: { token, answer: 'yes' | 'no' }   (from the buttons in the email)
+//   yes -> the customer account is made now      no -> the sign-up is deleted
+async function verifyEmail(req, res) {
+  const token = String(req.body.token || '');
+  const answer = req.body.answer === 'no' ? 'no' : 'yes';
+  if (!/^[0-9a-f]{64}$/.test(token)) return res.status(400).json({ error: 'This link is not valid.' });
+  await SignupRequest.setupTable();
+
+  const reqRow = await SignupRequest.findByToken(token);
+  if (!reqRow) return res.status(400).json({ error: 'This link has expired or was already used. Please create your account again.' });
+  await SignupRequest.remove(reqRow.email);
+  if (answer === 'no') return res.json({ ok: true, answer });
+
+  // Someone may have made an account with this email in the meantime (e.g. with Google)
+  if (await User.findByEmail(reqRow.email)) return res.json({ ok: true, answer, already: true });
+  const id = await Customer.nextId();
+  await Customer.create({ id, name: reqRow.name, email: reqRow.email, phone: reqRow.phone, address: reqRow.address, password: reqRow.password, status: 'active' });
+
+  // The owner of the email clicked "Yes", so we log them in straight away
+  const user = { id, role: 'customer', name: reqRow.name, email: reqRow.email };
+  res.json({ ok: true, answer, name: reqRow.name, token: makeToken(user), user });
 }
 
 // ---------- Continue with Google ----------
@@ -163,7 +230,8 @@ async function google(req, res) {
 // page to find out who has an account.
 const CODE_MINUTES = 10;      // how long a code works
 const CODE_TRIES = 5;         // wrong codes allowed before the code stops working
-const RESEND_SECONDS = 60;    // wait between two codes for the same email
+const RESEND_SECONDS = 60;    // wait between two codes (or two sign-up emails) for the same email
+const VERIFY_HOURS = 24;      // how long the "Is it you?" link in the sign-up email works
 
 // "Hello {name}, your code is {code}" -> the real name and code
 const fill = (text, values) => String(text || '').replace(/\{(\w+)\}/g, (m, k) => (k in values ? values[k] : m));
@@ -242,4 +310,4 @@ function me(req, res) {
   res.json({ user: { id, role, name, email } });
 }
 
-module.exports = { login, signup, googleConfig, google, forgot, reset, me };
+module.exports = { login, signup, verifyEmail, googleConfig, google, forgot, reset, me };

@@ -24,6 +24,22 @@ export default function SignupModal({ open, created, texts = {}, onCreated, onCl
 
   if (!open) return null
 
+  // After sign-up: "Check your email" (the account is made when the owner clicks Yes in the email)
+  if (created && created.pending) {
+    return (
+      <div className="am-backdrop am-center">
+        <div className="am-card am-success" role="dialog" aria-modal="true" aria-label="Check your email">
+          <span className="am-success-icon"><i className="bi bi-envelope-check"></i></span>
+          <h3>{texts.verifySentTitle || 'Check your email'}</h3>
+          <p>{String(texts.verifySentText || 'We sent an email to {email}. Click "Yes, it\'s me" in it to finish your account.').split('{email}').map((part, i) => (i ? [<strong key={i}>{created.email}</strong>, part] : part))}</p>
+          <div className="am-success-btns">
+            <button className="lg-btn" onClick={onClose}>OK, back to sign in</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
   // After the account is made: the success message
   if (created) {
     return (

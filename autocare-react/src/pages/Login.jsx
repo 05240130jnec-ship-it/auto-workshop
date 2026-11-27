@@ -29,6 +29,7 @@ export default function Login({ signup = false, staff = false }) {
 
   function closeSignup() {
     setShowSignup(false)
+    setCreated(null)
     if (location.pathname === '/signup') navigate('/login', { replace: true })
   }
 
